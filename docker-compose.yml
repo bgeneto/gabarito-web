@@ -1,14 +1,13 @@
 services:
-  gabarito-frontend:
-    container_name: gabarito-frontend
-    user: "1000:1000"
+  gabarito-frontend-build:
+    container_name: gabarito-frontend-build
     build:
       context: ./frontend
       dockerfile: Dockerfile
     volumes:
       - ./frontend/dist:/app/dist-out
-    entrypoint: sh -c "mkdir -p /app/dist-out && rm -rf /app/dist-out/* && cp -rf /usr/share/nginx/html/. /app/dist-out/ && exec nginx -g 'daemon off;'"
-    restart: always
+    entrypoint: sh -c "rm -rf /app/dist-out/* && cp -rf /usr/share/nginx/html/. /app/dist-out/"
+    restart: "no"
 
   gabarito-api:
     container_name: gabarito-api
@@ -21,8 +20,10 @@ services:
       - DATABASE_PATH=/app/data/gabarito.db
     volumes:
       - gabaritoweb-db:/app/data
-    command: sh -c "npx drizzle-kit push && npm run start"
+    command: sh -c "npx drizzle-kit migrate && npm run start"
     restart: always
+    depends_on:
+      - gabarito-frontend-build
 
 volumes:
   gabaritoweb-db:

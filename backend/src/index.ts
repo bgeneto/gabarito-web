@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { bodyLimit } from "hono/body-limit";
 import { serve } from "@hono/node-server";
 import { eq, and } from "drizzle-orm";
 import crypto from "crypto";
@@ -21,8 +22,23 @@ import {
 
 const app = new Hono();
 
-// Habilita CORS para facilitar desenvolvimento
-app.use("/api/*", cors());
+// Configuração de CORS: aberto em desenvolvimento, restrito em produção
+const corsOrigin = process.env.CORS_ORIGIN || (
+  process.env.NODE_ENV === "production"
+    ? "https://gabarito.sistema.pro.br"
+    : "*"
+);
+app.use("/api/*", cors({ origin: corsOrigin }));
+
+// Limites de tamanho de payload
+app.use("/api/exams", bodyLimit({ maxSize: 1024 * 1024 })); // 1 MB para criação de prova
+app.use("/api/exams/:public_code/submissions", bodyLimit({ maxSize: 512 * 1024 })); // 512 KB para submissões
+
+// Constantes de validação
+const MAX_TITLE_LENGTH = 200;
+const MAX_STUDENT_NAME_LENGTH = 150;
+const MAX_STUDENT_IDENTIFIER_LENGTH = 50;
+const MAX_ITEMS_PER_EXAM = 500;
 
 // Função utilitária para gerar hash SHA-256 do token administrativo
 function hashToken(token: string): string {
@@ -40,6 +56,33 @@ app.post("/api/exams", async (c) => {
         {
           error: "Parâmetros inválidos",
           message: "O título e pelo menos uma questão são obrigatórios.",
+        },
+        400,
+      );
+    }
+
+    if (typeof title !== "string" || title.trim().length === 0) {
+      return c.json(
+        { error: "Validação", message: "O título da prova é inválido." },
+        400,
+      );
+    }
+
+    if (title.length > MAX_TITLE_LENGTH) {
+      return c.json(
+        {
+          error: "Validação",
+          message: `O título da prova deve ter no máximo ${MAX_TITLE_LENGTH} caracteres.`,
+        },
+        400,
+      );
+    }
+
+    if (items.length > MAX_ITEMS_PER_EXAM) {
+      return c.json(
+        {
+          error: "Validação",
+          message: `A prova pode ter no máximo ${MAX_ITEMS_PER_EXAM} itens.`,
         },
         400,
       );
@@ -282,6 +325,33 @@ app.post("/api/exams/:public_code/submissions", rateLimiter, async (c) => {
         {
           error: "Parâmetros inválidos",
           message: "Nome, matrícula e respostas são obrigatórios.",
+        },
+        400,
+      );
+    }
+
+    if (typeof student_name !== "string" || typeof student_identifier !== "string") {
+      return c.json(
+        { error: "Validação", message: "Nome e matrícula devem ser textos." },
+        400,
+      );
+    }
+
+    if (student_name.length > MAX_STUDENT_NAME_LENGTH) {
+      return c.json(
+        {
+          error: "Validação",
+          message: `O nome do aluno deve ter no máximo ${MAX_STUDENT_NAME_LENGTH} caracteres.`,
+        },
+        400,
+      );
+    }
+
+    if (student_identifier.length > MAX_STUDENT_IDENTIFIER_LENGTH) {
+      return c.json(
+        {
+          error: "Validação",
+          message: `A matrícula deve ter no máximo ${MAX_STUDENT_IDENTIFIER_LENGTH} caracteres.`,
         },
         400,
       );

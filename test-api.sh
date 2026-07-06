@@ -4,6 +4,12 @@
 PORT=3000
 BASE_URL="http://localhost:$PORT/api"
 
+# Verifica dependências
+if ! command -v jq >/dev/null 2>&1; then
+  echo "Erro: jq não está instalado. Instale-o para executar os testes de API."
+  exit 1
+fi
+
 echo "=== INICIANDO TESTES DE API ==="
 
 # 0. Testar validações ao criar prova
@@ -93,8 +99,8 @@ CREATE_RESP=$(curl -s -X POST "$BASE_URL/exams" \
 echo "Resposta de criação:"
 echo "$CREATE_RESP"
 
-PUBLIC_CODE=$(echo "$CREATE_RESP" | grep -o '"public_code":"[^"]*' | grep -o '[^"]*$')
-ADMIN_TOKEN=$(echo "$CREATE_RESP" | grep -o '"admin_token":"[^"]*' | grep -o '[^"]*$')
+PUBLIC_CODE=$(echo "$CREATE_RESP" | jq -r '.public_code')
+ADMIN_TOKEN=$(echo "$CREATE_RESP" | jq -r '.admin_token')
 
 echo "Public Code: $PUBLIC_CODE"
 echo "Admin Token: $ADMIN_TOKEN"
@@ -110,11 +116,10 @@ GET_RESP=$(curl -s "$BASE_URL/exams/$PUBLIC_CODE")
 echo "Resposta da consulta pública (gabarito deve estar ocultado):"
 echo "$GET_RESP"
 
-# Extrair IDs usando grep simples para compatibilidade
-ITEMS_PART=$(echo "$GET_RESP" | grep -o '"items":.*')
-ITEM_1_ID=$(echo "$ITEMS_PART" | grep -o '"id":"[^"]*' | head -n 1 | grep -o '[^"]*$')
-ITEM_2_ID=$(echo "$ITEMS_PART" | grep -o '"id":"[^"]*' | head -n 2 | tail -n 1 | grep -o '[^"]*$')
-ITEM_3_ID=$(echo "$ITEMS_PART" | grep -o '"id":"[^"]*' | head -n 3 | tail -n 1 | grep -o '[^"]*$')
+# Extrair IDs dos itens com jq
+ITEM_1_ID=$(echo "$GET_RESP" | jq -r '.items[0].id')
+ITEM_2_ID=$(echo "$GET_RESP" | jq -r '.items[1].id')
+ITEM_3_ID=$(echo "$GET_RESP" | jq -r '.items[2].id')
 
 echo "Item 1 ID: $ITEM_1_ID"
 echo "Item 2 ID: $ITEM_2_ID"
@@ -136,7 +141,7 @@ SUB_1_RESP=$(curl -s -X POST "$BASE_URL/exams/$PUBLIC_CODE/submissions" \
 echo "Resposta de submissão do Aluno 1:"
 echo "$SUB_1_RESP"
 
-SUB_1_ID=$(echo "$SUB_1_RESP" | grep -o '"submission_id":"[^"]*' | grep -o '[^"]*$')
+SUB_1_ID=$(echo "$SUB_1_RESP" | jq -r '.submission_id')
 echo "Submission 1 ID: $SUB_1_ID"
 
 # 4. Submeter Resposta do Aluno 2 (Parcial, nota total esperada = 2.5)
@@ -155,7 +160,7 @@ SUB_2_RESP=$(curl -s -X POST "$BASE_URL/exams/$PUBLIC_CODE/submissions" \
 echo "Resposta de submissão do Aluno 2:"
 echo "$SUB_2_RESP"
 
-SUB_2_ID=$(echo "$SUB_2_RESP" | grep -o '"submission_id":"[^"]*' | grep -o '[^"]*$')
+SUB_2_ID=$(echo "$SUB_2_RESP" | jq -r '.submission_id')
 
 # 5. Tentar submissão duplicada (deve retornar erro 409)
 echo -e "\n5. Tentando submissão duplicada para Aluno 1..."

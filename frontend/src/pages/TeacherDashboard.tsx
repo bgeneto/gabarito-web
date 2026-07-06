@@ -140,6 +140,13 @@ export default function TeacherDashboard({
     setTimeout(() => setCopiedCode(false), 2000);
   };
 
+  const sanitizeCsvField = (value: string): string => {
+    // Previne injeção de fórmulas em planilhas removendo caracteres de início de fórmula
+    const sanitized = value.replace(/^[\t\r\n=@+\-]+/, "");
+    // Escapa aspas duplas e envolve o campo em aspas duplas
+    return `"${sanitized.replace(/"/g, '""')}"`;
+  };
+
   const exportCSV = () => {
     if (!data || data.submissions.length === 0) return;
 
@@ -153,19 +160,22 @@ export default function TeacherDashboard({
 
     // Linhas
     const rows = data.submissions.map((sub) => [
-      `"${sub.student_name.replace(/"/g, '""')}"`,
-      `"${sub.student_identifier.replace(/"/g, '""')}"`,
-      `"${new Date(sub.submitted_at).toLocaleString("pt-BR")}"`,
+      sanitizeCsvField(sub.student_name),
+      sanitizeCsvField(sub.student_identifier),
+      sanitizeCsvField(new Date(sub.submitted_at).toLocaleString("pt-BR")),
       sub.total_score.toFixed(1),
     ]);
 
     const csvContent =
-      "data:text/csv;charset=utf-8,\uFEFF" +
+      "\uFEFF" +
       [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
 
-    const encodedUri = encodeURI(csvContent);
+    const blob = new Blob([csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
+    link.setAttribute("href", url);
     link.setAttribute(
       "download",
       `gabarito_web_${data.public_code}_resultados.csv`,
@@ -173,6 +183,7 @@ export default function TeacherDashboard({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   if (loading) {

@@ -1,0 +1,45 @@
+# Git
+.git
+.gitignore
+
+# Node modules
+**/node_modules
+npm-debug.log*
+yarn-error.log*
+package-lock.json
+
+# Build outputs
+frontend/dist
+backend/dist
+
+# Local databases
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# IDE / editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test and coverage artifacts
+coverage
+.nyc_output
+*.log
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore

@@ -37,11 +37,12 @@ case "$1" in
     echo "=== INICIANDO DEPLOY DE PRODUÇÃO ==="
     echo "1. Preparando diretórios locais..."
     mkdir -p frontend/dist
-    echo "2. Iniciando build, migrações e containers de produção via Docker Compose..."
+    echo "2. Iniciando build do frontend, migrações do banco e API via Docker Compose..."
     docker compose up --build -d
     echo "====================================="
     echo "Deploy de produção realizado com sucesso via Docker!"
-    echo "Lembre-se: O Caddy deve estar configurado para servir a pasta /srv/gabarito"
+    echo "O frontend foi copiado para frontend/dist e deve ser servido pelo Caddy em /srv/gabarito."
+    echo "A API está disponível no container gabarito-api (porta 3000) para proxy reverso."
     ;;
   prod-stop)
     echo "Parando container de produção..."
