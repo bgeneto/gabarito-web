@@ -6,8 +6,55 @@ BASE_URL="http://localhost:$PORT/api"
 
 echo "=== INICIANDO TESTES DE API ==="
 
+# 0. Testar validações ao criar prova
+echo "0. Testando validações de criação de prova (deve falhar)..."
+
+# Caso 1: Questão repetida sem subitem
+RESP_DUP_NO_SUB=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/exams" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Prova Inválida 1",
+    "items": [
+      {"question_number": 1, "sub_label": null, "points": 1, "answer_type": "choice", "answer_config": {"accepted": ["A"]}},
+      {"question_number": 1, "sub_label": "", "points": 1, "answer_type": "choice", "answer_config": {"accepted": ["B"]}}
+    ]
+  }')
+
+# Caso 2: Questão com subitem repetido
+RESP_DUP_SUB=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/exams" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Prova Inválida 2",
+    "items": [
+      {"question_number": 1, "sub_label": "a", "points": 1, "answer_type": "choice", "answer_config": {"accepted": ["A"]}},
+      {"question_number": 1, "sub_label": "a", "points": 1, "answer_type": "choice", "answer_config": {"accepted": ["B"]}}
+    ]
+  }')
+
+# Caso 3: Questão duplicada (sem subitem)
+RESP_DUP_SIMPLE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/exams" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Prova Inválida 3",
+    "items": [
+      {"question_number": 2, "sub_label": null, "points": 1, "answer_type": "choice", "answer_config": {"accepted": ["A"]}},
+      {"question_number": 2, "sub_label": null, "points": 1, "answer_type": "choice", "answer_config": {"accepted": ["B"]}}
+    ]
+  }')
+
+echo "HTTP Code Caso 1 (esperado 400): $RESP_DUP_NO_SUB"
+echo "HTTP Code Caso 2 (esperado 400): $RESP_DUP_SUB"
+echo "HTTP Code Caso 3 (esperado 400): $RESP_DUP_SIMPLE"
+
+if [ "$RESP_DUP_NO_SUB" != "400" ] || [ "$RESP_DUP_SUB" != "400" ] || [ "$RESP_DUP_SIMPLE" != "400" ]; then
+  echo "Erro: Validações de criação de prova não funcionaram como esperado."
+  exit 1
+fi
+
+echo "Validações de criação de prova funcionando corretamente."
+
 # 1. Criar Prova
-echo "1. Criando prova..."
+echo -e "\n1. Criando prova válida..."
 CREATE_RESP=$(curl -s -X POST "$BASE_URL/exams" \
   -H "Content-Type: application/json" \
   -d '{

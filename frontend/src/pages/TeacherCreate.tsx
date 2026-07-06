@@ -145,6 +145,39 @@ export default function TeacherCreate() {
       }
     }
 
+    // Validação de questões repetidas/subitens
+    const questionCounts: Record<number, number> = {};
+    for (const item of items) {
+      const qNum = item.questionNumber;
+      questionCounts[qNum] = (questionCounts[qNum] || 0) + 1;
+    }
+
+    const seenKeys = new Set<string>();
+    for (const item of items) {
+      const qNum = item.questionNumber;
+      const sub = item.subLabel.trim().toLowerCase();
+      const key = `${qNum}-${sub}`;
+
+      if (questionCounts[qNum] > 1 && !sub) {
+        setError(
+          `A questão ${qNum} aparece mais de uma vez e precisa ter subitens preenchidos (ex: A, B, C).`,
+        );
+        setLoading(false);
+        return;
+      }
+
+      if (seenKeys.has(key)) {
+        setError(
+          sub
+            ? `A questão ${qNum} com subitem "${sub.toUpperCase()}" está duplicada.`
+            : `A questão ${qNum} está duplicada (sem subitem).`,
+        );
+        setLoading(false);
+        return;
+      }
+      seenKeys.add(key);
+    }
+
     const payload = {
       title: title.trim(),
       items: items.map((item) => ({

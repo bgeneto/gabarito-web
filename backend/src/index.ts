@@ -45,6 +45,75 @@ app.post("/api/exams", async (c) => {
       );
     }
 
+    // Validação dos itens da prova
+    const qCount: Record<number, number> = {};
+    for (const item of items) {
+      const qNum = Number(item.question_number);
+      if (isNaN(qNum) || qNum <= 0) {
+        return c.json(
+          {
+            error: "Validação de itens",
+            message: "O número da questão deve ser um inteiro positivo.",
+          },
+          400,
+        );
+      }
+
+      const points = Number(item.points);
+      if (isNaN(points) || points <= 0) {
+        return c.json(
+          {
+            error: "Validação de itens",
+            message: `A pontuação da questão ${qNum}${item.sub_label ? item.sub_label : ""} deve ser maior que zero.`,
+          },
+          400,
+        );
+      }
+
+      const accepted = item.answer_config?.accepted;
+      if (!Array.isArray(accepted) || accepted.length === 0) {
+        return c.json(
+          {
+            error: "Validação de itens",
+            message: `A questão ${qNum}${item.sub_label ? item.sub_label : ""} precisa de pelo menos uma resposta correta.`,
+          },
+          400,
+        );
+      }
+
+      qCount[qNum] = (qCount[qNum] || 0) + 1;
+    }
+
+    const seenKeys = new Set<string>();
+    for (const item of items) {
+      const qNum = Number(item.question_number);
+      const sub = (item.sub_label || "").trim().toLowerCase();
+      const key = `${qNum}-${sub}`;
+
+      if (qCount[qNum] > 1 && !sub) {
+        return c.json(
+          {
+            error: "Validação de itens",
+            message: `A questão ${qNum} aparece mais de uma vez e precisa ter subitens preenchidos (ex: A, B, C).`,
+          },
+          400,
+        );
+      }
+
+      if (seenKeys.has(key)) {
+        return c.json(
+          {
+            error: "Validação de itens",
+            message: sub
+              ? `A questão ${qNum} com subitem "${sub.toUpperCase()}" está duplicada.`
+              : `A questão ${qNum} está duplicada (sem subitem).`,
+          },
+          400,
+        );
+      }
+      seenKeys.add(key);
+    }
+
     // Gerar códigos aleatórios seguros com detecção de colisão
     let publicCode = "";
     let isUniquePublic = false;
