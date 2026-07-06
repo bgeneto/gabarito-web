@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    @apply bg-slate-950 text-slate-100 antialiased font-sans selection:bg-cyan-500 selection:text-slate-950;
+  }
+}
+
+/* Efeito sutil de gradiente de fundo */
+.bg-gradient-radial {
+  background-image: radial-gradient(circle at top, var(--color-slate-900) 0%, var(--color-slate-950) 100%);
+}
+
+/* Glassmorphism utility */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}

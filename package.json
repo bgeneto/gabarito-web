@@ -1,0 +1,23 @@
+{
+  "name": "gabarito-web",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev": "concurrently \"npm:dev:backend\" \"npm:dev:frontend\"",
+    "build:backend": "npm --prefix backend run build",
+    "build:frontend": "npm --prefix frontend run build",
+    "build": "npm run build:backend && npm run build:frontend"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.10",
+    "drizzle-orm": "^0.45.2"
+  }
+}
