@@ -1,36 +1,44 @@
-import { useState, useEffect } from 'react';
-import { navigateTo } from '../App';
-import { ClipboardCheck, ShieldAlert, Award, FileQuestion, ArrowLeft, Copy, Check } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { navigateTo } from "../App";
+import {
+  ClipboardCheck,
+  ShieldAlert,
+  Award,
+  FileQuestion,
+  ArrowLeft,
+  Copy,
+  Check,
+} from "lucide-react";
 
 interface ExamItem {
   id: string;
   questionNumber: number;
   subLabel: string | null;
   points: number;
-  answerType: 'choice' | 'true_false' | 'text_exact';
+  answerType: "choice" | "true_false" | "text_exact";
   position: number;
 }
 
 interface ExamPublicData {
   id: string;
   title: string;
-  status: 'open' | 'closed';
+  status: "open" | "closed";
   items: ExamItem[];
 }
 
 export default function StudentExam({ publicCode }: { publicCode: string }) {
   const [exam, setExam] = useState<ExamPublicData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   // Form Fields
-  const [studentName, setStudentName] = useState('');
-  const [studentIdentifier, setStudentIdentifier] = useState('');
+  const [studentName, setStudentName] = useState("");
+  const [studentIdentifier, setStudentIdentifier] = useState("");
   const [answers, setAnswers] = useState<{ [itemId: string]: string }>({});
 
   // Receipt State
-  const [receiptId, setReceiptId] = useState('');
+  const [receiptId, setReceiptId] = useState("");
   const [copiedReceipt, setCopiedReceipt] = useState(false);
 
   const fetchExamData = async () => {
@@ -38,18 +46,18 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
       const response = await fetch(`/api/exams/${publicCode}`);
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.message || 'Erro ao buscar dados da prova.');
+        throw new Error(data.message || "Erro ao buscar dados da prova.");
       }
       setExam(data);
-      
+
       // Inicializar respostas vazias
       const initialAnswers: { [key: string]: string } = {};
       data.items.forEach((item: ExamItem) => {
-        initialAnswers[item.id] = '';
+        initialAnswers[item.id] = "";
       });
       setAnswers(initialAnswers);
     } catch (err: any) {
-      setError(err.message || 'Erro de conexão com o servidor.');
+      setError(err.message || "Erro de conexão com o servidor.");
     } finally {
       setLoading(false);
     }
@@ -68,21 +76,31 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     if (!studentName.trim() || !studentIdentifier.trim()) {
-      setError('Nome e Matrícula são obrigatórios para a submissão.');
+      setError("Nome e Matrícula são obrigatórios para a submissão.");
       return;
     }
 
     // Verificar se todas as questões foram respondidas
-    const unansweredCount = exam?.items.filter(item => !answers[item.id] || !answers[item.id].trim()).length;
+    const unansweredCount = exam?.items.filter(
+      (item) => !answers[item.id] || !answers[item.id].trim(),
+    ).length;
     if (unansweredCount && unansweredCount > 0) {
-      if (!window.confirm(`Você deixou ${unansweredCount} questão(ões) em branco. Deseja enviar assim mesmo?`)) {
+      if (
+        !window.confirm(
+          `Você deixou ${unansweredCount} questão(ões) em branco. Deseja enviar assim mesmo?`,
+        )
+      ) {
         return;
       }
     } else {
-      if (!window.confirm('Tem certeza que deseja enviar suas respostas? O reenvio está bloqueado e você não poderá fazer edições.')) {
+      if (
+        !window.confirm(
+          "Tem certeza que deseja enviar suas respostas? O reenvio está bloqueado e você não poderá fazer edições.",
+        )
+      ) {
         return;
       }
     }
@@ -96,21 +114,21 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
 
     try {
       const response = await fetch(`/api/exams/${publicCode}/submissions`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(payload),
       });
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.message || 'Erro ao submeter respostas.');
+        throw new Error(data.message || "Erro ao submeter respostas.");
       }
 
       setReceiptId(data.submission_id);
     } catch (err: any) {
-      setError(err.message || 'Houve um erro de rede ao enviar.');
+      setError(err.message || "Houve um erro de rede ao enviar.");
     } finally {
       setSubmitting(false);
     }
@@ -126,7 +144,9 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
     return (
       <div className="text-center py-12">
         <div className="w-10 h-10 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-slate-400 text-sm">Carregando estrutura da prova...</p>
+        <p className="text-slate-400 text-sm">
+          Carregando estrutura da prova...
+        </p>
       </div>
     );
   }
@@ -140,7 +160,7 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
         <h2 className="text-xl font-bold">Não foi possível acessar a prova</h2>
         <p className="text-sm text-slate-400">{error}</p>
         <button
-          onClick={() => navigateTo('/')}
+          onClick={() => navigateTo("/")}
           className="px-5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm font-semibold hover:bg-slate-850 cursor-pointer"
         >
           Voltar para Home
@@ -149,7 +169,7 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
     );
   }
 
-  if (exam && exam.status === 'closed' && !receiptId) {
+  if (exam && exam.status === "closed" && !receiptId) {
     return (
       <div className="max-w-md mx-auto text-center py-12 space-y-4">
         <div className="w-14 h-14 bg-rose-950/80 border border-rose-900/30 rounded-2xl flex items-center justify-center mx-auto">
@@ -157,10 +177,11 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
         </div>
         <h2 className="text-xl font-bold">Prova Encerrada</h2>
         <p className="text-sm text-slate-400">
-          Esta prova já foi fechada pelo professor e não está mais aceitando submissões.
+          Esta prova já foi fechada pelo professor e não está mais aceitando
+          submissões.
         </p>
         <button
-          onClick={() => navigateTo('/')}
+          onClick={() => navigateTo("/")}
           className="px-5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm font-semibold hover:bg-slate-850 cursor-pointer"
         >
           Voltar para Home
@@ -177,7 +198,9 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
           <div className="w-14 h-14 bg-emerald-950/80 border border-emerald-800/40 rounded-full flex items-center justify-center mx-auto mb-4">
             <ClipboardCheck className="w-8 h-8 text-emerald-400" />
           </div>
-          <h2 className="text-2xl font-black text-emerald-400">Respostas Enviadas!</h2>
+          <h2 className="text-2xl font-black text-emerald-400">
+            Respostas Enviadas!
+          </h2>
           <p className="text-xs text-slate-400 mt-1.5">
             Suas respostas foram gravadas e autocorrigidas no servidor.
           </p>
@@ -185,27 +208,42 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
 
         {/* Comprovante */}
         <div className="glass-panel border border-slate-800 rounded-2xl p-5 space-y-4 text-center">
-          <span className="text-[10px] uppercase font-bold text-slate-500 block tracking-wider">Comprovante de Submissão</span>
-          
+          <span className="text-[10px] uppercase font-bold text-slate-500 block tracking-wider">
+            Comprovante de Submissão
+          </span>
+
           <div className="bg-slate-900 border border-slate-850 rounded-xl p-3.5 flex items-center justify-between">
-            <span className="font-mono text-xs text-cyan-400 block truncate font-bold mr-2">{receiptId}</span>
+            <span className="font-mono text-xs text-cyan-400 block truncate font-bold mr-2">
+              {receiptId}
+            </span>
             <button
               onClick={handleCopyReceipt}
               className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition-colors"
               title="Copiar Comprovante"
             >
-              {copiedReceipt ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+              {copiedReceipt ? (
+                <Check className="w-4 h-4 text-emerald-400" />
+              ) : (
+                <Copy className="w-4 h-4" />
+              )}
             </button>
           </div>
 
           <div className="bg-slate-950 p-3 rounded-xl border border-slate-900 text-left text-xs text-slate-400 space-y-1.5">
-            <p><strong>Estudante:</strong> {studentName}</p>
-            <p><strong>Matrícula:</strong> {studentIdentifier}</p>
-            <p><strong>Prova:</strong> {exam.title}</p>
+            <p>
+              <strong>Estudante:</strong> {studentName}
+            </p>
+            <p>
+              <strong>Matrícula:</strong> {studentIdentifier}
+            </p>
+            <p>
+              <strong>Prova:</strong> {exam.title}
+            </p>
           </div>
 
           <p className="text-[10px] text-slate-500 italic">
-            Guarde o código do comprovante. Quando o professor encerrar a prova, você poderá pesquisar sua nota final por ele.
+            Guarde o código do comprovante. Quando o professor encerrar a prova,
+            você poderá pesquisar sua nota final por ele.
           </p>
         </div>
 
@@ -217,7 +255,7 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
             Acompanhar Resultados
           </button>
           <button
-            onClick={() => navigateTo('/')}
+            onClick={() => navigateTo("/")}
             className="flex-1 py-3 bg-slate-900 border border-slate-850 hover:bg-slate-850 rounded-xl text-xs text-slate-300 transition-colors cursor-pointer"
           >
             Voltar para Home
@@ -227,32 +265,42 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
     );
   }
 
-  const maxPoints = exam ? exam.items.reduce((acc, curr) => acc + curr.points, 0) : 0;
+  const maxPoints = exam
+    ? exam.items.reduce((acc, curr) => acc + curr.points, 0)
+    : 0;
 
   return (
     <div className="max-w-xl mx-auto w-full space-y-6">
       {/* Header da Prova */}
       <div className="flex items-center gap-3">
-        <button 
-          onClick={() => navigateTo('/')} 
+        <button
+          onClick={() => navigateTo("/")}
           className="p-2 bg-slate-900 border border-slate-850 rounded-xl hover:bg-slate-800 transition-colors cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4 text-slate-300" />
         </button>
         <div className="truncate">
           <h1 className="text-xl font-black truncate">{exam?.title}</h1>
-          <p className="text-[10px] text-slate-500 font-mono uppercase mt-0.5">Prova Aberta • {exam?.items.length} itens • {maxPoints.toFixed(1)} pontos max</p>
+          <p className="text-[10px] text-slate-500 font-mono uppercase mt-0.5">
+            Prova Aberta • {exam?.items.length} itens • {maxPoints.toFixed(1)}{" "}
+            pontos max
+          </p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Identificação do Aluno */}
         <div className="glass-panel border border-slate-800 rounded-2xl p-5 space-y-4">
-          <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-400">Identificação</h3>
-          
+          <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-400">
+            Identificação
+          </h3>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="studentName" className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase">
+              <label
+                htmlFor="studentName"
+                className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase"
+              >
                 Seu Nome Completo
               </label>
               <input
@@ -267,7 +315,10 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
             </div>
 
             <div>
-              <label htmlFor="studentIdentifier" className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase">
+              <label
+                htmlFor="studentIdentifier"
+                className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase"
+              >
                 Sua Matrícula
               </label>
               <input
@@ -285,15 +336,24 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
 
         {/* Questões */}
         <div className="space-y-4">
-          <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-400">Registrar Respostas</h3>
-          
+          <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-400">
+            Registrar Respostas
+          </h3>
+
           {exam?.items.map((item) => (
-            <div key={item.id} className="glass-panel border border-slate-800 rounded-2xl p-5 space-y-3">
+            <div
+              key={item.id}
+              className="glass-panel border border-slate-800 rounded-2xl p-5 space-y-3"
+            >
               <div className="flex items-center justify-between">
                 <span className="font-bold text-sm flex items-center gap-1.5">
                   <FileQuestion className="w-4 h-4 text-cyan-400" />
                   Questão {item.questionNumber}
-                  {item.subLabel && <span className="text-cyan-400 uppercase">{item.subLabel}</span>}
+                  {item.subLabel && (
+                    <span className="text-cyan-400 uppercase">
+                      {item.subLabel}
+                    </span>
+                  )}
                 </span>
                 <span className="text-[10px] font-bold text-slate-500 bg-slate-950 border border-slate-850 px-2 py-0.5 rounded-md">
                   {item.points.toFixed(1)} pts
@@ -303,17 +363,17 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
               {/* Input de Resposta baseado no tipo */}
               <div className="pt-1.5">
                 {/* Múltipla Escolha */}
-                {item.answerType === 'choice' && (
+                {item.answerType === "choice" && (
                   <div className="flex gap-2 justify-between">
-                    {['A', 'B', 'C', 'D', 'E'].map(option => (
+                    {["A", "B", "C", "D", "E"].map((option) => (
                       <button
                         key={option}
                         type="button"
                         onClick={() => handleUpdateAnswer(item.id, option)}
                         className={`flex-1 py-2.5 rounded-xl border text-sm font-bold transition-all cursor-pointer ${
                           answers[item.id] === option
-                            ? 'bg-cyan-500 text-slate-950 border-cyan-450 scale-102 shadow-md shadow-cyan-500/10'
-                            : 'bg-slate-900 border-slate-850 text-slate-400 hover:border-slate-800'
+                            ? "bg-cyan-500 text-slate-950 border-cyan-450 scale-102 shadow-md shadow-cyan-500/10"
+                            : "bg-slate-900 border-slate-850 text-slate-400 hover:border-slate-800"
                         }`}
                       >
                         {option}
@@ -323,32 +383,41 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
                 )}
 
                 {/* Verdadeiro ou Falso */}
-                {item.answerType === 'true_false' && (
+                {item.answerType === "true_false" && (
                   <div className="flex gap-3">
-                    {['V', 'F'].map(option => (
+                    {["V", "F"].map((option) => (
                       <button
                         key={option}
                         type="button"
-                        onClick={() => handleUpdateAnswer(item.id, option === 'V' ? 'verdadeiro' : 'falso')}
+                        onClick={() =>
+                          handleUpdateAnswer(
+                            item.id,
+                            option === "V" ? "verdadeiro" : "falso",
+                          )
+                        }
                         className={`flex-1 py-2.5 rounded-xl border text-sm font-bold transition-all cursor-pointer ${
-                          (option === 'V' && answers[item.id] === 'verdadeiro') || (option === 'F' && answers[item.id] === 'falso')
-                            ? 'bg-blue-500 text-white border-blue-450 scale-102'
-                            : 'bg-slate-900 border-slate-850 text-slate-400 hover:border-slate-800'
+                          (option === "V" &&
+                            answers[item.id] === "verdadeiro") ||
+                          (option === "F" && answers[item.id] === "falso")
+                            ? "bg-blue-500 text-white border-blue-450 scale-102"
+                            : "bg-slate-900 border-slate-850 text-slate-400 hover:border-slate-800"
                         }`}
                       >
-                        {option === 'V' ? 'Verd. (V)' : 'Falso (F)'}
+                        {option === "V" ? "Verd. (V)" : "Falso (F)"}
                       </button>
                     ))}
                   </div>
                 )}
 
                 {/* Texto Exato */}
-                {item.answerType === 'text_exact' && (
+                {item.answerType === "text_exact" && (
                   <input
                     type="text"
                     placeholder="Digite sua resposta por extenso..."
-                    value={answers[item.id] || ''}
-                    onChange={(e) => handleUpdateAnswer(item.id, e.target.value)}
+                    value={answers[item.id] || ""}
+                    onChange={(e) =>
+                      handleUpdateAnswer(item.id, e.target.value)
+                    }
                     className="w-full bg-slate-900 border border-slate-850 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:border-cyan-500 font-semibold"
                   />
                 )}
@@ -361,8 +430,11 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
         <div className="bg-slate-900/40 border border-slate-850 rounded-2xl p-4 flex gap-3 text-xs text-slate-400">
           <Award className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
           <div>
-            <span className="font-bold text-slate-200 block mb-0.5">Envio Único e Definitivo</span>
-            Ao clicar em enviar, suas respostas serão registradas e não poderão ser editadas. Certifique-se de preencher todos os itens.
+            <span className="font-bold text-slate-200 block mb-0.5">
+              Envio Único e Definitivo
+            </span>
+            Ao clicar em enviar, suas respostas serão registradas e não poderão
+            ser editadas. Certifique-se de preencher todos os itens.
           </div>
         </div>
 
@@ -379,7 +451,7 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
           disabled={submitting}
           className="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 disabled:from-slate-800 disabled:to-slate-800 disabled:text-slate-650 text-slate-950 font-bold rounded-2xl text-sm transition-all shadow-lg shadow-cyan-500/10 flex items-center justify-center gap-2 cursor-pointer"
         >
-          {submitting ? 'Enviando Gabarito...' : 'Finalizar e Enviar Respostas'}
+          {submitting ? "Enviando Gabarito..." : "Finalizar e Enviar Respostas"}
         </button>
       </form>
     </div>

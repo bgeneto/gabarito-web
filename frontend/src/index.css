@@ -8,7 +8,11 @@
 
 /* Efeito sutil de gradiente de fundo */
 .bg-gradient-radial {
-  background-image: radial-gradient(circle at top, var(--color-slate-900) 0%, var(--color-slate-950) 100%);
+  background-image: radial-gradient(
+    circle at top,
+    var(--color-slate-900) 0%,
+    var(--color-slate-950) 100%
+  );
 }
 
 /* Glassmorphism utility */

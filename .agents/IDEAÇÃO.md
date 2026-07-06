@@ -1,16 +1,12 @@
 # IDEAÇÃO
 
-Pretendo desenvolver um aplicativo web (com abordagem *mobile first*) no qual os alunos insiram suas respostas após finalizarem a prova. O fluxo operacional seria o seguinte: ao encerrar a avaliação, o professor disponibilizaria um código QR que direcionaria o aluno a uma página específica para o registro das respostas, questão por questão, em campos de texto. Esses campos seriam validados automaticamente contra um gabarito definido pelo docente. O professor poderia configurar múltiplas respostas aceitáveis por item para abranger as diferentes formas de expressão do aluno (por exemplo: “5”, “5s”, “5 segundos”, “5 s”, “cinco”; ou “o mesmo”, “a mesma”, “igual”). Para a validação, os textos seriam normalizados (remoção de espaços e conversão para maiúsculas).
+Pretendo desenvolver um aplicativo web (com abordagem _mobile first_) no qual os alunos insiram suas respostas após finalizarem a prova. O fluxo operacional seria o seguinte: ao encerrar a avaliação, o professor disponibilizaria um código QR que direcionaria o aluno a uma página específica para o registro das respostas, questão por questão, em campos de texto. Esses campos seriam validados automaticamente contra um gabarito definido pelo docente. O professor poderia configurar múltiplas respostas aceitáveis por item para abranger as diferentes formas de expressão do aluno (por exemplo: “5”, “5s”, “5 segundos”, “5 s”, “cinco”; ou “o mesmo”, “a mesma”, “igual”). Para a validação, os textos seriam normalizados (remoção de espaços e conversão para maiúsculas).
 
 A plataforma não exigiria cadastro de usuários. Na tela inicial, o visitante selecionaria uma das duas opções: “Sou aluno” ou “Sou professor”. Caso seja aluno, ele inseriria um código de acesso (provavelmente o mesmo associado ao QR code, embora este redirecione diretamente para o formulário) para visualizar suas respostas, o gabarito e a nota obtida. Se for professor, ele configuraria o número de questões (e subitens, quando aplicável), definiria os gabaritos com as variantes aceitáveis e atribuiria a pontuação de cada item. Ao final da configuração, o sistema geraria um código de identificação da prova (para consulta posterior das respostas e notas dos alunos) e um QR code para compartilhamento com os estudantes.
 
 Para a implementação, pretendo utilizar uma stack leve e moderna, como React, Tailwind CSS v4 e SQLite. Gostaria de saber sua opinião sobre a viabilidade e a qualidade da proposta. Podemos refinar conjuntamente essa ideia até a elaboração de um documento de especificações técnicas (SDD)?
 
-
-
 # OPINIÃO
-
-
 
 Sim, a ideia é **boa, factível e tem um escopo muito adequado para um MVP**. Ela resolve um problema real: reduzir o trabalho manual de correção, permitir estatísticas imediatas e ainda preservar uma dinâmica simples de sala de aula, sem login obrigatório.
 
@@ -569,7 +565,7 @@ A proposta lista 5 tipos de validação (texto exato, numérico com/sem tolerân
 
 Quais tipos de correção devem entrar no MVP inicial?
 
-✅ A. Apenas texto exato normalizado (com lista de variantes aceitáveis) + múltipla escolha + verdadeiro ou falso 
+✅ A. Apenas texto exato normalizado (com lista de variantes aceitáveis) + múltipla escolha + verdadeiro ou falso
 
 B. Texto exato + múltipla escolha + numérico simples (com tolerância, sem unidade)
 
@@ -647,7 +643,6 @@ A. A questão tem uma pontuação própria (ex: nota de "abertura"/participaçã
 
 C. Depende da questão: o professor decide se uma questão terá subitens (soma automática) OU será um item único com resposta e pontuação próprias (não ambos ao mesmo tempo)
 
-
 Ótimo, todas as decisões estão alinhadas e sem ambiguidades pendentes. Aqui está o resumo consolidado do escopo do GabaritoWEB (MVP) que ficou definido:
 
 Escopo Consolidado do MVP
@@ -686,7 +681,6 @@ Suggested Next Steps
 Não há um workflow específico configurado nesta conversa até o momento. Sugiro prosseguir com um dos seguintes caminhos:
 
 **Confirmado:** a abordagem "toda questão é um item-folha respondível, com agrupamento visual" para o modelo de dados, é mais simple e atende bem!
-
 
 Solicito agora a elaboração das especificações técnicas (SDD) detalhando modelo de dados, fluxos de aluno/professor, contratos de API e regras de normalização/correção.
 Solicitar a quebra em tickets de implementação para o MVP, uma vez que as specs estejam definidas. pergunte-me se ficou algo em aberto...

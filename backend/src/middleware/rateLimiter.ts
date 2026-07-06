@@ -1,4 +1,4 @@
-import { Context, Next } from 'hono';
+import { Context, Next } from "hono";
 
 interface RateLimitInfo {
   count: number;
@@ -8,43 +8,47 @@ interface RateLimitInfo {
 const rateLimitMap = new Map<string, RateLimitInfo>();
 
 const WINDOW_MS = 60 * 1000; // 1 minuto
-const MAX_REQUESTS = 5;      // no máximo 5 submissões por minuto
+const MAX_REQUESTS = 5; // no máximo 5 submissões por minuto
 
 export function getClientIp(c: Context): string {
   const req = c.req;
-  const xForwardedFor = req.header('x-forwarded-for');
+  const xForwardedFor = req.header("x-forwarded-for");
   if (xForwardedFor) {
-    return xForwardedFor.split(',')[0].trim();
+    return xForwardedFor.split(",")[0].trim();
   }
-  const realIp = req.header('x-real-ip');
+  const realIp = req.header("x-real-ip");
   if (realIp) {
     return realIp;
   }
-  return 'local-ip';
+  return "local-ip";
 }
 
 export async function rateLimiter(c: Context, next: Next) {
   const ip = getClientIp(c);
   const now = Date.now();
-  
+
   let info = rateLimitMap.get(ip);
-  
+
   if (!info || now > info.resetTime) {
     info = {
       count: 1,
-      resetTime: now + WINDOW_MS
+      resetTime: now + WINDOW_MS,
     };
     rateLimitMap.set(ip, info);
   } else {
     info.count++;
   }
-  
+
   if (info.count > MAX_REQUESTS) {
-    return c.json({
-      error: 'Too Many Requests',
-      message: 'Você excedeu o limite de submissões. Por favor, aguarde um minuto e tente novamente.'
-    }, 429);
+    return c.json(
+      {
+        error: "Too Many Requests",
+        message:
+          "Você excedeu o limite de submissões. Por favor, aguarde um minuto e tente novamente.",
+      },
+      429,
+    );
   }
-  
+
   await next();
 }

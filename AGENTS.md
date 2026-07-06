@@ -6,7 +6,8 @@ Este arquivo contém instruções detalhadas sobre a arquitetura do projeto **Ga
 
 ## 1. Visão Geral do Projeto
 
-O **GabaritoWEB** é uma aplicação web leve e responsiva (*mobile-first*) projetada para que professores publiquem gabaritos oficiais de provas e alunos submetam suas respostas para autocorreção instantânea.
+O **GabaritoWEB** é uma aplicação web leve e responsiva (_mobile-first_) projetada para que professores publiquem gabaritos oficiais de provas e alunos submetam suas respostas para autocorreção instantânea.
+
 - **Abordagem sem cadastro**: Alunos não se cadastram (apenas se identificam por Nome e Matrícula no momento do envio). Professores gerenciam a prova através de um link contendo um **Token Administrativo** aleatório privado.
 - **Stack Tecnológica**:
   - **Frontend**: React + TypeScript + Vite + Tailwind CSS v4.
@@ -89,19 +90,20 @@ Para aceitar variações textuais simples sem exigir IA ou regex complexas do pr
 
 ```typescript
 export function normalizeText(text: string): string {
-  if (!text) return '';
+  if (!text) return "";
   return text
     .trim()
-    .normalize('NFD') // Decompõe acentos e caracteres especiais
-    .replace(/[\u0300-\u036f]/g, '') // Filtra os acentos
-    .replace(/Ç/g, 'C')
-    .replace(/ç/g, 'c')
+    .normalize("NFD") // Decompõe acentos e caracteres especiais
+    .replace(/[\u0300-\u036f]/g, "") // Filtra os acentos
+    .replace(/Ç/g, "C")
+    .replace(/ç/g, "c")
     .toUpperCase()
-    .replace(/\s+/g, ' '); // Colapsa múltiplos espaços
+    .replace(/\s+/g, " "); // Colapsa múltiplos espaços
 }
 ```
 
 ### Regras por Tipo de Questão:
+
 - **Múltipla Escolha (`choice`)**: Remove todos os caracteres que não sejam letras (`A-Z`) e compara em maiúsculo.
 - **Verd. ou Falso (`true_false`)**: Mapeia termos comuns como `"VERDADEIRO"`, `"SIM"`, `"TRUE"`, `"T"`, `"S"`, `"V"` para `"V"`. E `"FALSO"`, `"FALSE"`, `"NAO"`, `"N"`, `"F"` para `"F"`.
 - **Texto Exato (`text_exact`)**: Aplica a normalização padrão no input do aluno e compara contra as variações normalizadas do gabarito oficial.
@@ -111,37 +113,48 @@ export function normalizeText(text: string): string {
 ## 5. Como Executar e Trabalhar no Projeto
 
 ### 5.1. Instalação e Preparação
+
 As dependências do monorepo são instaladas a partir da raiz:
+
 ```bash
 npm install
 ```
-*Nota: Caso o Drizzle Kit reclame que a dependência `drizzle-orm` não foi encontrada devido a problemas de hoisting nos workspaces do npm, instale os pacotes de banco de dados diretamente na raiz (`npm install drizzle-orm drizzle-kit --save-dev`).*
+
+_Nota: Caso o Drizzle Kit reclame que a dependência `drizzle-orm` não foi encontrada devido a problemas de hoisting nos workspaces do npm, instale os pacotes de banco de dados diretamente na raiz (`npm install drizzle-orm drizzle-kit --save-dev`)._
 
 ### 5.2. Executando o Ambiente de Desenvolvimento
+
 Roda o frontend (Vite na porta `5173`) e o backend (Hono na porta `3000`) simultaneamente:
+
 ```bash
 npm run dev
 ```
 
 ### 5.3. Banco de Dados / Drizzle Commands
+
 Como o Drizzle está configurado com caminhos absolutos, sempre execute os comandos a partir da raiz:
-* Puxar alterações do schema TS para o arquivo SQLite:
+
+- Puxar alterações do schema TS para o arquivo SQLite:
   ```bash
   npx drizzle-kit push --config=backend/drizzle.config.ts
   ```
-* Visualizar o banco de dados no painel interativo do Drizzle Studio:
+- Visualizar o banco de dados no painel interativo do Drizzle Studio:
   ```bash
   npx drizzle-kit studio --config=backend/drizzle.config.ts
   ```
 
 ### 5.4. Build de Produção
+
 Compila o TypeScript do backend e empacota o frontend:
+
 ```bash
 npm run build
 ```
 
 ### 5.5. Rodando Testes de API
+
 Para rodar a verificação de sanidade das rotas, ligue o servidor de desenvolvimento em segundo plano e execute:
+
 ```bash
 chmod +x test-api.sh
 ./test-api.sh
@@ -152,36 +165,39 @@ chmod +x test-api.sh
 O projeto fornece um script central de gerenciamento no host ([manage.sh](file:///home/bgeneto/github/gabarito-web/manage.sh)) para unificar builds, migrações de banco e operações do Docker.
 
 #### Desenvolvimento (Docker com Hot-Reload)
-* **Iniciar**: Roda os containers de dev montando as pastas locais para atualização automática dos fontes:
+
+- **Iniciar**: Roda os containers de dev em segundo plano (-d) montando as pastas locais para atualização automática dos fontes:
   ```bash
   ./manage.sh dev-start
   ```
-* **Parar**: Derruba e limpa os containers de desenvolvimento:
+- **Parar**: Derruba e limpa os containers de desenvolvimento:
   ```bash
   ./manage.sh dev-stop
   ```
 
 #### Produção (Deploy Integrado)
-* **Iniciar**: Executa o build de produção do frontend (`dist/`), aplica as atualizações pendentes do banco SQLite e inicia o container da API de produção (`gabarito-api` na porta 3000) com persistência automática de dados no volume `gabaritoweb-db`:
+
+- **Iniciar**: Executa o build de produção do frontend (`dist/`), aplica as atualizações pendentes do banco SQLite e inicia o container da API de produção (`gabarito-api` na porta 3000) em segundo plano (-d) com persistência automática de dados no volume `gabaritoweb-db`:
   ```bash
   ./manage.sh prod-start
   ```
-  *Nota: Com esta abordagem, o servidor web externo (Caddy) deve servir diretamente a pasta `frontend/dist` no caminho `/srv/gabarito` e fazer proxy reverso da API.*
-* **Parar**: Derruba o container da API de produção:
+  _Nota: Com esta abordagem, o servidor web externo (Caddy) deve servir diretamente a pasta `frontend/dist` no caminho `/srv/gabarito` e fazer proxy reverso da API._
+- **Parar**: Derruba o container da API de produção:
   ```bash
   ./manage.sh prod-stop
   ```
 
 #### Outros Utilitários do Script
-* `./manage.sh db-push`: Sincroniza o schema com o SQLite.
-* `./manage.sh test`: Inicia o servidor temporariamente e roda os testes de integração do `test-api.sh`.
+
+- `./manage.sh format`: Formata recursivamente todo o código-fonte do repositório utilizando Prettier.
+- `./manage.sh db-push`: Sincroniza o schema com o SQLite.
+- `./manage.sh test`: Executa os testes de integração do `test-api.sh` (utilizando a instância ativa se disponível, ou subindo uma temporária automaticamente).
 
 ---
 
-
 ## 6. Diretrizes Importantes para Desenvolvimento Futuro
 
-* **Sem Bibliotecas de Roteamento Complexas**: O frontend utiliza um mini roteador reativo no próprio [App.tsx](file:///home/bgeneto/github/gabarito-web/frontend/src/App.tsx) que escuta eventos `popstate`. Mantenha essa abordagem para evitar inflar o bundle ou introduzir incompatibilidades de rotas no Vite.
-* **Segurança de Gabaritos**: Nunca modifique a rota pública `GET /api/exams/:public_code` para retornar as respostas corretas (`answer_config_json`). A correção e atribuição de pontos devem ocorrer estritamente no servidor (`POST /api/exams/:public_code/submissions`).
-* **Exposição de Notas**: O estudante só pode visualizar sua nota final e o detalhamento das questões no endpoint `/api/submissions/:submission_id` se a prova estiver com o status `'closed'`. Se estiver aberta, a nota deve retornar como `null`.
-* **Aparência e Design**: Mantenha o tema escuro moderno do Tailwind CSS v4, aproveitando o painel de glassmorphism (`glass-panel`) e paletas em tons de ardósia, ciano e azul profundo. Certifique-se de que todas as telas sejam otimizadas para toque e telas de celular (mobile-first).
+- **Sem Bibliotecas de Roteamento Complexas**: O frontend utiliza um mini roteador reativo no próprio [App.tsx](file:///home/bgeneto/github/gabarito-web/frontend/src/App.tsx) que escuta eventos `popstate`. Mantenha essa abordagem para evitar inflar o bundle ou introduzir incompatibilidades de rotas no Vite.
+- **Segurança de Gabaritos**: Nunca modifique a rota pública `GET /api/exams/:public_code` para retornar as respostas corretas (`answer_config_json`). A correção e atribuição de pontos devem ocorrer estritamente no servidor (`POST /api/exams/:public_code/submissions`).
+- **Exposição de Notas**: O estudante só pode visualizar sua nota final e o detalhamento das questões no endpoint `/api/submissions/:submission_id` se a prova estiver com o status `'closed'`. Se estiver aberta, a nota deve retornar como `null`.
+- **Aparência e Design**: Mantenha o tema escuro moderno do Tailwind CSS v4, aproveitando o painel de glassmorphism (`glass-panel`) e paletas em tons de ardósia, ciano e azul profundo. Certifique-se de que todas as telas sejam otimizadas para toque e telas de celular (mobile-first).

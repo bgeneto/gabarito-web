@@ -1,6 +1,6 @@
 # Software Design Document (SDD) - GabaritoWEB (MVP)
 
-Este documento especifica a arquitetura técnica, o modelo de dados, os fluxos de usuário, os contratos de API e as regras de correção do **GabaritoWEB**, um aplicativo web *mobile-first* para registro e autocorreção de gabaritos de provas.
+Este documento especifica a arquitetura técnica, o modelo de dados, os fluxos de usuário, os contratos de API e as regras de correção do **GabaritoWEB**, um aplicativo web _mobile-first_ para registro e autocorreção de gabaritos de provas.
 
 ---
 
@@ -27,56 +27,60 @@ erDiagram
 ```
 
 ### 2.1. Tabela `exams`
+
 Armazena as configurações e o status geral de cada prova gerada.
 
-| Campo | Tipo SQLite | Descrição |
-| :--- | :--- | :--- |
-| `id` | `TEXT` (PK) | UUID ou NanoID gerado pelo servidor. |
-| `title` | `TEXT` | Título da prova (ex: "Física Geral I - Prova 1"). |
-| `public_code` | `TEXT` | Código público único de acesso (ex: `GAB-2026-X8Y9`). |
-| `admin_code_hash` | `TEXT` | Hash SHA-256 do token administrativo do professor. |
-| `status` | `TEXT` | Estado da prova: `'open'` (aberta para respostas) ou `'closed'` (encerrada). |
-| `created_at` | `INTEGER` | Timestamp de criação (Epoch ms). |
-| `closed_at` | `INTEGER` | Timestamp de encerramento (Epoch ms, nulo se aberta). |
+| Campo             | Tipo SQLite | Descrição                                                                    |
+| :---------------- | :---------- | :--------------------------------------------------------------------------- |
+| `id`              | `TEXT` (PK) | UUID ou NanoID gerado pelo servidor.                                         |
+| `title`           | `TEXT`      | Título da prova (ex: "Física Geral I - Prova 1").                            |
+| `public_code`     | `TEXT`      | Código público único de acesso (ex: `GAB-2026-X8Y9`).                        |
+| `admin_code_hash` | `TEXT`      | Hash SHA-256 do token administrativo do professor.                           |
+| `status`          | `TEXT`      | Estado da prova: `'open'` (aberta para respostas) ou `'closed'` (encerrada). |
+| `created_at`      | `INTEGER`   | Timestamp de criação (Epoch ms).                                             |
+| `closed_at`       | `INTEGER`   | Timestamp de encerramento (Epoch ms, nulo se aberta).                        |
 
 ### 2.2. Tabela `exam_items`
+
 Representa as questões e subitens respondíveis da prova (itens-folha).
 
-| Campo | Tipo SQLite | Descrição |
-| :--- | :--- | :--- |
-| `id` | `TEXT` (PK) | UUID ou NanoID. |
-| `exam_id` | `TEXT` (FK) | Relacionado a `exams.id`. |
-| `question_number` | `INTEGER` | Número da questão (ex: `1`, `2`). |
-| `sub_label` | `TEXT` | Rótulo do subitem (ex: `"a"`, `"b"` ou `NULL` para item único). |
-| `points` | `REAL` | Pontuação atribuída ao item (ex: `1.5`). |
-| `answer_type` | `TEXT` | Tipo de correção: `'text_exact'`, `'choice'`, ou `'true_false'`. |
-| `answer_config_json` | `TEXT` | JSON contendo os parâmetros de resposta (gabarito aceito). |
-| `position` | `INTEGER` | Ordem de exibição do item na prova. |
+| Campo                | Tipo SQLite | Descrição                                                        |
+| :------------------- | :---------- | :--------------------------------------------------------------- |
+| `id`                 | `TEXT` (PK) | UUID ou NanoID.                                                  |
+| `exam_id`            | `TEXT` (FK) | Relacionado a `exams.id`.                                        |
+| `question_number`    | `INTEGER`   | Número da questão (ex: `1`, `2`).                                |
+| `sub_label`          | `TEXT`      | Rótulo do subitem (ex: `"a"`, `"b"` ou `NULL` para item único).  |
+| `points`             | `REAL`      | Pontuação atribuída ao item (ex: `1.5`).                         |
+| `answer_type`        | `TEXT`      | Tipo de correção: `'text_exact'`, `'choice'`, ou `'true_false'`. |
+| `answer_config_json` | `TEXT`      | JSON contendo os parâmetros de resposta (gabarito aceito).       |
+| `position`           | `INTEGER`   | Ordem de exibição do item na prova.                              |
 
 ### 2.3. Tabela `submissions`
+
 Armazena a submissão de respostas realizada por cada aluno.
 
-| Campo | Tipo SQLite | Descrição |
-| :--- | :--- | :--- |
-| `id` | `TEXT` (PK) | UUID ou NanoID. |
-| `exam_id` | `TEXT` (FK) | Relacionado a `exams.id`. |
-| `student_name` | `TEXT` | Nome do aluno informado na submissão. |
-| `student_identifier` | `TEXT` | Matrícula ou identificador único informado pelo aluno. |
-| `submitted_at` | `INTEGER` | Timestamp do momento do envio (Epoch ms). |
-| `total_score` | `REAL` | Nota final calculada do aluno na prova. |
+| Campo                | Tipo SQLite | Descrição                                              |
+| :------------------- | :---------- | :----------------------------------------------------- |
+| `id`                 | `TEXT` (PK) | UUID ou NanoID.                                        |
+| `exam_id`            | `TEXT` (FK) | Relacionado a `exams.id`.                              |
+| `student_name`       | `TEXT`      | Nome do aluno informado na submissão.                  |
+| `student_identifier` | `TEXT`      | Matrícula ou identificador único informado pelo aluno. |
+| `submitted_at`       | `INTEGER`   | Timestamp do momento do envio (Epoch ms).              |
+| `total_score`        | `REAL`      | Nota final calculada do aluno na prova.                |
 
 ### 2.4. Tabela `submission_answers`
+
 Armazena a resposta de um aluno para um item específico de uma prova.
 
-| Campo | Tipo SQLite | Descrição |
-| :--- | :--- | :--- |
-| `id` | `TEXT` (PK) | UUID ou NanoID. |
-| `submission_id` | `TEXT` (FK) | Relacionado a `submissions.id`. |
-| `item_id` | `TEXT` (FK) | Relacionado a `exam_items.id`. |
-| `raw_answer` | `TEXT` | Resposta textual original inserida pelo aluno. |
-| `normalized_answer` | `TEXT` | Resposta após o pipeline de normalização. |
-| `is_correct` | `INTEGER` (Bool) | Se a resposta foi considerada correta (`1` ou `0`). |
-| `score_awarded` | `REAL` | Nota atribuída ao item (igual a `points` ou `0.0`). |
+| Campo               | Tipo SQLite      | Descrição                                           |
+| :------------------ | :--------------- | :-------------------------------------------------- |
+| `id`                | `TEXT` (PK)      | UUID ou NanoID.                                     |
+| `submission_id`     | `TEXT` (FK)      | Relacionado a `submissions.id`.                     |
+| `item_id`           | `TEXT` (FK)      | Relacionado a `exam_items.id`.                      |
+| `raw_answer`        | `TEXT`           | Resposta textual original inserida pelo aluno.      |
+| `normalized_answer` | `TEXT`           | Resposta após o pipeline de normalização.           |
+| `is_correct`        | `INTEGER` (Bool) | Se a resposta foi considerada correta (`1` ou `0`). |
+| `score_awarded`     | `REAL`           | Nota atribuída ao item (igual a `points` ou `0.0`). |
 
 ---
 
@@ -130,9 +134,11 @@ sequenceDiagram
 Todas as requisições e respostas utilizam `Content-Type: application/json`.
 
 ### 4.1. Criar Prova (Professor)
+
 - **Método**: `POST`
 - **Rota**: `/api/exams`
 - **Corpo da Requisição**:
+
 ```json
 {
   "title": "Física Geral I - Segunda Prova",
@@ -167,7 +173,9 @@ Todas as requisições e respostas utilizam `Content-Type: application/json`.
   ]
 }
 ```
+
 - **Resposta (201 Created)**:
+
 ```json
 {
   "id": "exam_id_123",
@@ -178,9 +186,11 @@ Todas as requisições e respostas utilizam `Content-Type: application/json`.
 ```
 
 ### 4.2. Buscar Prova pelo Código Público (Aluno)
+
 - **Método**: `GET`
 - **Rota**: `/api/exams/:public_code`
 - **Resposta (200 OK)**:
+
 ```json
 {
   "id": "exam_id_123",
@@ -216,9 +226,11 @@ Todas as requisições e respostas utilizam `Content-Type: application/json`.
 ```
 
 ### 4.3. Enviar Respostas (Aluno)
+
 - **Método**: `POST`
 - **Rota**: `/api/exams/:public_code/submissions`
 - **Corpo da Requisição**:
+
 ```json
 {
   "student_name": "Maria Silva",
@@ -230,7 +242,9 @@ Todas as requisições e respostas utilizam `Content-Type: application/json`.
   }
 }
 ```
+
 - **Resposta (201 Created)**:
+
 ```json
 {
   "submission_id": "sub_9a8b7c6d5e",
@@ -239,9 +253,11 @@ Todas as requisições e respostas utilizam `Content-Type: application/json`.
 ```
 
 ### 4.4. Consultar Submissão (Aluno)
+
 - **Método**: `GET`
 - **Rota**: `/api/submissions/:submission_id`
 - **Resposta se Prova Aberta (200 OK)**:
+
 ```json
 {
   "id": "sub_9a8b7c6d5e",
@@ -254,7 +270,9 @@ Todas as requisições e respostas utilizam `Content-Type: application/json`.
   "message": "A nota e o gabarito estarão disponíveis assim que a prova for encerrada pelo professor."
 }
 ```
+
 - **Resposta se Prova Fechada (200 OK)**:
+
 ```json
 {
   "id": "sub_9a8b7c6d5e",
@@ -294,9 +312,11 @@ Todas as requisições e respostas utilizam `Content-Type: application/json`.
 ```
 
 ### 4.5. Consultar Painel da Prova (Professor)
+
 - **Método**: `GET`
 - **Rota**: `/api/admin/exams/:admin_token`
 - **Resposta (200 OK)**:
+
 ```json
 {
   "id": "exam_id_123",
@@ -340,9 +360,11 @@ Todas as requisições e respostas utilizam `Content-Type: application/json`.
 ```
 
 ### 4.6. Encerrar Prova (Professor)
+
 - **Método**: `POST`
 - **Rota**: `/api/admin/exams/:admin_token/close`
 - **Resposta (200 OK)**:
+
 ```json
 {
   "status": "closed",
@@ -358,6 +380,7 @@ Todas as requisições e respostas utilizam `Content-Type: application/json`.
 Todas as strings fornecidas pelos alunos passam por um pipeline de limpeza antes da comparação.
 
 ### 5.1. Pipeline de Normalização Comum (Texto Geral)
+
 1. **Trim**: Remove espaços no início e final.
 2. **Unicode NFD**: Decompõe acentos e caracteres especiais (ex: `é` torna-se `e` + `´`).
 3. **Remoção de Diacríticos**: Filtra acentos utilizando regex: `replace(/[\u0300-\u036f]/g, "")`.
@@ -368,10 +391,12 @@ Todas as strings fornecidas pelos alunos passam por um pipeline de limpeza antes
 ### 5.2. Regras de Validação Específicas por Tipo
 
 #### A. Múltipla Escolha (`choice`)
+
 - **Regra**: O valor deve corresponder exatamente à letra selecionada.
 - **Normalização**: Além da normalização comum, retira qualquer caractere que não seja uma letra e compara. (Normalmente o frontend envia apenas a letra exata do botão selecionado).
 
 #### B. Verdadeiro ou Falso (`true_false`)
+
 - **Regra**: Converte as variações linguísticas de verdadeiro ou falso para `V` ou `F`.
 - **Mapeamento de Verdadeiro (`V`)**:
   - `"V"`, `"VERDADEIRO"`, `"VERDADE"`, `"SIM"`, `"S"`, `"TRUE"`, `"T"`
@@ -380,6 +405,7 @@ Todas as strings fornecidas pelos alunos passam por um pipeline de limpeza antes
 - **Comparação**: Se a resposta normalizada for classificada em uma dessas opções, ela será comparada com o gabarito. Se não for reconhecida, é computada como errada.
 
 #### C. Texto Exato (`text_exact`)
+
 - **Regra**: A resposta é correta se for idêntica (após normalização comum) a **qualquer** uma das variantes aceitáveis cadastradas no gabarito pelo professor.
 - **Exemplo**:
   - Gabarito cadastrado: `["o mesmo", "a mesma", "igual"]`
