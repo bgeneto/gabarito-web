@@ -71,11 +71,11 @@ case "$1" in
 
     echo -e "\nExecutando testes de integração da API..."
     chmod +x test-api.sh
-    
+
     # Tenta conectar na porta 3000. Se falhar por 'Connection refused' (exit code 7), a API está offline.
     curl -s --connect-timeout 2 http://localhost:3000/ > /dev/null 2>&1
     CURL_STATUS=$?
-    
+
     if [ $CURL_STATUS -ne 7 ]; then
       echo "API ativa detectada na porta 3000. Executando testes diretamente..."
       ./test-api.sh

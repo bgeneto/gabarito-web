@@ -1,18 +1,18 @@
-import { useState, useEffect } from "react";
-import { navigateTo } from "../App";
 import {
-  ShieldCheck,
-  Calendar,
-  Lock,
-  Trophy,
-  Download,
-  Users,
-  FileSpreadsheet,
-  AlertTriangle,
-  ChevronRight,
-  Clipboard,
-  Check,
+    AlertTriangle,
+    Calendar,
+    Check,
+    ChevronRight,
+    Clipboard,
+    Download,
+    FileSpreadsheet,
+    Lock,
+    ShieldCheck,
+    Trophy,
+    Users,
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { navigateTo } from "../App";
 import { useModal } from "../components/ModalProvider";
 
 interface Submission {

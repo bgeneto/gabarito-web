@@ -1,24 +1,24 @@
-import { Hono } from "hono";
-import { cors } from "hono/cors";
-import { bodyLimit } from "hono/body-limit";
 import { serve } from "@hono/node-server";
-import { eq, and } from "drizzle-orm";
 import crypto from "crypto";
+import { and, eq } from "drizzle-orm";
+import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
+import { cors } from "hono/cors";
 
 import { db } from "./db/index.js";
 import {
-  exams,
-  examItems,
-  submissions,
-  submissionAnswers,
+    examItems,
+    exams,
+    submissionAnswers,
+    submissions,
 } from "./db/schema.js";
-import { checkAnswer } from "./utils/normalizer.js";
 import { rateLimiter } from "./middleware/rateLimiter.js";
 import {
-  generatePublicCode,
-  generateAdminToken,
-  generateSubmissionId,
+    generateAdminToken,
+    generatePublicCode,
+    generateSubmissionId,
 } from "./utils/generator.js";
+import { checkAnswer } from "./utils/normalizer.js";
 
 const app = new Hono();
 
