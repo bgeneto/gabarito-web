@@ -28,34 +28,37 @@ Professor encerra prova →  Aluno consulta nota detalhada
 
 ## 🚀 Funcionalidades
 
-| Funcionalidade | Descrição |
-|---|---|
-| 📋 **Criação de provas** | Múltiplas questões com subitens, pontuações individuais e tipos variados |
-| 🔢 **Tipos de questão** | Múltipla escolha, Verdadeiro/Falso e Texto exato |
-| 📱 **QR Code automático** | Gerado na criação da prova para compartilhamento rápido |
-| ✅ **Autocorreção** | Correção instantânea no servidor com normalização de texto (acentos, maiúsculas, espaços) |
-| 🔒 **Sem gabarito exposto** | O gabarito nunca trafega para o cliente; a correção ocorre 100% no servidor |
-| 📊 **Dashboard em tempo real** | Painel do professor atualizado automaticamente com novas submissões via polling |
-| 🚫 **Anti-duplicidade** | Impede que um mesmo aluno (por matrícula) submeta mais de uma vez |
-| 📤 **Import/Export de gabarito** | Exporta e importa configurações de prova em formato JSON |
-| 🌙 **Tema escuro** | Interface moderna com glassmorphism, tema slate/ciano e suporte _mobile-first_ |
-| 🐳 **Docker pronto** | Ambientes de desenvolvimento e produção via Docker Compose |
+| Funcionalidade                   | Descrição                                                                                 |
+| -------------------------------- | ----------------------------------------------------------------------------------------- |
+| 📋 **Criação de provas**         | Múltiplas questões com subitens, pontuações individuais e tipos variados                  |
+| 🔢 **Tipos de questão**          | Múltipla escolha, Verdadeiro/Falso e Texto exato                                          |
+| 📱 **QR Code automático**        | Gerado na criação da prova para compartilhamento rápido                                   |
+| ✅ **Autocorreção**              | Correção instantânea no servidor com normalização de texto (acentos, maiúsculas, espaços) |
+| 🔒 **Sem gabarito exposto**      | O gabarito nunca trafega para o cliente; a correção ocorre 100% no servidor               |
+| 📊 **Dashboard em tempo real**   | Painel do professor atualizado automaticamente com novas submissões via polling           |
+| 🚫 **Anti-duplicidade**          | Impede que um mesmo aluno (por matrícula) submeta mais de uma vez                         |
+| 📤 **Import/Export de gabarito** | Exporta e importa configurações de prova em formato JSON                                  |
+| 🌙 **Tema escuro**               | Interface moderna com glassmorphism, tema slate/ciano e suporte _mobile-first_            |
+| 🐳 **Docker pronto**             | Ambientes de desenvolvimento e produção via Docker Compose                                |
 
 ---
 
 ## 🛠️ Stack Tecnológica
 
 ### Frontend
+
 - **[React 19](https://react.dev)** + **[TypeScript](https://www.typescriptlang.org)** — SPA com roteador reativo próprio (sem biblioteca externa)
 - **[Vite](https://vitejs.dev)** — Build tool e servidor de desenvolvimento
 - **[Tailwind CSS v4](https://tailwindcss.com)** — Estilização _utility-first_ com tema escuro personalizado
 
 ### Backend
+
 - **[Node.js](https://nodejs.org)** + **[Hono](https://hono.dev)** — API REST leve e performática
 - **[SQLite](https://sqlite.org)** (modo WAL) — Banco de dados embarcado e portável
 - **[Drizzle ORM](https://orm.drizzle.team)** + **Drizzle Kit** — ORM type-safe e migrações
 
 ### Infraestrutura
+
 - **[Docker](https://docker.com)** + **Docker Compose** — Containers para dev e produção
 - **[Caddy](https://caddyserver.com)** _(recomendado)_ — Servidor web para produção com HTTPS automático
 
@@ -134,6 +137,7 @@ npm run dev
 ```
 
 Isso inicia:
+
 - **Frontend (Vite):** http://localhost:5173
 - **Backend (Hono):** http://localhost:3000
 
@@ -164,16 +168,16 @@ Isso inicia:
 
 ## 🧰 Script `manage.sh` — Referência Completa
 
-| Comando | Descrição |
-|---|---|
-| `./manage.sh dev-start` | Sobe os containers de desenvolvimento via Docker Compose |
-| `./manage.sh dev-stop` | Para e remove os containers de desenvolvimento |
+| Comando                  | Descrição                                                      |
+| ------------------------ | -------------------------------------------------------------- |
+| `./manage.sh dev-start`  | Sobe os containers de desenvolvimento via Docker Compose       |
+| `./manage.sh dev-stop`   | Para e remove os containers de desenvolvimento                 |
 | `./manage.sh prod-start` | Build do frontend + migração do banco + inicia API de produção |
-| `./manage.sh prod-stop` | Para o container da API de produção |
-| `./manage.sh build` | Build completo do monorepo (backend + frontend) localmente |
-| `./manage.sh db-push` | Sincroniza o schema TypeScript com o banco SQLite |
-| `./manage.sh format` | Formata o código-fonte com Prettier |
-| `./manage.sh test` | Executa testes unitários e testes de integração da API |
+| `./manage.sh prod-stop`  | Para o container da API de produção                            |
+| `./manage.sh build`      | Build completo do monorepo (backend + frontend) localmente     |
+| `./manage.sh db-push`    | Sincroniza o schema TypeScript com o banco SQLite              |
+| `./manage.sh format`     | Formata o código-fonte com Prettier                            |
+| `./manage.sh test`       | Executa testes unitários e testes de integração da API         |
 
 ---
 
@@ -229,10 +233,10 @@ erDiagram
 
 ### Tipos de Questão (`answer_type`)
 
-| Tipo | Descrição | Exemplo de gabarito |
-|---|---|---|
-| `choice` | Múltipla escolha (letra) | `{ "accepted": ["A"] }` |
-| `true_false` | Verdadeiro ou Falso | `{ "accepted": ["V"] }` |
+| Tipo         | Descrição                   | Exemplo de gabarito                 |
+| ------------ | --------------------------- | ----------------------------------- |
+| `choice`     | Múltipla escolha (letra)    | `{ "accepted": ["A"] }`             |
+| `true_false` | Verdadeiro ou Falso         | `{ "accepted": ["V"] }`             |
 | `text_exact` | Texto exato (com variações) | `{ "accepted": ["MASSA", "PESO"] }` |
 
 ---
@@ -243,19 +247,19 @@ Todas as rotas utilizam `Content-Type: application/json`.
 
 ### Professor
 
-| Método | Rota | Descrição |
-|---|---|---|
-| `POST` | `/api/exams` | Cria uma nova prova |
-| `GET` | `/api/admin/exams/:admin_token` | Consulta painel da prova (com gabarito e submissões) |
-| `POST` | `/api/admin/exams/:admin_token/close` | Encerra a prova e libera notas |
+| Método | Rota                                  | Descrição                                            |
+| ------ | ------------------------------------- | ---------------------------------------------------- |
+| `POST` | `/api/exams`                          | Cria uma nova prova                                  |
+| `GET`  | `/api/admin/exams/:admin_token`       | Consulta painel da prova (com gabarito e submissões) |
+| `POST` | `/api/admin/exams/:admin_token/close` | Encerra a prova e libera notas                       |
 
 ### Aluno
 
-| Método | Rota | Descrição |
-|---|---|---|
-| `GET` | `/api/exams/:public_code` | Busca a prova pelo código público (sem gabarito) |
-| `POST` | `/api/exams/:public_code/submissions` | Envia as respostas do aluno |
-| `GET` | `/api/submissions/:submission_id` | Consulta nota e detalhamento da correção |
+| Método | Rota                                  | Descrição                                        |
+| ------ | ------------------------------------- | ------------------------------------------------ |
+| `GET`  | `/api/exams/:public_code`             | Busca a prova pelo código público (sem gabarito) |
+| `POST` | `/api/exams/:public_code/submissions` | Envia as respostas do aluno                      |
+| `GET`  | `/api/submissions/:submission_id`     | Consulta nota e detalhamento da correção         |
 
 ### Exemplo: Criar Prova
 
@@ -284,6 +288,7 @@ curl -X POST http://localhost:3000/api/exams \
 ```
 
 **Resposta `201 Created`:**
+
 ```json
 {
   "id": "abc123",
@@ -315,15 +320,15 @@ O script detecta automaticamente se a API está no ar e, caso não esteja, sobe 
 
 ## 🔐 Segurança
 
-| Mecanismo | Detalhes |
-|---|---|
+| Mecanismo                | Detalhes                                                                           |
+| ------------------------ | ---------------------------------------------------------------------------------- |
 | **Token administrativo** | Formato `adm_XXXXXX` (6 chars base36). Apenas o hash SHA-256 é armazenado no banco |
-| **Código público** | Formato `GYY-XXXXXX` (ano + 6 chars base36). Não expõe o gabarito |
-| **Gabarito oculto** | A rota pública `/api/exams/:public_code` nunca retorna `answer_config_json` |
-| **Notas ocultas** | Enquanto a prova estiver aberta, `total_score` retorna `null` para o aluno |
-| **Rate limiting** | Máximo de 5 submissões por IP por minuto na rota de envio de respostas |
-| **Anti-duplicidade** | Matrícula duplicada na mesma prova retorna `409 Conflict` |
-| **Comprovante compacto** | ID de submissão com 6 chars base36 com detecção de colisão e retry |
+| **Código público**       | Formato `GYY-XXXXXX` (ano + 6 chars base36). Não expõe o gabarito                  |
+| **Gabarito oculto**      | A rota pública `/api/exams/:public_code` nunca retorna `answer_config_json`        |
+| **Notas ocultas**        | Enquanto a prova estiver aberta, `total_score` retorna `null` para o aluno         |
+| **Rate limiting**        | Máximo de 5 submissões por IP por minuto na rota de envio de respostas             |
+| **Anti-duplicidade**     | Matrícula duplicada na mesma prova retorna `409 Conflict`                          |
+| **Comprovante compacto** | ID de submissão com 6 chars base36 com detecção de colisão e retry                 |
 
 ---
 
@@ -340,12 +345,13 @@ Para aceitar variações textuais sem exigir configuração complexa, o backend 
 
 **Mapeamentos Verdadeiro/Falso:**
 
-| Entrada do aluno | Interpretado como |
-|---|---|
-| `V`, `VERDADEIRO`, `VERDADE`, `SIM`, `S`, `TRUE`, `T` | `V` |
-| `F`, `FALSO`, `NAO`, `N`, `FALSE` | `F` |
+| Entrada do aluno                                      | Interpretado como |
+| ----------------------------------------------------- | ----------------- |
+| `V`, `VERDADEIRO`, `VERDADE`, `SIM`, `S`, `TRUE`, `T` | `V`               |
+| `F`, `FALSO`, `NAO`, `N`, `FALSE`                     | `F`               |
 
 **Exemplo `text_exact`:**
+
 ```
 Gabarito:  ["o mesmo", "a mesma", "igual"]
 Resposta:  "  À mesma. "
