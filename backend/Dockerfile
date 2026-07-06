@@ -5,6 +5,7 @@ RUN mkdir -p /app/data && chmod 777 /app/data
 COPY package.json tsconfig.json drizzle.config.ts ./
 RUN npm install
 
+COPY drizzle ./drizzle
 COPY src ./src
 RUN npm run build
 
