@@ -23,7 +23,9 @@ function show_help() {
 case "$1" in
   dev-start)
     echo "Iniciando Docker Compose (Desenvolvimento em segundo plano)..."
-    docker compose -f docker-compose.dev.yml up --build -d
+    # --renew-anon-volumes: repopulate node_modules from the image so ownership
+    # matches USER node (fixes Vite EACCES on node_modules/.vite after fresh clone).
+    docker compose -f docker-compose.dev.yml up --build -d --renew-anon-volumes
     echo "====================================="
     echo "Ambiente rodando!"
     echo "Vite Frontend: http://localhost:5173"
