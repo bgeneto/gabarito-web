@@ -9,6 +9,7 @@
     "test:unit": "tsx --test src/**/*.test.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:migrate:run": "node dist/db/migrate.js",
     "db:push": "drizzle-kit push"
   },
   "dependencies": {

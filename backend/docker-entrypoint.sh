@@ -8,8 +8,19 @@ log() {
   printf '[gabarito-api] %s\n' "$1"
 }
 
-if [ -d "$DATA_DIR" ]; then
-  chown -R node:node "$DATA_DIR" 2>/dev/null || true
+mkdir -p "$DATA_DIR"
+
+if chown -R node:node "$DATA_DIR" 2>/dev/null; then
+  log "Data directory ownership set for node user (${DATA_DIR})."
+else
+  log "chown unavailable; using permissive mode on ${DATA_DIR}."
+  chmod -R 777 "$DATA_DIR"
+fi
+
+if ! gosu node sh -c "touch '${DATA_DIR}/.write-test' && rm '${DATA_DIR}/.write-test'"; then
+  log "ERROR: ${DATA_DIR} is not writable by the node user."
+  ls -lan "$DATA_DIR" || true
+  exit 1
 fi
 
 is_valid_sqlite() {
@@ -28,14 +39,9 @@ fi
 cd /app
 
 log "Applying database migrations..."
-if ! gosu node npx drizzle-kit migrate; then
-  log "ERROR: drizzle-kit migrate failed."
-  if [ -f "$DB_PATH" ]; then
-    log "Database file exists at ${DB_PATH}."
-    log "If this is a fresh deploy, reset the volume:"
-    log "  docker compose down && docker volume rm gabaritoweb-db && ./manage.sh prod-start"
-    log "If you have data, inspect/backup the file before resetting."
-  fi
+if ! gosu node node dist/db/migrate.js; then
+  log "Migration failed. Directory listing:"
+  ls -lan "$DATA_DIR" || true
   exit 1
 fi
 

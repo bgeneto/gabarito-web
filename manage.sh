@@ -24,6 +24,7 @@ function show_help() {
 case "$1" in
   dev-start)
     echo "Iniciando Docker Compose (Desenvolvimento em segundo plano)..."
+    mkdir -p data/dev
     # --renew-anon-volumes: repopulate node_modules from the image so ownership
     # matches USER node (fixes Vite EACCES on node_modules/.vite after fresh clone).
     docker compose -f docker-compose.dev.yml up --build -d --renew-anon-volumes
@@ -39,7 +40,7 @@ case "$1" in
   prod-start)
     echo "=== INICIANDO DEPLOY DE PRODUÇÃO ==="
     echo "1. Preparando diretórios locais..."
-    mkdir -p frontend/dist
+    mkdir -p frontend/dist data/prod
     echo "2. Iniciando build do frontend, migrações do banco e API via Docker Compose..."
     docker compose up --build -d
     echo "====================================="
@@ -53,14 +54,14 @@ case "$1" in
     ;;
   prod-reset-db)
     echo "=== RESET DO BANCO DE PRODUÇÃO ==="
-    echo "Isso remove o volume Docker gabaritoweb-db e todos os dados da API."
+    echo "Isso apaga os arquivos em ./data/prod (banco SQLite de produção)."
     echo "Use apenas em deploy inicial ou quando o banco estiver corrompido."
     echo ""
     read -r -p "Tem certeza? Digite Y para confirmar: " confirm
     case "$confirm" in
       Y|y)
         docker compose down
-        docker volume rm gabaritoweb-db 2>/dev/null || true
+        rm -f ./data/prod/gabarito.db ./data/prod/gabarito.db-* ./data/prod/*.invalid.*
         ./manage.sh prod-start
         ;;
       *)
@@ -75,7 +76,7 @@ case "$1" in
     ;;
   db-push)
     echo "Puxando schema Drizzle..."
-    npx drizzle-kit push --config=backend/drizzle.config.ts
+    DATABASE_PATH=./data/dev/gabarito.db npx drizzle-kit push --config=backend/drizzle.config.ts
     ;;
   build)
     echo "Executando build do monorepo..."

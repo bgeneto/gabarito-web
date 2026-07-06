@@ -12,7 +12,11 @@ lerna-debug.log*
 /backend/dist/
 *.tsbuildinfo
 
-# SQLite Database (Arquivos locais de banco de dados)
+# SQLite Database (Arquivos locais em ./data)
+data/dev/*
+data/prod/*
+!data/dev/.gitkeep
+!data/prod/.gitkeep
 /backend/gabarito.db
 /backend/gabarito.db-shm
 /backend/gabarito.db-wal

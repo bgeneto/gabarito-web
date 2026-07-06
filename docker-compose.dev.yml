@@ -10,9 +10,10 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules
+      - ./data/dev:/app/data
     environment:
       - NODE_ENV=development
-      - DATABASE_PATH=/app/gabarito-dev.db
+      - DATABASE_PATH=/app/data/gabarito.db
 
   frontend:
     container_name: gabaritoweb-frontend-dev
