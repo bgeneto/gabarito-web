@@ -21,7 +21,8 @@ services:
       - ./data/prod:/app/data:z
     restart: always
     depends_on:
-      - gabarito-frontend-build
+      gabarito-frontend-build:
+        condition: service_completed_successfully
     networks:
       - proxy
 

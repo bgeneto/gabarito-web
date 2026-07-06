@@ -41,8 +41,15 @@ case "$1" in
     echo "=== INICIANDO DEPLOY DE PRODUÇÃO ==="
     echo "1. Preparando diretórios locais..."
     mkdir -p frontend/dist data/prod
-    echo "2. Iniciando build do frontend, migrações do banco e API via Docker Compose..."
-    docker compose up --build -d
+    echo "2. Gerando build estático do frontend..."
+    docker compose build gabarito-frontend-build
+    docker compose run --rm gabarito-frontend-build
+    if [ ! -f frontend/dist/index.html ]; then
+      echo "Erro: frontend/dist/index.html não foi gerado. Verifique os logs do build acima."
+      exit 1
+    fi
+    echo "3. Iniciando migrações do banco e API via Docker Compose..."
+    docker compose up --build -d gabarito-api
     echo "====================================="
     echo "Deploy de produção realizado com sucesso via Docker!"
     echo "O frontend foi copiado para frontend/dist e deve ser servido pelo Caddy em /srv/gabarito."
