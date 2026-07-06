@@ -1,0 +1,26 @@
+# Tarefas de Implementação - GabaritoWEB (MVP)
+
+- `[/]` Componente 1: Inicialização do Repositório
+  - `[x]` Criar arquivo `package.json` na raiz
+  - `[x]` Inicializar subpasta `backend/` com `package.json`, `tsconfig.json` e dependências
+  - `[ ]` Inicializar subpasta `frontend/` com Vite, React, Tailwind CSS v4, Zod e typescript
+- `[x]` Componente 2: Banco de Dados (`backend`)
+  - `[x]` Definir schema Drizzle em `backend/src/db/schema.ts`
+  - `[x]` Configurar `backend/src/db/index.ts` e `backend/drizzle.config.ts`
+  - `[x]` Executar migrações iniciais do Drizzle para gerar o banco SQLite
+- `[x]` Componente 3: Lógica do Backend Hono
+  - `[x]` Implementar pipeline de normalização em `backend/src/utils/normalizer.ts`
+  - `[x]` Implementar middleware de rate limit em `backend/src/middleware/rateLimiter.ts`
+  - `[x]` Implementar rotas da API em `backend/src/index.ts`
+  - `[x]` Criar e rodar o script de teste de integração `test-api.sh`
+- `[x]` Componente 4: Frontend React + Tailwind v4
+  - `[x]` Configurar Tailwind CSS v4 em `frontend/` e `index.css`
+  - `[x]` Implementar roteamento baseado em estados no `App.tsx`
+  - `[x]` Desenvolver tela inicial (`Home.tsx`)
+  - `[x]` Desenvolver tela de criação de prova pelo professor (`TeacherCreate.tsx`)
+  - `[x]` Desenvolver painel de visualização de submissões do professor (`TeacherDashboard.tsx`)
+  - `[x]` Desenvolver tela de resposta do aluno (`StudentExam.tsx`)
+  - `[x]` Desenvolver tela de visualização do resultado do aluno (`StudentResult.tsx`)
+- `[x]` Verificação Final
+  - `[x]` Validar build completo do frontend e backend
+  - `[x]` Executar verificação visual via subagente do navegador (CDP Local indisponível, verificado via API/Build)
