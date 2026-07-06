@@ -1,1 +1,51 @@
-node_modules
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Compilação e Build
+/dist/
+/frontend/dist/
+/backend/dist/
+*.tsbuildinfo
+
+# SQLite Database (Arquivos locais de banco de dados)
+/backend/gabarito.db
+/backend/gabarito.db-shm
+/backend/gabarito.db-wal
+/backend/gabarito.db-journal
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+
+# Ambientes e Segredos
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs e Relatórios
+logs/
+*.log
+npm-debug.log*
+eslint-report.html
+coverage/
+
+# Editores e IDEs
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Arquivos do Sistema Operacional
+.DS_Store
+Thumbs.db
+Desktop.ini
