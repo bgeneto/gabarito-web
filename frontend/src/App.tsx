@@ -4,6 +4,7 @@ import TeacherCreate from "./pages/TeacherCreate";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import StudentExam from "./pages/StudentExam";
 import StudentResult from "./pages/StudentResult";
+import { ModalProvider } from "./components/ModalProvider";
 
 export type RoutePath =
   | { type: "home" }
@@ -68,42 +69,44 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 bg-gradient-radial text-slate-100 flex flex-col">
-      {/* Header Fixo */}
-      <header className="border-b border-slate-900 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div
-            onClick={() => navigateTo("/")}
-            className="flex items-center gap-2 cursor-pointer select-none group"
-          >
-            <span className="text-2xl group-hover:scale-110 transition-transform">
-              📝
-            </span>
-            <span className="font-extrabold text-xl bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-              Gabarito<span className="text-slate-100">WEB</span>
-            </span>
+    <ModalProvider>
+      <div className="min-h-screen bg-slate-950 bg-gradient-radial text-slate-100 flex flex-col">
+        {/* Header Fixo */}
+        <header className="border-b border-slate-900 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
+          <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div
+              onClick={() => navigateTo("/")}
+              className="flex items-center gap-2 cursor-pointer select-none group"
+            >
+              <span className="text-2xl group-hover:scale-110 transition-transform">
+                📝
+              </span>
+              <span className="font-extrabold text-xl bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+                Gabarito<span className="text-slate-100">WEB</span>
+              </span>
+            </div>
+            <div className="flex items-center gap-4 text-xs font-semibold text-slate-400">
+              <span className="px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800">
+                MVP v1.0
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-4 text-xs font-semibold text-slate-400">
-            <span className="px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800">
-              MVP v1.0
-            </span>
-          </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Main Content */}
-      <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-8 flex flex-col justify-start">
-        {renderContent()}
-      </main>
+        {/* Main Content */}
+        <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-8 flex flex-col justify-start">
+          {renderContent()}
+        </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-900 py-6 text-center text-xs text-slate-600">
-        <p>
-          © 2026 GabaritoWEB. Desenvolvido por bgeneto para simplificar
-          correções.
-        </p>
-      </footer>
-    </div>
+        {/* Footer */}
+        <footer className="border-t border-slate-900 py-6 text-center text-xs text-slate-600">
+          <p>
+            © 2026 GabaritoWEB. Desenvolvido por bgeneto para simplificar
+            correções.
+          </p>
+        </footer>
+      </div>
+    </ModalProvider>
   );
 }
 

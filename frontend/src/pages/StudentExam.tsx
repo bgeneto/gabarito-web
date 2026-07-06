@@ -9,6 +9,7 @@ import {
   Copy,
   Check,
 } from "lucide-react";
+import { useModal } from "../components/ModalProvider";
 
 interface ExamItem {
   id: string;
@@ -27,6 +28,7 @@ interface ExamPublicData {
 }
 
 export default function StudentExam({ publicCode }: { publicCode: string }) {
+  const { confirm } = useModal();
   const [exam, setExam] = useState<ExamPublicData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -88,19 +90,29 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
       (item) => !answers[item.id] || !answers[item.id].trim(),
     ).length;
     if (unansweredCount && unansweredCount > 0) {
-      if (
-        !window.confirm(
-          `Você deixou ${unansweredCount} questão(ões) em branco. Deseja enviar assim mesmo?`,
-        )
-      ) {
+      const hasConfirmed = await confirm(
+        `Você deixou ${unansweredCount} questão(ões) em branco. Deseja enviar assim mesmo?`,
+        {
+          title: "Questões em Branco",
+          severity: "warning",
+          confirmText: "Enviar assim mesmo",
+          cancelText: "Voltar e responder",
+        },
+      );
+      if (!hasConfirmed) {
         return;
       }
     } else {
-      if (
-        !window.confirm(
-          "Tem certeza que deseja enviar suas respostas? O reenvio está bloqueado e você não poderá fazer edições.",
-        )
-      ) {
+      const hasConfirmed = await confirm(
+        "Tem certeza que deseja enviar suas respostas? O reenvio está bloqueado e você não poderá fazer edições.",
+        {
+          title: "Enviar Respostas",
+          severity: "info",
+          confirmText: "Sim, enviar",
+          cancelText: "Cancelar",
+        },
+      );
+      if (!hasConfirmed) {
         return;
       }
     }

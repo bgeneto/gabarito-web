@@ -13,6 +13,7 @@ import {
   Clipboard,
   Check,
 } from "lucide-react";
+import { useModal } from "../components/ModalProvider";
 
 interface Submission {
   id: string;
@@ -49,6 +50,7 @@ export default function TeacherDashboard({
 }: {
   adminToken: string;
 }) {
+  const { alert, confirm } = useModal();
   const [data, setData] = useState<ExamData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -76,11 +78,16 @@ export default function TeacherDashboard({
 
   const handleCloseExam = async () => {
     if (!data) return;
-    if (
-      !window.confirm(
-        "Tem certeza que deseja encerrar a prova? Uma vez encerrada, novos envios de alunos serão bloqueados e os resultados individuais estarão liberados.",
-      )
-    ) {
+    const hasConfirmed = await confirm(
+      "Tem certeza que deseja encerrar a prova? Uma vez encerrada, novos envios de alunos serão bloqueados e os resultados individuais estarão liberados.",
+      {
+        title: "Encerrar Prova",
+        severity: "danger",
+        confirmText: "Encerrar",
+        cancelText: "Cancelar",
+      },
+    );
+    if (!hasConfirmed) {
       return;
     }
 
@@ -101,7 +108,10 @@ export default function TeacherDashboard({
         closed_at: resData.closed_at,
       });
     } catch (err: any) {
-      alert(err.message || "Houve um erro ao encerrar a prova.");
+      await alert(err.message || "Houve um erro ao encerrar a prova.", {
+        title: "Erro ao Encerrar Prova",
+        severity: "danger",
+      });
     } finally {
       setCloseLoading(false);
     }

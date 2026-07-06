@@ -9,28 +9,28 @@
  */
 export function normalizeText(text) {
     if (!text)
-        return '';
+        return "";
     return text
         .trim()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '') // remove acentos
-        .replace(/Ç/g, 'C')
-        .replace(/ç/g, 'c')
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // remove acentos
+        .replace(/Ç/g, "C")
+        .replace(/ç/g, "c")
         .toUpperCase()
-        .replace(/\s+/g, ' '); // colapsa múltiplos espaços
+        .replace(/\s+/g, " "); // colapsa múltiplos espaços
 }
 /**
  * Normaliza e classifica respostas de Verdadeiro ou Falso (V/F)
  */
 export function normalizeTrueFalse(text) {
     const norm = normalizeText(text);
-    const trueValues = ['V', 'VERDADEIRO', 'VERDADE', 'SIM', 'S', 'TRUE', 'T'];
-    const falseValues = ['F', 'FALSO', 'FALSE', 'FA', 'NAO', 'N'];
+    const trueValues = ["V", "VERDADEIRO", "VERDADE", "SIM", "S", "TRUE", "T"];
+    const falseValues = ["F", "FALSO", "FALSE", "FA", "NAO", "N"];
     if (trueValues.includes(norm)) {
-        return 'V';
+        return "V";
     }
     if (falseValues.includes(norm)) {
-        return 'F';
+        return "F";
     }
     return null; // Caso não seja reconhecido
 }
@@ -40,7 +40,7 @@ export function normalizeTrueFalse(text) {
 export function normalizeChoice(text) {
     const norm = normalizeText(text);
     // Remove tudo que não for letra (A-Z)
-    return norm.replace(/[^A-Z]/g, '');
+    return norm.replace(/[^A-Z]/g, "");
 }
 /**
  * Compara a resposta do aluno com o gabarito baseado no tipo
@@ -54,25 +54,27 @@ export function checkAnswer(rawAnswer, answerType, answerConfigJson) {
         config = { accepted: [] };
     }
     const acceptedList = config.accepted || [];
-    if (answerType === 'choice') {
+    if (answerType === "choice") {
         const studentNorm = normalizeChoice(rawAnswer);
-        const normalizedAccepted = acceptedList.map(v => normalizeChoice(v));
-        const isCorrect = normalizedAccepted.includes(studentNorm) && studentNorm !== '';
+        const normalizedAccepted = acceptedList.map((v) => normalizeChoice(v));
+        const isCorrect = normalizedAccepted.includes(studentNorm) && studentNorm !== "";
         return { isCorrect, normalizedAnswer: studentNorm };
     }
-    if (answerType === 'true_false') {
+    if (answerType === "true_false") {
         const studentTF = normalizeTrueFalse(rawAnswer);
         if (!studentTF) {
             return { isCorrect: false, normalizedAnswer: normalizeText(rawAnswer) };
         }
-        const normalizedAccepted = acceptedList.map(v => normalizeTrueFalse(v)).filter(Boolean);
+        const normalizedAccepted = acceptedList
+            .map((v) => normalizeTrueFalse(v))
+            .filter(Boolean);
         const isCorrect = normalizedAccepted.includes(studentTF);
         return { isCorrect, normalizedAnswer: studentTF };
     }
-    if (answerType === 'text_exact') {
+    if (answerType === "text_exact") {
         const studentNorm = normalizeText(rawAnswer);
-        const normalizedAccepted = acceptedList.map(v => normalizeText(v));
-        const isCorrect = normalizedAccepted.includes(studentNorm) && studentNorm !== '';
+        const normalizedAccepted = acceptedList.map((v) => normalizeText(v));
+        const isCorrect = normalizedAccepted.includes(studentNorm) && studentNorm !== "";
         return { isCorrect, normalizedAnswer: studentNorm };
     }
     return { isCorrect: false, normalizedAnswer: rawAnswer };
