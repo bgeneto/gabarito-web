@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { navigateTo } from "../App";
 import {
   ClipboardCheck,
@@ -8,8 +8,18 @@ import {
   ArrowLeft,
   Copy,
   Check,
+  Save,
+  RotateCcw,
 } from "lucide-react";
 import { useModal } from "../components/ModalProvider";
+import {
+  loadDraft,
+  saveDraft,
+  clearDraft,
+  mergeDraftWithExamItems,
+  buildDraftFromForm,
+  formatDraftSavedAt,
+} from "../utils/examDraft";
 
 interface ExamItem {
   id: string;
@@ -43,6 +53,30 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
   const [receiptId, setReceiptId] = useState("");
   const [copiedReceipt, setCopiedReceipt] = useState(false);
 
+  // Draft persistence
+  const [draftRestored, setDraftRestored] = useState(false);
+  const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null);
+  const formHydratedRef = useRef(false);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const persistDraft = useCallback(
+    (name: string, identifier: string, currentAnswers: Record<string, string>) => {
+      if (!exam) return;
+
+      const itemIds = exam.items.map((item) => item.id);
+      const draft = buildDraftFromForm(
+        publicCode,
+        name,
+        identifier,
+        currentAnswers,
+        itemIds,
+      );
+      saveDraft(draft);
+      setDraftSavedAt(draft.savedAt);
+    },
+    [exam, publicCode],
+  );
+
   const fetchExamData = async () => {
     try {
       const response = await fetch(`/api/exams/${publicCode}`);
@@ -52,12 +86,25 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
       }
       setExam(data);
 
-      // Inicializar respostas vazias
-      const initialAnswers: { [key: string]: string } = {};
-      data.items.forEach((item: ExamItem) => {
-        initialAnswers[item.id] = "";
-      });
-      setAnswers(initialAnswers);
+      const draft = loadDraft(publicCode);
+      if (draft) {
+        const merged = mergeDraftWithExamItems(draft, data.items);
+        setStudentName(merged.studentName);
+        setStudentIdentifier(merged.studentIdentifier);
+        setAnswers(merged.answers);
+        setDraftRestored(merged.hasRestorableContent);
+        setDraftSavedAt(draft.savedAt);
+      } else {
+        const initialAnswers: { [key: string]: string } = {};
+        data.items.forEach((item: ExamItem) => {
+          initialAnswers[item.id] = "";
+        });
+        setAnswers(initialAnswers);
+        setDraftRestored(false);
+        setDraftSavedAt(null);
+      }
+
+      formHydratedRef.current = true;
     } catch (err: any) {
       setError(err.message || "Erro de conexão com o servidor.");
     } finally {
@@ -66,8 +113,57 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
   };
 
   useEffect(() => {
+    formHydratedRef.current = false;
+    setDraftRestored(false);
+    setDraftSavedAt(null);
     fetchExamData();
   }, [publicCode]);
+
+  useEffect(() => {
+    if (!formHydratedRef.current || !exam || receiptId) return;
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(() => {
+      persistDraft(studentName, studentIdentifier, answers);
+    }, 400);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [
+    publicCode,
+    studentName,
+    studentIdentifier,
+    answers,
+    exam,
+    receiptId,
+    persistDraft,
+  ]);
+
+  useEffect(() => {
+    const flushDraft = () => {
+      if (!formHydratedRef.current || !exam || receiptId) return;
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      persistDraft(studentName, studentIdentifier, answers);
+    };
+
+    window.addEventListener("pagehide", flushDraft);
+    return () => window.removeEventListener("pagehide", flushDraft);
+  }, [
+    studentName,
+    studentIdentifier,
+    answers,
+    exam,
+    receiptId,
+    persistDraft,
+  ]);
 
   const handleUpdateAnswer = (itemId: string, val: string) => {
     setAnswers({
@@ -138,6 +234,7 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
         throw new Error(data.message || "Erro ao submeter respostas.");
       }
 
+      clearDraft(publicCode);
       setReceiptId(data.submission_id);
     } catch (err: any) {
       setError(err.message || "Houve um erro de rede ao enviar.");
@@ -300,6 +397,16 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
         </div>
       </div>
 
+      {draftRestored && draftSavedAt && (
+        <div className="flex items-start gap-3 bg-cyan-950/30 border border-cyan-800/40 rounded-2xl p-4 text-xs text-cyan-200/90">
+          <RotateCcw className="w-4 h-4 shrink-0 mt-0.5 text-cyan-400" />
+          <p>
+            Continuamos de onde você parou. Rascunho restaurado{" "}
+            {formatDraftSavedAt(draftSavedAt)}.
+          </p>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Identificação do Aluno */}
         <div className="glass-panel border border-slate-800 rounded-2xl p-5 space-y-4">
@@ -344,6 +451,11 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
               />
             </div>
           </div>
+
+          <p className="text-[10px] text-slate-500 leading-relaxed">
+            Suas respostas são salvas automaticamente neste aparelho enquanto
+            você preenche.
+          </p>
         </div>
 
         {/* Questões */}
@@ -454,6 +566,16 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
           <div className="flex items-center gap-2 text-xs text-rose-400 bg-rose-950/20 border border-rose-900/30 p-3 rounded-lg">
             <ShieldAlert className="w-4 h-4 shrink-0" />
             <span>{error}</span>
+          </div>
+        )}
+
+        {draftSavedAt && (
+          <div className="flex items-center justify-center gap-1.5 text-[10px] text-slate-500">
+            <Save className="w-3 h-3 text-emerald-500/80" />
+            <span>
+              Rascunho salvo no dispositivo •{" "}
+              {formatDraftSavedAt(draftSavedAt)}
+            </span>
           </div>
         )}
 

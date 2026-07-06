@@ -9,3 +9,6 @@ const dbPath = process.env.DATABASE_PATH || path.resolve(__dirname, "../../gabar
 const sqlite = new Database(dbPath);
 sqlite.pragma("journal_mode = WAL");
 export const db = drizzle(sqlite, { schema });
+export function pingDatabase() {
+    sqlite.prepare("SELECT 1").get();
+}

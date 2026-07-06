@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
+import { index, integer, real, sqliteTable, text, } from "drizzle-orm/sqlite-core";
 export const exams = sqliteTable("exams", {
     id: text("id").primaryKey(),
     title: text("title").notNull(),
@@ -7,7 +7,11 @@ export const exams = sqliteTable("exams", {
     status: text("status").$type().default("open").notNull(),
     createdAt: integer("created_at").notNull(),
     closedAt: integer("closed_at"),
-});
+}, (table) => ({
+    publicCodeIdx: index("exams_public_code_idx").on(table.publicCode),
+    adminCodeHashIdx: index("exams_admin_code_hash_idx").on(table.adminCodeHash),
+    statusIdx: index("exams_status_idx").on(table.status),
+}));
 export const examItems = sqliteTable("exam_items", {
     id: text("id").primaryKey(),
     examId: text("exam_id")
@@ -21,7 +25,9 @@ export const examItems = sqliteTable("exam_items", {
         .notNull(),
     answerConfigJson: text("answer_config_json").notNull(), // config contendo accepted answers
     position: integer("position").notNull(),
-});
+}, (table) => ({
+    examIdIdx: index("exam_items_exam_id_idx").on(table.examId),
+}));
 export const submissions = sqliteTable("submissions", {
     id: text("id").primaryKey(),
     examId: text("exam_id")
@@ -31,7 +37,11 @@ export const submissions = sqliteTable("submissions", {
     studentIdentifier: text("student_identifier").notNull(),
     submittedAt: integer("submitted_at").notNull(),
     totalScore: real("total_score").notNull(),
-});
+}, (table) => ({
+    examIdIdx: index("submissions_exam_id_idx").on(table.examId),
+    studentIdentifierIdx: index("submissions_student_identifier_idx").on(table.studentIdentifier),
+    examStudentIdx: index("submissions_exam_student_idx").on(table.examId, table.studentIdentifier),
+}));
 export const submissionAnswers = sqliteTable("submission_answers", {
     id: text("id").primaryKey(),
     submissionId: text("submission_id")
@@ -44,4 +54,7 @@ export const submissionAnswers = sqliteTable("submission_answers", {
     normalizedAnswer: text("normalized_answer").notNull(),
     isCorrect: integer("is_correct").notNull(), // 0 para falso, 1 para verdadeiro
     scoreAwarded: real("score_awarded").notNull(),
-});
+}, (table) => ({
+    submissionIdIdx: index("submission_answers_submission_id_idx").on(table.submissionId),
+    itemIdIdx: index("submission_answers_item_id_idx").on(table.itemId),
+}));

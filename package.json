@@ -13,7 +13,7 @@
     "build:frontend": "npm --prefix frontend run build",
     "build": "npm run build:backend && npm run build:frontend",
     "format": "prettier --write \"backend/src/**/*.ts\" \"frontend/src/**/*.{ts,tsx}\" \"*.{md,json}\"",
-    "test:unit": "npm --prefix backend run test:unit",
+    "test:unit": "npm --prefix backend run test:unit && npm --prefix frontend run test:unit",
     "test": "npm run test:unit && ./manage.sh test"
   },
   "dependencies": {
