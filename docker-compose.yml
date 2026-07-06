@@ -1,6 +1,7 @@
 services:
   gabarito-frontend:
     container_name: gabarito-frontend
+    user: "1000:1000"
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -11,6 +12,7 @@ services:
 
   gabarito-api:
     container_name: gabarito-api
+    user: "1000:1000"
     build:
       context: ./backend
       dockerfile: Dockerfile
