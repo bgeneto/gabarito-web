@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   gabarito-api:
     container_name: gabarito-api

@@ -1,5 +1,5 @@
 # Build Stage
-FROM node:20-alpine AS build
+FROM node:24-slim AS build
 WORKDIR /app
 
 COPY package.json tsconfig.json vite.config.ts ./
