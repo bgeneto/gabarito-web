@@ -55,9 +55,19 @@ case "$1" in
     echo "=== RESET DO BANCO DE PRODUÇÃO ==="
     echo "Isso remove o volume Docker gabaritoweb-db e todos os dados da API."
     echo "Use apenas em deploy inicial ou quando o banco estiver corrompido."
-    docker compose down
-    docker volume rm gabaritoweb-db 2>/dev/null || true
-    ./manage.sh prod-start
+    echo ""
+    read -r -p "Tem certeza? Digite Y para confirmar: " confirm
+    case "$confirm" in
+      Y|y)
+        docker compose down
+        docker volume rm gabaritoweb-db 2>/dev/null || true
+        ./manage.sh prod-start
+        ;;
+      *)
+        echo "Operação cancelada."
+        exit 1
+        ;;
+    esac
     ;;
   format)
     echo "Formatando código com Prettier..."
