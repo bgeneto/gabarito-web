@@ -5,7 +5,7 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 
-import { db } from "./db/index.js";
+import { db, pingDatabase } from "./db/index.js";
 import {
   examItems,
   exams,
@@ -47,6 +47,17 @@ const MAX_ITEMS_PER_EXAM = 500;
 function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
+
+// ROTA: Health check público (liveness + conectividade do banco)
+app.get("/health", (c) => {
+  try {
+    pingDatabase();
+    return c.json({ status: "ok", database: "ok" });
+  } catch (error: any) {
+    console.error("Health check falhou:", error);
+    return c.json({ status: "degraded", database: "error" }, 503);
+  }
+});
 
 // ROTA: Criar Prova (Professor)
 app.post("/api/exams", async (c) => {

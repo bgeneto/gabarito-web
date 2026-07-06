@@ -12,8 +12,17 @@ fi
 
 echo "=== INICIANDO TESTES DE API ==="
 
-# 0. Testar validações ao criar prova
-echo "0. Testando validações de criação de prova (deve falhar)..."
+# Health check
+echo "0. Testando health check..."
+HEALTH_RESP=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$PORT/health")
+if [ "$HEALTH_RESP" != "200" ]; then
+  echo "FALHOU: health check retornou HTTP $HEALTH_RESP (esperado 200)"
+  exit 1
+fi
+echo "OK: health check"
+
+# 1. Testar validações ao criar prova
+echo "1. Testando validações de criação de prova (deve falhar)..."
 
 # Caso 1: Questão repetida sem subitem
 RESP_DUP_NO_SUB=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/exams" \
