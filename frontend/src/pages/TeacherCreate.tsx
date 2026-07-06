@@ -10,7 +10,10 @@ import {
   QrCode,
   ClipboardList,
   ArrowLeft,
+  Upload,
+  Download,
 } from "lucide-react";
+import { useModal } from "../components/ModalProvider";
 
 interface ItemInput {
   id: string;
@@ -46,6 +49,145 @@ export default function TeacherCreate() {
   const [result, setResult] = useState<CreationResult | null>(null);
   const [copiedPublic, setCopiedPublic] = useState(false);
   const [copiedAdmin, setCopiedAdmin] = useState(false);
+
+  const { alert, confirm } = useModal();
+
+  const validateImportedData = (data: any): string | null => {
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
+      return "O formato do arquivo deve ser um objeto JSON contendo o título e as questões.";
+    }
+    if (typeof data.title !== "string" || !data.title.trim()) {
+      return "O título da prova é inválido ou está vazio.";
+    }
+    if (!Array.isArray(data.items) || data.items.length === 0) {
+      return "A lista de questões ('items') deve conter pelo menos uma questão.";
+    }
+
+    for (let i = 0; i < data.items.length; i++) {
+      const item = data.items[i];
+      const itemIndex = i + 1;
+      if (typeof item !== "object" || item === null) {
+        return `A questão na posição ${itemIndex} é inválida.`;
+      }
+      if (typeof item.questionNumber !== "number" || item.questionNumber < 1) {
+        return `A questão na posição ${itemIndex} precisa ter um 'questionNumber' numérico válido (maior ou igual a 1).`;
+      }
+      if (typeof item.points !== "number" || item.points <= 0) {
+        return `A questão ${item.questionNumber} precisa ter uma pontuação ('points') maior que zero.`;
+      }
+      if (!["choice", "true_false", "text_exact"].includes(item.answerType)) {
+        return `A questão ${item.questionNumber} possui um tipo de resposta ('answerType') inválido. Deve ser 'choice', 'true_false' ou 'text_exact'.`;
+      }
+      if (!Array.isArray(item.accepted) || item.accepted.length === 0) {
+        return `A questão ${item.questionNumber} precisa de pelo menos uma resposta correta no array 'accepted'.`;
+      }
+    }
+    return null;
+  };
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const text = event.target?.result;
+        if (typeof text !== "string") {
+          await alert("Não foi possível ler o arquivo.");
+          return;
+        }
+
+        const data = JSON.parse(text);
+        const validationError = validateImportedData(data);
+        if (validationError) {
+          await alert(validationError, {
+            title: "Erro na Importação",
+            severity: "danger",
+          });
+          return;
+        }
+
+        const confirmImport = await confirm(
+          "Deseja importar as questões deste arquivo? Isso substituirá as questões atuais da tela.",
+          {
+            title: "Confirmar Importação",
+            confirmText: "Sim, Importar",
+            cancelText: "Cancelar",
+            severity: "warning",
+          },
+        );
+
+        if (!confirmImport) {
+          e.target.value = "";
+          return;
+        }
+
+        setTitle(data.title);
+        const importedItems = data.items.map((item: any) => ({
+          id: Math.random().toString(36).substring(2, 9),
+          questionNumber: Number(item.questionNumber) || 1,
+          subLabel: String(item.subLabel || "")
+            .toLowerCase()
+            .replace(/[^a-z]/g, ""),
+          points: Number(item.points) || 1.0,
+          answerType: item.answerType,
+          accepted: Array.isArray(item.accepted)
+            ? item.accepted.map(String)
+            : ["A"],
+          tempVariant: "",
+        }));
+        setItems(importedItems);
+        e.target.value = "";
+      } catch (err) {
+        await alert(
+          "Ocorreu um erro ao decodificar o JSON. Verifique se o arquivo está correto.",
+          {
+            title: "Erro de Formatação",
+            severity: "danger",
+          },
+        );
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleExportFile = () => {
+    try {
+      const exportData = {
+        title: title.trim(),
+        items: items.map((item) => ({
+          questionNumber: item.questionNumber,
+          subLabel: item.subLabel.trim() || "",
+          points: item.points,
+          answerType: item.answerType,
+          accepted: item.accepted,
+        })),
+      };
+
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonString], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      const cleanTitle = title
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
+
+      link.href = url;
+      link.download = `gabarito-${cleanTitle || "prova"}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert("Erro ao exportar gabarito.");
+    }
+  };
 
   const handleAddItem = () => {
     const nextNum =
@@ -246,6 +388,16 @@ export default function TeacherCreate() {
           <p className="text-sm text-slate-400 mt-1">
             A prova foi publicada e está pronta para receber submissões.
           </p>
+          <div className="mt-4 flex justify-center">
+            <button
+              onClick={handleExportFile}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 hover:border-emerald-500/50 rounded-xl text-xs font-bold text-emerald-400 transition-all cursor-pointer"
+              title="Baixar arquivo JSON do gabarito"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Exportar Gabarito (JSON)
+            </button>
+          </div>
         </div>
 
         {/* Informações da Prova */}
@@ -403,18 +555,38 @@ export default function TeacherCreate() {
   // Formulário de Criação
   return (
     <div className="max-w-2xl mx-auto w-full space-y-6">
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => navigateTo("/")}
-          className="p-2 bg-slate-900 border border-slate-850 rounded-xl hover:bg-slate-800 transition-colors cursor-pointer"
-        >
-          <ArrowLeft className="w-4 h-4 text-slate-300" />
-        </button>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigateTo("/")}
+            className="p-2 bg-slate-900 border border-slate-850 rounded-xl hover:bg-slate-800 transition-colors cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4 text-slate-300" />
+          </button>
+          <div>
+            <h1 className="text-2xl font-black">Configurar Prova</h1>
+            <p className="text-xs text-slate-500">
+              Defina o título, as questões e os gabaritos aceitos.
+            </p>
+          </div>
+        </div>
+
         <div>
-          <h1 className="text-2xl font-black">Configurar Prova</h1>
-          <p className="text-xs text-slate-500">
-            Defina o título, as questões e os gabaritos aceitos.
-          </p>
+          <input
+            type="file"
+            accept=".json"
+            onChange={handleImportFile}
+            className="hidden"
+            id="import-gabarito-file"
+          />
+          <label
+            htmlFor="import-gabarito-file"
+            className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 border border-slate-850 hover:bg-slate-800 hover:border-slate-700 text-slate-300 font-bold rounded-xl text-xs transition-all cursor-pointer shadow-lg shadow-slate-950/10"
+            title="Importar gabarito de arquivo JSON"
+          >
+            <Upload className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Importar</span>
+          </label>
         </div>
       </div>
 

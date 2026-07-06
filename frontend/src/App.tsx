@@ -101,8 +101,8 @@ function App() {
         {/* Footer */}
         <footer className="border-t border-slate-900 py-6 text-center text-xs text-slate-600">
           <p>
-            © 2026 GabaritoWEB. Desenvolvido por bgeneto para simplificar
-            correções.
+            © 2026 GabaritoWEB. Desenvolvido por bgeneto para facilitar a vida
+            do professor.
           </p>
         </footer>
       </div>

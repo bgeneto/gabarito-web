@@ -43,11 +43,11 @@ export default function Home() {
       {/* Intro */}
       <div className="text-center mb-8">
         <h1 className="text-4xl font-black tracking-tight mb-3">
-          Correção instantânea de provas
+          Correção online de provas
         </h1>
         <p className="text-slate-400 text-sm">
           Sem cadastros complicados. Digite seu código de prova ou gerencie seus
-          gabaritos de forma 100% digital.
+          gabaritos de forma 100% online.
         </p>
       </div>
 
