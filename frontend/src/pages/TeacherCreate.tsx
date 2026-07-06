@@ -644,7 +644,7 @@ export default function TeacherCreate() {
           className="w-full py-3 bg-slate-900 border border-slate-850 hover:bg-slate-850 border-dashed text-slate-400 hover:text-slate-200 rounded-2xl flex items-center justify-center gap-2 text-sm font-semibold transition-all cursor-pointer"
         >
           <Plus className="w-4 h-4" />
-          Adicionar Nova Questão
+          Adicionar Nova Questão ou Item
         </button>
 
         {error && (

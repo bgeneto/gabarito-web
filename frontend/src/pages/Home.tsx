@@ -123,7 +123,7 @@ export default function Home() {
               <input
                 id="publicCode"
                 type="text"
-                placeholder="Ex: GAB-2026-A1B2"
+                placeholder="Ex: G26-DNEM9G"
                 value={publicCode}
                 onChange={(e) => setPublicCode(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20 text-slate-100 placeholder:text-slate-600 uppercase tracking-widest text-center font-mono font-bold"
@@ -195,7 +195,7 @@ export default function Home() {
                 <input
                   id="adminToken"
                   type="text"
-                  placeholder="Ex: adm_..."
+                  placeholder="Ex: adm_A7K9QF"
                   value={adminToken}
                   onChange={(e) => setAdminToken(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-slate-100 placeholder:text-slate-600 font-mono text-center text-xs"

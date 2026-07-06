@@ -34,7 +34,7 @@ Armazena as configurações e o status geral de cada prova gerada.
 | :---------------- | :---------- | :--------------------------------------------------------------------------- |
 | `id`              | `TEXT` (PK) | UUID ou NanoID gerado pelo servidor.                                         |
 | `title`           | `TEXT`      | Título da prova (ex: "Física Geral I - Prova 1").                            |
-| `public_code`     | `TEXT`      | Código público único de acesso (ex: `GAB-2026-X8Y9`).                        |
+| `public_code`     | `TEXT`      | Código público único de acesso (ex: `G26-DNEM9G`).                           |
 | `admin_code_hash` | `TEXT`      | Hash SHA-256 do token administrativo do professor.                           |
 | `status`          | `TEXT`      | Estado da prova: `'open'` (aberta para respostas) ou `'closed'` (encerrada). |
 | `created_at`      | `INTEGER`   | Timestamp de criação (Epoch ms).                                             |
@@ -61,7 +61,7 @@ Armazena a submissão de respostas realizada por cada aluno.
 
 | Campo                | Tipo SQLite | Descrição                                              |
 | :------------------- | :---------- | :----------------------------------------------------- |
-| `id`                 | `TEXT` (PK) | UUID ou NanoID.                                        |
+| `id`                 | `TEXT` (PK) | Código de comprovante de submissão (6 caracteres base36, ex: `A7K9QF`). |
 | `exam_id`            | `TEXT` (FK) | Relacionado a `exams.id`.                              |
 | `student_name`       | `TEXT`      | Nome do aluno informado na submissão.                  |
 | `student_identifier` | `TEXT`      | Matrícula ou identificador único informado pelo aluno. |
@@ -179,8 +179,8 @@ Todas as requisições e respostas utilizam `Content-Type: application/json`.
 ```json
 {
   "id": "exam_id_123",
-  "public_code": "GAB-2026-A4F9",
-  "admin_token": "adm_8c1b2f9a3e4d7c6b5a4f3e2d1c0b",
+  "public_code": "G26-DNEM9G",
+  "admin_token": "adm_A7K9QF",
   "message": "Prova criada com sucesso!"
 }
 ```
@@ -321,7 +321,7 @@ Todas as requisições e respostas utilizam `Content-Type: application/json`.
 {
   "id": "exam_id_123",
   "title": "Física Geral I - Segunda Prova",
-  "public_code": "GAB-2026-A4F9",
+  "public_code": "G26-DNEM9G",
   "status": "open",
   "created_at": 1783478234,
   "closed_at": null,
@@ -418,9 +418,10 @@ Todas as strings fornecidas pelos alunos passam por um pipeline de limpeza antes
 
 ## 6. Segurança e Robustez no MVP
 
-1. **Tokens Administrativos Aleatórios**: O `admin_token` gerado terá a estrutura `adm_` + 24 caracteres hexadecimais aleatórios (criptograficamente seguros).
+1. **Tokens Administrativos Aleatórios**: O `admin_token` gerado terá a estrutura `adm_` + 6 caracteres base36 aleatórios com detecção e retry de colisão (ex: `adm_A7K9QF`).
 2. **Armazenamento de Senha / Token**: O backend calcula o hash SHA-256 do token administrativo e armazena apenas o hash (`admin_code_hash`). No momento do acesso administrativo, calcula-se o hash do token recebido e compara-se com o valor no banco para evitar vazamentos em caso de roubo do arquivo SQLite.
-3. **Códigos Públicos Não Sequenciais**: O `public_code` terá o formato `GAB-YYYY-XXXX`, sendo `YYYY` o ano atual e `XXXX` uma string de 4 caracteres alfanuméricos aleatórios não sequenciais (ex: `GAB-2026-F3K9`).
+3. **Códigos Públicos Não Sequenciais**: O `public_code` terá o formato `GYY-XXXXXX`, sendo `YY` os dois últimos dígitos do ano atual e `XXXXXX` uma string de 6 caracteres base36 aleatórios com detecção e retry de colisão (ex: `G26-DNEM9G`).
 4. **Ocultação de Gabaritos**: A rota pública `/api/exams/:public_code` não expõe de forma alguma o campo `answer_config_json` (gabarito). O cálculo de acerto/nota é realizado estritamente no servidor.
 5. **Rate Limiting no MVP**: Uma proteção na rota de submissão de respostas limitando requisições por IP a no máximo 5 submissões por minuto para prevenir spam de banco de dados.
 6. **Prevenção de Duplicidade de Respostas**: O reenvio de respostas com a mesma matrícula (`student_identifier`) para a mesma prova está desabilitado. Se a matrícula já constar na tabela `submissions` para aquela prova, o backend retorna um erro `409 Conflict`.
+7. **Comprovante de Submissão Compacto**: O comprovante/id da submissão terá 6 caracteres base36 aleatórios gerados no servidor com detecção e retry de colisão (ex: `A7K9QF`).

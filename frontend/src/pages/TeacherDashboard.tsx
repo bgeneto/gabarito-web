@@ -57,7 +57,7 @@ export default function TeacherDashboard({
   const [closeLoading, setCloseLoading] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (silent = false) => {
     try {
       const response = await fetch(`/api/admin/exams/${adminToken}`);
       const resData = await response.json();
@@ -66,15 +66,31 @@ export default function TeacherDashboard({
       }
       setData(resData);
     } catch (err: any) {
-      setError(err.message || "Erro ao carregar dados. Verifique o token.");
+      if (!silent) {
+        setError(err.message || "Erro ao carregar dados. Verifique o token.");
+      } else {
+        console.error("Erro na atualização em segundo plano:", err);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     fetchDashboardData();
   }, [adminToken]);
+
+  useEffect(() => {
+    if (!data || data.status !== "open") return;
+
+    const interval = setInterval(() => {
+      fetchDashboardData(true);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [adminToken, data?.status]);
 
   const handleCloseExam = async () => {
     if (!data) return;

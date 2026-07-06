@@ -24,6 +24,20 @@ function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
+// Função utilitária para gerar código base36 seguro e não viesado
+function generateBase36(length: number): string {
+  const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  let result = "";
+  while (result.length < length) {
+    const byte = crypto.randomBytes(1)[0];
+    if (byte < 252) {
+      // 36 * 7 = 252
+      result += chars[byte % 36];
+    }
+  }
+  return result;
+}
+
 // ROTA: Criar Prova (Professor)
 app.post("/api/exams", async (c) => {
   try {
@@ -40,13 +54,60 @@ app.post("/api/exams", async (c) => {
       );
     }
 
-    // Gerar códigos aleatórios seguros
-    const currentYear = new Date().getFullYear();
-    const randomChars = crypto.randomBytes(2).toString("hex").toUpperCase(); // 4 chars hex
-    const publicCode = `GAB-${currentYear}-${randomChars}`;
+    // Gerar códigos aleatórios seguros com detecção de colisão
+    let publicCode = "";
+    let isUniquePublic = false;
+    let attempts = 0;
+    while (!isUniquePublic && attempts < 10) {
+      const currentYear = new Date().getFullYear().toString().slice(-2); // YY, ex: "26"
+      const randomBase36 = generateBase36(6);
+      publicCode = `G${currentYear}-${randomBase36}`;
 
-    const adminToken = `adm_${crypto.randomBytes(12).toString("hex")}`;
-    const adminCodeHash = hashToken(adminToken);
+      const [existing] = await db
+        .select()
+        .from(exams)
+        .where(eq(exams.publicCode, publicCode));
+      if (!existing) {
+        isUniquePublic = true;
+      }
+      attempts++;
+    }
+    if (!isUniquePublic) {
+      return c.json(
+        {
+          error: "Erro de geração",
+          message: "Não foi possível gerar um código de prova único.",
+        },
+        500,
+      );
+    }
+
+    let adminToken = "";
+    let adminCodeHash = "";
+    let isUniqueAdmin = false;
+    attempts = 0;
+    while (!isUniqueAdmin && attempts < 10) {
+      adminToken = `adm_${generateBase36(6)}`;
+      adminCodeHash = hashToken(adminToken);
+
+      const [existing] = await db
+        .select()
+        .from(exams)
+        .where(eq(exams.adminCodeHash, adminCodeHash));
+      if (!existing) {
+        isUniqueAdmin = true;
+      }
+      attempts++;
+    }
+    if (!isUniqueAdmin) {
+      return c.json(
+        {
+          error: "Erro de geração",
+          message: "Não foi possível gerar um token administrativo único.",
+        },
+        500,
+      );
+    }
 
     const examId = crypto.randomUUID();
     const now = Date.now();
@@ -218,7 +279,30 @@ app.post("/api/exams/:public_code/submissions", rateLimiter, async (c) => {
       .where(eq(examItems.examId, exam.id));
 
     let totalScore = 0;
-    const submissionId = crypto.randomUUID();
+    let submissionId = "";
+    let isUniqueSubmission = false;
+    let attempts = 0;
+    while (!isUniqueSubmission && attempts < 10) {
+      submissionId = generateBase36(6);
+
+      const [existing] = await db
+        .select()
+        .from(submissions)
+        .where(eq(submissions.id, submissionId));
+      if (!existing) {
+        isUniqueSubmission = true;
+      }
+      attempts++;
+    }
+    if (!isUniqueSubmission) {
+      return c.json(
+        {
+          error: "Erro de geração",
+          message: "Não foi possível gerar um comprovante de submissão único.",
+        },
+        500,
+      );
+    }
     const now = Date.now();
 
     // Preparar registros de respostas

@@ -57,8 +57,8 @@ As relações do banco de dados estão estruturadas da seguinte forma em `backen
 1. **`exams`**:
    - `id` (PK, string): UUID.
    - `title` (string): Nome da prova.
-   - `publicCode` (string, unique): Código público gerado no backend (`GAB-YYYY-XXXX`).
-   - `adminCodeHash` (string): Hash SHA-256 do token administrativo do professor (`adm_...`).
+   - `publicCode` (string, unique): Código público gerado no backend (`GYY-XXXXXX`, ex: `G26-DNEM9G`).
+   - `adminCodeHash` (string): Hash SHA-256 do token administrativo do professor (`adm_XXXXXX`, ex: `adm_A7K9QF`).
    - `status` (string): `'open'` ou `'closed'`.
    - `createdAt` e `closedAt` (integer): Timestamps epoch milissegundos.
 
@@ -72,6 +72,7 @@ As relações do banco de dados estão estruturadas da seguinte forma em `backen
 
 3. **`submissions`**:
    - Registro de envio de respostas de um aluno.
+   - `id` (PK, string): Código de comprovante de submissão do aluno de 6 caracteres base36 (ex: `A7K9QF`).
    - `studentName` (string) e `studentIdentifier` (string): Nome e matrícula.
    - `totalScore` (real): Soma das notas nos itens corretos.
    - O reenvio de respostas com a mesma matrícula (`studentIdentifier`) para a mesma prova é bloqueado no backend.
