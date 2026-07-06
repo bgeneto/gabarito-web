@@ -22,3 +22,9 @@ services:
     restart: always
     depends_on:
       - gabarito-frontend-build
+    networks:
+      - proxy
+
+networks:
+  proxy:
+    external: true
