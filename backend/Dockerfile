@@ -1,6 +1,10 @@
 FROM node:24-slim
 WORKDIR /app
-RUN mkdir -p /app/data
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends gosu \
+  && rm -rf /var/lib/apt/lists/* \
+  && mkdir -p /app/data
 
 COPY package.json tsconfig.json drizzle.config.ts ./
 RUN npm install
@@ -12,4 +16,3 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh && npm run build
 
 EXPOSE 3000
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["npx drizzle-kit migrate && npm run start"]

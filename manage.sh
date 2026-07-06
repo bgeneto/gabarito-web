@@ -12,6 +12,7 @@ function show_help() {
   echo "Comandos de Produção:"
   echo "  prod-start    Gera o build do frontend, aplica alterações no banco de dados e inicia a API de produção"
   echo "  prod-stop     Para o container da API de produção"
+  echo "  prod-reset-db Remove o volume do banco e faz deploy limpo (apaga dados da API)"
   echo ""
   echo "Utilitários:"
   echo "  format        Formata o código-fonte de todo o projeto usando Prettier"
@@ -49,6 +50,14 @@ case "$1" in
   prod-stop)
     echo "Parando container de produção..."
     docker compose down
+    ;;
+  prod-reset-db)
+    echo "=== RESET DO BANCO DE PRODUÇÃO ==="
+    echo "Isso remove o volume Docker gabaritoweb-db e todos os dados da API."
+    echo "Use apenas em deploy inicial ou quando o banco estiver corrompido."
+    docker compose down
+    docker volume rm gabaritoweb-db 2>/dev/null || true
+    ./manage.sh prod-start
     ;;
   format)
     echo "Formatando código com Prettier..."
