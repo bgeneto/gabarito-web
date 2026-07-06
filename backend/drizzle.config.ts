@@ -10,6 +10,6 @@ export default defineConfig({
   out: path.resolve(__dirname, "./drizzle"),
   dialect: "sqlite",
   dbCredentials: {
-    url: path.resolve(__dirname, "./gabarito.db"),
+    url: process.env.DATABASE_PATH || path.resolve(__dirname, "./gabarito.db"),
   },
 });

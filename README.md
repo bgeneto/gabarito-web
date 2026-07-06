@@ -97,8 +97,8 @@ gabarito-web/
 │   ├── Dockerfile.dev              # Imagem de desenvolvimento
 │   ├── vite.config.ts              # Proxy /api → porta 3000
 │   └── package.json
-├── docker-compose.yml              # Ambiente de desenvolvimento
-├── docker-compose.prod.yml         # Ambiente de produção
+├── docker-compose.yml              # Ambiente de produção (padrão)
+├── docker-compose.dev.yml          # Ambiente de desenvolvimento
 ├── manage.sh                       # Script central de gerenciamento
 ├── test-api.sh                     # Testes de integração da API
 ├── package.json                    # Workspace root (npm workspaces)

@@ -23,7 +23,7 @@ function show_help() {
 case "$1" in
   dev-start)
     echo "Iniciando Docker Compose (Desenvolvimento em segundo plano)..."
-    docker compose up --build -d
+    docker compose -f docker-compose.dev.yml up --build -d
     echo "====================================="
     echo "Ambiente rodando!"
     echo "Vite Frontend: http://localhost:5173"
@@ -31,23 +31,21 @@ case "$1" in
     ;;
   dev-stop)
     echo "Parando Docker Compose (Desenvolvimento)..."
-    docker compose down
+    docker compose -f docker-compose.dev.yml down
     ;;
   prod-start)
     echo "=== INICIANDO DEPLOY DE PRODUÇÃO ==="
-    echo "1. Gerando build estático do frontend no host..."
-    npm run build:frontend
-    echo "2. Atualizando banco de dados SQLite via Drizzle Kit..."
-    npx drizzle-kit push --config=backend/drizzle.config.ts
-    echo "3. Iniciando container de produção da API (gabarito-api)..."
-    docker compose -f docker-compose.prod.yml up --build -d
+    echo "1. Preparando diretórios locais..."
+    mkdir -p frontend/dist
+    echo "2. Iniciando build, migrações e containers de produção via Docker Compose..."
+    docker compose up --build -d
     echo "====================================="
-    echo "Deploy realizado com sucesso!"
-    echo "Lembre-se: O Caddy deve servir a pasta frontend/dist em /srv/gabarito"
+    echo "Deploy de produção realizado com sucesso via Docker!"
+    echo "Lembre-se: O Caddy deve estar configurado para servir a pasta /srv/gabarito"
     ;;
   prod-stop)
     echo "Parando container de produção..."
-    docker compose -f docker-compose.prod.yml down
+    docker compose down
     ;;
   format)
     echo "Formatando código com Prettier..."

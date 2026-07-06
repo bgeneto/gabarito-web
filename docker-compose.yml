@@ -1,28 +1,27 @@
 services:
-  backend:
-    container_name: gabaritoweb-backend-dev
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.dev
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
-    environment:
-      - NODE_ENV=development
-
-  frontend:
-    container_name: gabaritoweb-frontend-dev
+  gabarito-frontend:
+    container_name: gabarito-frontend
     build:
       context: ./frontend
-      dockerfile: Dockerfile.dev
-    ports:
-      - "5173:5173"
+      dockerfile: Dockerfile
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - ./frontend/dist:/app/dist-out
+    entrypoint: sh -c "mkdir -p /app/dist-out && rm -rf /app/dist-out/* && cp -rf /usr/share/nginx/html/. /app/dist-out/ && exec nginx -g 'daemon off;'"
+    restart: always
+
+  gabarito-api:
+    container_name: gabarito-api
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     environment:
-      - BACKEND_URL=http://backend:3000
-    depends_on:
-      - backend
+      - NODE_ENV=production
+      - DATABASE_PATH=/app/data/gabarito.db
+    volumes:
+      - gabaritoweb-db:/app/data
+    command: sh -c "npx drizzle-kit push && npm run start"
+    restart: always
+
+volumes:
+  gabaritoweb-db:
+    driver: local
