@@ -425,7 +425,7 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
                 {item.answerType === "text_exact" && (
                   <input
                     type="text"
-                    placeholder="Digite sua resposta por extenso..."
+                    placeholder="Digite sua resposta..."
                     value={answers[item.id] || ""}
                     onChange={(e) =>
                       handleUpdateAnswer(item.id, e.target.value)

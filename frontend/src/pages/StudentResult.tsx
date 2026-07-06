@@ -16,6 +16,8 @@ interface AnswerDetail {
   rawAnswer: string;
   isCorrect: boolean;
   scoreAwarded: number;
+  answerType: "choice" | "true_false" | "text_exact";
+  acceptedAnswers: string[];
 }
 
 interface SubmissionData {
@@ -296,10 +298,14 @@ export default function StudentResult({
                   <div className="bg-slate-950/60 p-2 rounded-lg border border-slate-900/80 flex flex-col justify-between">
                     <div>
                       <span className="text-[9px] uppercase font-bold text-slate-500 block">
-                        Correção
+                        Gabarito
                       </span>
                       <span className="font-bold text-slate-300">
-                        {ans.isCorrect ? "Correta" : "Incorreta"}
+                        {ans.answerType === "true_false"
+                          ? ans.acceptedAnswers?.[0] === "V"
+                            ? "verdadeiro"
+                            : "falso"
+                          : ans.acceptedAnswers?.[0] || "-"}
                       </span>
                     </div>
                   </div>

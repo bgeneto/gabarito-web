@@ -471,16 +471,32 @@ app.get("/api/submissions/:submission_id", async (c) => {
         rawAnswer: submissionAnswers.rawAnswer,
         isCorrect: submissionAnswers.isCorrect,
         scoreAwarded: submissionAnswers.scoreAwarded,
+        answerType: examItems.answerType,
+        answerConfigJson: examItems.answerConfigJson,
       })
       .from(submissionAnswers)
       .innerJoin(examItems, eq(submissionAnswers.itemId, examItems.id))
       .where(eq(submissionAnswers.submissionId, sub.id))
       .orderBy(examItems.position);
 
-    const formattedAnswers = answersList.map((a) => ({
-      ...a,
-      isCorrect: a.isCorrect === 1,
-    }));
+    const formattedAnswers = answersList.map((a) => {
+      let accepted: string[] = [];
+      try {
+        const parsed = JSON.parse(a.answerConfigJson);
+        accepted = parsed.accepted || [];
+      } catch (e) {}
+
+      return {
+        questionNumber: a.questionNumber,
+        subLabel: a.subLabel,
+        points: a.points,
+        rawAnswer: a.rawAnswer,
+        isCorrect: a.isCorrect === 1,
+        scoreAwarded: a.scoreAwarded,
+        answerType: a.answerType,
+        acceptedAnswers: accepted,
+      };
+    });
 
     return c.json({
       id: sub.id,

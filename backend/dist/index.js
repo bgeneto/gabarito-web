@@ -7,6 +7,7 @@ import { db } from "./db/index.js";
 import { exams, examItems, submissions, submissionAnswers, } from "./db/schema.js";
 import { checkAnswer } from "./utils/normalizer.js";
 import { rateLimiter } from "./middleware/rateLimiter.js";
+import { generatePublicCode, generateAdminToken, generateSubmissionId, } from "./utils/generator.js";
 const app = new Hono();
 // Habilita CORS para facilitar desenvolvimento
 app.use("/api/*", cors());
@@ -25,12 +26,97 @@ app.post("/api/exams", async (c) => {
                 message: "O título e pelo menos uma questão são obrigatórios.",
             }, 400);
         }
-        // Gerar códigos aleatórios seguros
-        const currentYear = new Date().getFullYear();
-        const randomChars = crypto.randomBytes(2).toString("hex").toUpperCase(); // 4 chars hex
-        const publicCode = `GAB-${currentYear}-${randomChars}`;
-        const adminToken = `adm_${crypto.randomBytes(12).toString("hex")}`;
-        const adminCodeHash = hashToken(adminToken);
+        // Validação dos itens da prova
+        const qCount = {};
+        for (const item of items) {
+            const qNum = Number(item.question_number);
+            if (isNaN(qNum) || qNum <= 0) {
+                return c.json({
+                    error: "Validação de itens",
+                    message: "O número da questão deve ser um inteiro positivo.",
+                }, 400);
+            }
+            const points = Number(item.points);
+            if (isNaN(points) || points <= 0) {
+                return c.json({
+                    error: "Validação de itens",
+                    message: `A pontuação da questão ${qNum}${item.sub_label ? item.sub_label : ""} deve ser maior que zero.`,
+                }, 400);
+            }
+            const accepted = item.answer_config?.accepted;
+            if (!Array.isArray(accepted) || accepted.length === 0) {
+                return c.json({
+                    error: "Validação de itens",
+                    message: `A questão ${qNum}${item.sub_label ? item.sub_label : ""} precisa de pelo menos uma resposta correta.`,
+                }, 400);
+            }
+            qCount[qNum] = (qCount[qNum] || 0) + 1;
+        }
+        const seenKeys = new Set();
+        for (const item of items) {
+            const qNum = Number(item.question_number);
+            const sub = (item.sub_label || "").trim().toLowerCase();
+            const key = `${qNum}-${sub}`;
+            if (qCount[qNum] > 1 && !sub) {
+                return c.json({
+                    error: "Validação de itens",
+                    message: `A questão ${qNum} aparece mais de uma vez e precisa ter subitens preenchidos (ex: A, B, C).`,
+                }, 400);
+            }
+            if (seenKeys.has(key)) {
+                return c.json({
+                    error: "Validação de itens",
+                    message: sub
+                        ? `A questão ${qNum} com subitem "${sub.toUpperCase()}" está duplicada.`
+                        : `A questão ${qNum} está duplicada (sem subitem).`,
+                }, 400);
+            }
+            seenKeys.add(key);
+        }
+        // Gerar códigos aleatórios seguros com detecção de colisão
+        let publicCode = "";
+        let isUniquePublic = false;
+        let attempts = 0;
+        while (!isUniquePublic && attempts < 10) {
+            const currentYear = new Date().getFullYear();
+            publicCode = generatePublicCode(currentYear);
+            const [existing] = await db
+                .select()
+                .from(exams)
+                .where(eq(exams.publicCode, publicCode));
+            if (!existing) {
+                isUniquePublic = true;
+            }
+            attempts++;
+        }
+        if (!isUniquePublic) {
+            return c.json({
+                error: "Erro de geração",
+                message: "Não foi possível gerar um código de prova único.",
+            }, 500);
+        }
+        let adminToken = "";
+        let adminCodeHash = "";
+        let isUniqueAdmin = false;
+        attempts = 0;
+        while (!isUniqueAdmin && attempts < 10) {
+            adminToken = generateAdminToken();
+            adminCodeHash = hashToken(adminToken);
+            const [existing] = await db
+                .select()
+                .from(exams)
+                .where(eq(exams.adminCodeHash, adminCodeHash));
+            if (!existing) {
+                isUniqueAdmin = true;
+            }
+            attempts++;
+        }
+        if (!isUniqueAdmin) {
+            return c.json({
+                error: "Erro de geração",
+                message: "Não foi possível gerar um token administrativo único.",
+            }, 500);
+        }
         const examId = crypto.randomUUID();
         const now = Date.now();
         // Inserir prova no BD
@@ -154,7 +240,26 @@ app.post("/api/exams/:public_code/submissions", rateLimiter, async (c) => {
             .from(examItems)
             .where(eq(examItems.examId, exam.id));
         let totalScore = 0;
-        const submissionId = crypto.randomUUID();
+        let submissionId = "";
+        let isUniqueSubmission = false;
+        let attempts = 0;
+        while (!isUniqueSubmission && attempts < 10) {
+            submissionId = generateSubmissionId();
+            const [existing] = await db
+                .select()
+                .from(submissions)
+                .where(eq(submissions.id, submissionId));
+            if (!existing) {
+                isUniqueSubmission = true;
+            }
+            attempts++;
+        }
+        if (!isUniqueSubmission) {
+            return c.json({
+                error: "Erro de geração",
+                message: "Não foi possível gerar um comprovante de submissão único.",
+            }, 500);
+        }
         const now = Date.now();
         // Preparar registros de respostas
         const answerRecords = [];
@@ -236,15 +341,31 @@ app.get("/api/submissions/:submission_id", async (c) => {
             rawAnswer: submissionAnswers.rawAnswer,
             isCorrect: submissionAnswers.isCorrect,
             scoreAwarded: submissionAnswers.scoreAwarded,
+            answerType: examItems.answerType,
+            answerConfigJson: examItems.answerConfigJson,
         })
             .from(submissionAnswers)
             .innerJoin(examItems, eq(submissionAnswers.itemId, examItems.id))
             .where(eq(submissionAnswers.submissionId, sub.id))
             .orderBy(examItems.position);
-        const formattedAnswers = answersList.map((a) => ({
-            ...a,
-            isCorrect: a.isCorrect === 1,
-        }));
+        const formattedAnswers = answersList.map((a) => {
+            let accepted = [];
+            try {
+                const parsed = JSON.parse(a.answerConfigJson);
+                accepted = parsed.accepted || [];
+            }
+            catch (e) { }
+            return {
+                questionNumber: a.questionNumber,
+                subLabel: a.subLabel,
+                points: a.points,
+                rawAnswer: a.rawAnswer,
+                isCorrect: a.isCorrect === 1,
+                scoreAwarded: a.scoreAwarded,
+                answerType: a.answerType,
+                acceptedAnswers: accepted,
+            };
+        });
         return c.json({
             id: sub.id,
             student_name: sub.studentName,
