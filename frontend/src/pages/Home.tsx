@@ -172,7 +172,6 @@ export default function Home() {
               onClick={() => navigateTo("/criar-prova")}
               className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-blue-500/15 mb-6 flex items-center justify-center gap-2 cursor-pointer"
             >
-              <Trophy className="w-4 h-4" />
               Criar Novo Gabarito
             </button>
 

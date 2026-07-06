@@ -7,32 +7,35 @@ import { cors } from "hono/cors";
 
 import { db } from "./db/index.js";
 import {
-    examItems,
-    exams,
-    submissionAnswers,
-    submissions,
+  examItems,
+  exams,
+  submissionAnswers,
+  submissions,
 } from "./db/schema.js";
 import { rateLimiter } from "./middleware/rateLimiter.js";
 import {
-    generateAdminToken,
-    generatePublicCode,
-    generateSubmissionId,
+  generateAdminToken,
+  generatePublicCode,
+  generateSubmissionId,
 } from "./utils/generator.js";
 import { checkAnswer } from "./utils/normalizer.js";
 
 const app = new Hono();
 
 // Configuração de CORS: aberto em desenvolvimento, restrito em produção
-const corsOrigin = process.env.CORS_ORIGIN || (
-  process.env.NODE_ENV === "production"
+const corsOrigin =
+  process.env.CORS_ORIGIN ||
+  (process.env.NODE_ENV === "production"
     ? "https://gabarito.sistema.pro.br"
-    : "*"
-);
+    : "*");
 app.use("/api/*", cors({ origin: corsOrigin }));
 
 // Limites de tamanho de payload
 app.use("/api/exams", bodyLimit({ maxSize: 1024 * 1024 })); // 1 MB para criação de prova
-app.use("/api/exams/:public_code/submissions", bodyLimit({ maxSize: 512 * 1024 })); // 512 KB para submissões
+app.use(
+  "/api/exams/:public_code/submissions",
+  bodyLimit({ maxSize: 512 * 1024 }),
+); // 512 KB para submissões
 
 // Constantes de validação
 const MAX_TITLE_LENGTH = 200;
@@ -330,7 +333,10 @@ app.post("/api/exams/:public_code/submissions", rateLimiter, async (c) => {
       );
     }
 
-    if (typeof student_name !== "string" || typeof student_identifier !== "string") {
+    if (
+      typeof student_name !== "string" ||
+      typeof student_identifier !== "string"
+    ) {
       return c.json(
         { error: "Validação", message: "Nome e matrícula devem ser textos." },
         400,

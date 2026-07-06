@@ -1,15 +1,15 @@
 import {
-    AlertTriangle,
-    Calendar,
-    Check,
-    ChevronRight,
-    Clipboard,
-    Download,
-    FileSpreadsheet,
-    Lock,
-    ShieldCheck,
-    Trophy,
-    Users,
+  AlertTriangle,
+  Calendar,
+  Check,
+  ChevronRight,
+  Clipboard,
+  Download,
+  FileSpreadsheet,
+  Lock,
+  ShieldCheck,
+  Trophy,
+  Users,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { navigateTo } from "../App";
