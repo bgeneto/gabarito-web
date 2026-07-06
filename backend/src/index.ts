@@ -13,6 +13,11 @@ import {
 } from "./db/schema.js";
 import { checkAnswer } from "./utils/normalizer.js";
 import { rateLimiter } from "./middleware/rateLimiter.js";
+import {
+  generatePublicCode,
+  generateAdminToken,
+  generateSubmissionId,
+} from "./utils/generator.js";
 
 const app = new Hono();
 
@@ -22,20 +27,6 @@ app.use("/api/*", cors());
 // Função utilitária para gerar hash SHA-256 do token administrativo
 function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
-}
-
-// Função utilitária para gerar código base36 seguro e não viesado
-function generateBase36(length: number): string {
-  const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  let result = "";
-  while (result.length < length) {
-    const byte = crypto.randomBytes(1)[0];
-    if (byte < 252) {
-      // 36 * 7 = 252
-      result += chars[byte % 36];
-    }
-  }
-  return result;
 }
 
 // ROTA: Criar Prova (Professor)
@@ -59,9 +50,8 @@ app.post("/api/exams", async (c) => {
     let isUniquePublic = false;
     let attempts = 0;
     while (!isUniquePublic && attempts < 10) {
-      const currentYear = new Date().getFullYear().toString().slice(-2); // YY, ex: "26"
-      const randomBase36 = generateBase36(6);
-      publicCode = `G${currentYear}-${randomBase36}`;
+      const currentYear = new Date().getFullYear();
+      publicCode = generatePublicCode(currentYear);
 
       const [existing] = await db
         .select()
@@ -87,7 +77,7 @@ app.post("/api/exams", async (c) => {
     let isUniqueAdmin = false;
     attempts = 0;
     while (!isUniqueAdmin && attempts < 10) {
-      adminToken = `adm_${generateBase36(6)}`;
+      adminToken = generateAdminToken();
       adminCodeHash = hashToken(adminToken);
 
       const [existing] = await db
@@ -283,7 +273,7 @@ app.post("/api/exams/:public_code/submissions", rateLimiter, async (c) => {
     let isUniqueSubmission = false;
     let attempts = 0;
     while (!isUniqueSubmission && attempts < 10) {
-      submissionId = generateBase36(6);
+      submissionId = generateSubmissionId();
 
       const [existing] = await db
         .select()

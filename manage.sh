@@ -62,7 +62,15 @@ case "$1" in
     npm run build
     ;;
   test)
-    echo "Executando testes de integração da API..."
+    echo "Executando testes unitários do backend..."
+    npm run test:unit
+    UNIT_STATUS=$?
+    if [ $UNIT_STATUS -ne 0 ]; then
+      echo "Erro nos testes unitários. Abortando testes de integração."
+      exit $UNIT_STATUS
+    fi
+
+    echo -e "\nExecutando testes de integração da API..."
     chmod +x test-api.sh
     
     # Tenta conectar na porta 3000. Se falhar por 'Connection refused' (exit code 7), a API está offline.
