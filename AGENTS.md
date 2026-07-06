@@ -147,7 +147,37 @@ chmod +x test-api.sh
 ./test-api.sh
 ```
 
+### 5.6. Executando via Docker e Script de Gerenciamento
+
+O projeto fornece um script central de gerenciamento no host ([manage.sh](file:///home/bgeneto/github/gabarito-web/manage.sh)) para unificar builds, migrações de banco e operações do Docker.
+
+#### Desenvolvimento (Docker com Hot-Reload)
+* **Iniciar**: Roda os containers de dev montando as pastas locais para atualização automática dos fontes:
+  ```bash
+  ./manage.sh dev-start
+  ```
+* **Parar**: Derruba e limpa os containers de desenvolvimento:
+  ```bash
+  ./manage.sh dev-stop
+  ```
+
+#### Produção (Deploy Integrado)
+* **Iniciar**: Executa o build de produção do frontend (`dist/`), aplica as atualizações pendentes do banco SQLite e inicia o container da API de produção (`gabarito-api` na porta 3000) com persistência automática de dados no volume `gabaritoweb-db`:
+  ```bash
+  ./manage.sh prod-start
+  ```
+  *Nota: Com esta abordagem, o servidor web externo (Caddy) deve servir diretamente a pasta `frontend/dist` no caminho `/srv/gabarito` e fazer proxy reverso da API.*
+* **Parar**: Derruba o container da API de produção:
+  ```bash
+  ./manage.sh prod-stop
+  ```
+
+#### Outros Utilitários do Script
+* `./manage.sh db-push`: Sincroniza o schema com o SQLite.
+* `./manage.sh test`: Inicia o servidor temporariamente e roda os testes de integração do `test-api.sh`.
+
 ---
+
 
 ## 6. Diretrizes Importantes para Desenvolvimento Futuro
 
