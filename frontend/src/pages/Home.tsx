@@ -1,12 +1,6 @@
 import { useState } from "react";
 import { navigateTo } from "../App";
-import {
-  GraduationCap,
-  Trophy,
-  ShieldAlert,
-  Key,
-  ClipboardList,
-} from "lucide-react";
+import { GraduationCap, ShieldAlert, Key, ClipboardList } from "lucide-react";
 
 export default function Home() {
   const [role, setRole] = useState<"student" | "teacher" | null>(null);
