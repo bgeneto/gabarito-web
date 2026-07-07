@@ -1,34 +1,63 @@
 import { useState } from "react";
 import { navigateTo } from "../App";
-import { GraduationCap, ShieldAlert, Key, ClipboardList } from "lucide-react";
+import {
+  GraduationCap,
+  ShieldAlert,
+  Key,
+  ClipboardList,
+  Receipt,
+} from "lucide-react";
+
+function parseReceiptCode(raw: string): string {
+  const trimmed = raw.trim().toUpperCase();
+  const fromUrl = trimmed.match(/\/SUBMISSAO\/([0-9A-Z]+)/);
+  if (fromUrl) return fromUrl[1];
+  return trimmed.replace(/[^0-9A-Z]/g, "");
+}
 
 export default function Home() {
   const [role, setRole] = useState<"student" | "teacher" | null>(null);
   const [publicCode, setPublicCode] = useState("");
+  const [receiptCode, setReceiptCode] = useState("");
   const [adminToken, setAdminToken] = useState("");
-  const [error, setError] = useState("");
+  const [examError, setExamError] = useState("");
+  const [receiptError, setReceiptError] = useState("");
+  const [teacherError, setTeacherError] = useState("");
 
   const handleStudentAccess = (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setExamError("");
     const code = publicCode.trim().toUpperCase();
     if (!code) {
-      setError("Por favor, insira o código da prova.");
+      setExamError("Por favor, insira o código da prova.");
       return;
     }
-    // Redireciona para a prova
     navigateTo(`/prova/${code}`);
+  };
+
+  const handleStudentReceiptAccess = (e: React.FormEvent) => {
+    e.preventDefault();
+    setReceiptError("");
+    const code = parseReceiptCode(receiptCode);
+    if (!code) {
+      setReceiptError("Por favor, insira o código do comprovante.");
+      return;
+    }
+    if (!/^[0-9A-Z]{6}$/.test(code)) {
+      setReceiptError("O comprovante deve ter 6 caracteres (ex: P9Z2JU).");
+      return;
+    }
+    navigateTo(`/submissao/${code}`);
   };
 
   const handleTeacherAccess = (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setTeacherError("");
     const token = adminToken.trim();
     if (!token) {
-      setError("Por favor, insira o token administrativo.");
+      setTeacherError("Por favor, insira o token administrativo.");
       return;
     }
-    // Redireciona para o painel
     navigateTo(`/admin/${token}`);
   };
 
@@ -101,7 +130,7 @@ export default function Home() {
             <div>
               <h2 className="font-bold text-lg">Acesso do Estudante</h2>
               <p className="text-xs text-slate-500">
-                Insira o código fornecido pelo professor
+                Responda uma prova ou consulte um envio pelo comprovante
               </p>
             </div>
           </div>
@@ -125,10 +154,10 @@ export default function Home() {
               />
             </div>
 
-            {error && (
+            {examError && (
               <div className="flex items-center gap-2 text-xs text-rose-400 bg-rose-950/20 border border-rose-900/30 p-3 rounded-lg">
                 <ShieldAlert className="w-4 h-4 shrink-0" />
-                <span>{error}</span>
+                <span>{examError}</span>
               </div>
             )}
 
@@ -137,6 +166,49 @@ export default function Home() {
               className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-slate-950 font-bold rounded-xl text-sm transition-all shadow-lg shadow-cyan-500/10 cursor-pointer"
             >
               Acessar Gabarito
+            </button>
+          </form>
+
+          <div className="relative flex py-5 items-center">
+            <div className="flex-grow border-t border-slate-900"></div>
+            <span className="flex-shrink mx-4 text-slate-600 text-[10px] uppercase font-bold tracking-widest">
+              Ou consulte um envio
+            </span>
+            <div className="flex-grow border-t border-slate-900"></div>
+          </div>
+
+          <form onSubmit={handleStudentReceiptAccess} className="space-y-4">
+            <div>
+              <label
+                htmlFor="receiptCode"
+                className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider"
+              >
+                Comprovante de Submissão
+              </label>
+              <input
+                id="receiptCode"
+                type="text"
+                placeholder="Ex: P9Z2JU"
+                value={receiptCode}
+                onChange={(e) => setReceiptCode(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20 text-slate-100 placeholder:text-slate-600 uppercase tracking-widest text-center font-mono font-bold"
+                required
+              />
+            </div>
+
+            {receiptError && (
+              <div className="flex items-center gap-2 text-xs text-rose-400 bg-rose-950/20 border border-rose-900/30 p-3 rounded-lg">
+                <ShieldAlert className="w-4 h-4 shrink-0" />
+                <span>{receiptError}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="w-full py-2.5 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Receipt className="w-4 h-4 text-cyan-400" />
+              Consultar Resultado
             </button>
           </form>
         </div>
@@ -196,10 +268,10 @@ export default function Home() {
                 />
               </div>
 
-              {error && (
+              {teacherError && (
                 <div className="flex items-center gap-2 text-xs text-rose-400 bg-rose-950/20 border border-rose-900/30 p-3 rounded-lg">
                   <ShieldAlert className="w-4 h-4 shrink-0" />
-                  <span>{error}</span>
+                  <span>{teacherError}</span>
                 </div>
               )}
 
