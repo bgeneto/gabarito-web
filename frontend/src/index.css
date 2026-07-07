@@ -13,6 +13,12 @@
   --font-mono:
     "Cascadia Code", "Cascadia Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
     Consolas, "Liberation Mono", "Courier New", monospace;
+  /*
+   * Segoe UI ships a separate "Black" face at 800–900 that looks far heavier than
+   * Bold on Windows. Cap display weights so extrabold/black never trigger it.
+   */
+  --font-weight-extrabold: 700;
+  --font-weight-black: 700;
 }
 
 @layer base {

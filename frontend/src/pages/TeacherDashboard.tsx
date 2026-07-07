@@ -507,9 +507,11 @@ export default function TeacherDashboard({
                   <td className="py-3.5 px-4 text-slate-500 text-xs">
                     {new Date(sub.submitted_at).toLocaleString("pt-BR")}
                   </td>
-                  <td className="py-3.5 px-4 text-center">
-                    <span className="font-extrabold text-slate-200 bg-slate-900 border border-slate-850 px-2.5 py-1 rounded-lg">
-                      {sub.total_score.toFixed(1)} / {maxPoints.toFixed(1)}
+                  <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                    <span className="inline-flex items-center whitespace-nowrap tabular-nums font-extrabold text-slate-200 bg-slate-900 border border-slate-850 px-2.5 py-1 rounded-lg">
+                      {sub.total_score.toFixed(1)}
+                      <span className="mx-1 text-slate-500 font-normal">/</span>
+                      {maxPoints.toFixed(1)}
                     </span>
                   </td>
                   <td className="py-3.5 px-4 text-right">

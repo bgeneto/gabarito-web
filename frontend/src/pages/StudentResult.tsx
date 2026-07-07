@@ -271,13 +271,15 @@ export default function StudentResult({
                     )}
                   </span>
                   <span
-                    className={`text-xs font-bold font-mono px-2 py-0.5 rounded ${
+                    className={`inline-flex items-center whitespace-nowrap tabular-nums text-xs font-bold font-mono px-2 py-0.5 rounded ${
                       ans.isCorrect
                         ? "bg-emerald-950 text-emerald-400"
                         : "bg-rose-950/50 text-rose-400"
                     }`}
                   >
-                    {ans.scoreAwarded.toFixed(1)} / {ans.points.toFixed(1)} pts
+                    {ans.scoreAwarded.toFixed(1)}
+                    <span className="mx-0.5 opacity-70">/</span>
+                    {ans.points.toFixed(1)} pts
                   </span>
                 </div>
 
