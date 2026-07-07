@@ -372,7 +372,7 @@ export default function TeacherDashboard({
             <span>•</span>
             <span className="flex items-center gap-1">
               <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-              Código: <span className="font-mono">{data.public_code}</span>
+              Código aluno: <span className="font-mono">{data.public_code}</span>
             </span>
           </div>
         </div>

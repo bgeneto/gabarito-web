@@ -153,6 +153,7 @@ Como o Drizzle está configurado com caminhos absolutos, sempre execute os coman
   ```bash
   npx drizzle-kit push --config=backend/drizzle.config.ts
   ```
+  _Em produção (Docker), o entrypoint aplica migrações versionadas em `backend/drizzle/` via `migrate.js`. Após alterar `schema.ts`, gere um novo arquivo com `npx drizzle-kit generate --config=backend/drizzle.config.ts` (executar a partir da raiz do monorepo) antes do deploy._
 - Visualizar o banco de dados no painel interativo do Drizzle Studio:
   ```bash
   npx drizzle-kit studio --config=backend/drizzle.config.ts
