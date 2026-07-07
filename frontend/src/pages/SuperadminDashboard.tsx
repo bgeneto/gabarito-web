@@ -370,7 +370,7 @@ export default function SuperadminDashboard() {
       <div className="glass-panel rounded-xl border border-slate-800 overflow-hidden">
         <div className="p-4 border-b border-slate-800 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
           <h2 className="font-bold text-slate-100">
-            Todas as provas ({overview.exams.total})
+            Todas as provas ({pagination.total})
           </h2>
           <div className="flex flex-wrap gap-2">
             <form onSubmit={handleSearch} className="flex gap-2">
