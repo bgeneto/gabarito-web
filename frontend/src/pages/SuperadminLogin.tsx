@@ -118,27 +118,41 @@ export default function SuperadminLogin() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" autoComplete="on">
+          {/* Campo oculto ajuda gerenciadores de senha (ex.: Bitwarden) a associar o item */}
+          <input
+            type="text"
+            name="username"
+            autoComplete="username"
+            defaultValue="superadmin@gabaritoweb"
+            className="sr-only"
+            tabIndex={-1}
+            aria-hidden="true"
+            readOnly
+          />
           <div>
-            <label className="block text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-2">
+            <label
+              htmlFor="superadmin-token"
+              className="block text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-2"
+            >
               Token de acesso
             </label>
             <div className="relative">
-              <textarea
-                rows={2}
+              <input
+                id="superadmin-token"
+                name="password"
+                type={showToken ? "text" : "password"}
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
-                className={`w-full bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-3 pr-12 text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30 font-mono text-xs resize-none break-all ${
-                  showToken ? "" : "[-webkit-text-security:disc]"
-                }`}
-                placeholder="Cole o token completo do openssl rand -hex 32"
-                autoComplete="off"
+                className="w-full bg-slate-900/80 border border-slate-700 rounded-xl px-4 py-3 pr-12 text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30 font-mono text-xs"
+                placeholder="Token do SUPERADMIN_TOKEN"
+                autoComplete="current-password"
                 spellCheck={false}
               />
               <button
                 type="button"
                 onClick={() => setShowToken(!showToken)}
-                className="absolute right-3 top-3 text-slate-500 hover:text-slate-300"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
               >
                 {showToken ? (
                   <EyeOff className="w-4 h-4" />
