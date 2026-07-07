@@ -45,7 +45,10 @@ export default function SuperadminLogin() {
         headers: { Authorization: `Bearer ${cleanToken}` },
       });
 
-      let data: { message?: string } = {};
+      let data: {
+        message?: string;
+        expires_at?: number | null;
+      } = {};
       try {
         data = await response.json();
       } catch {
@@ -78,7 +81,7 @@ export default function SuperadminLogin() {
         return;
       }
 
-      setSuperadminToken(cleanToken);
+      setSuperadminToken(cleanToken, data.expires_at ?? null);
       navigateTo("/superadmin/painel");
     } catch {
       setError("Não foi possível conectar ao servidor.");

@@ -7,6 +7,7 @@ import {
   getOverview,
 } from "../services/superadminStats.js";
 import {
+  getSuperadminSessionTtlMs,
   isSuperadminEnabled,
   superadminAuth,
 } from "../middleware/superadminAuth.js";
@@ -32,7 +33,13 @@ superadmin.use("*", async (c, next) => {
 superadmin.use("*", superadminAuth);
 
 superadmin.get("/session", (c) => {
-  return c.json({ ok: true });
+  const ttlMs = getSuperadminSessionTtlMs();
+  const now = Date.now();
+  return c.json({
+    ok: true,
+    session_ttl_seconds: ttlMs === 0 ? null : Math.floor(ttlMs / 1000),
+    expires_at: ttlMs === 0 ? null : now + ttlMs,
+  });
 });
 
 superadmin.get("/overview", async (c) => {

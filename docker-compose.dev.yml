@@ -16,6 +16,7 @@ services:
       - DATABASE_PATH=/app/data/gabarito.db
       - SUPERADMIN_TOKEN=${SUPERADMIN_TOKEN:-}
       - SUPERADMIN_ALLOWED_IPS=${SUPERADMIN_ALLOWED_IPS:-}
+      - SUPERADMIN_SESSION_TTL_MINUTES=${SUPERADMIN_SESSION_TTL_MINUTES:-0}
     env_file:
       - .env
 

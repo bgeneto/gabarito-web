@@ -24,6 +24,26 @@ export function isSuperadminEnabled(): boolean {
   return superadminTokenHash !== null;
 }
 
+const DEFAULT_SESSION_TTL_MINUTES = 0;
+
+/** 0 = sem expiração por tempo (apenas até fechar a aba do navegador). */
+export function getSuperadminSessionTtlMinutes(): number {
+  const raw = process.env.SUPERADMIN_SESSION_TTL_MINUTES;
+  if (raw === undefined || raw.trim() === "") {
+    return DEFAULT_SESSION_TTL_MINUTES;
+  }
+  const minutes = Number(raw);
+  if (!Number.isFinite(minutes) || minutes < 0) {
+    return DEFAULT_SESSION_TTL_MINUTES;
+  }
+  return Math.floor(minutes);
+}
+
+export function getSuperadminSessionTtlMs(): number {
+  const minutes = getSuperadminSessionTtlMinutes();
+  return minutes === 0 ? 0 : minutes * 60 * 1000;
+}
+
 function timingSafeEqualHex(a: string, b: string): boolean {
   try {
     return crypto.timingSafeEqual(Buffer.from(a, "hex"), Buffer.from(b, "hex"));
