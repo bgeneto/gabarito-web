@@ -108,7 +108,7 @@ export default function SuperadminExamDetail({ examId }: { examId: string }) {
         <p className="text-rose-400 mb-4">{error || "Prova não encontrada."}</p>
         <button
           onClick={() => navigateTo("/superadmin/painel")}
-          className="text-amber-400 hover:underline text-sm"
+          className="text-amber-400 hover:underline text-sm cursor-pointer"
         >
           Voltar ao painel
         </button>
@@ -126,7 +126,7 @@ export default function SuperadminExamDetail({ examId }: { examId: string }) {
       <nav className="flex items-center gap-2 text-sm text-slate-500">
         <button
           onClick={() => navigateTo("/superadmin/painel")}
-          className="hover:text-amber-400 flex items-center gap-1"
+          className="hover:text-amber-400 flex items-center gap-1 cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
           Painel
@@ -380,7 +380,7 @@ export default function SuperadminExamDetail({ examId }: { examId: string }) {
                         href={`/submissao/${sub.id}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-amber-400 hover:text-amber-300 text-xs"
+                        className="flex items-center gap-1 text-amber-400 hover:text-amber-300 text-xs cursor-pointer"
                       >
                         Ver
                         <ExternalLink className="w-3 h-3" />

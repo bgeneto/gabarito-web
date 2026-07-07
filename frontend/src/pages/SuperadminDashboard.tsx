@@ -242,7 +242,7 @@ export default function SuperadminDashboard() {
         <p className="text-rose-400 mb-4">{error}</p>
         <button
           onClick={() => navigateTo("/superadmin")}
-          className="text-amber-400 hover:underline text-sm"
+          className="text-amber-400 hover:underline text-sm cursor-pointer"
         >
           Voltar ao login
         </button>
@@ -272,14 +272,14 @@ export default function SuperadminDashboard() {
         <div className="flex gap-2">
           <button
             onClick={() => fetchData()}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 text-sm"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 text-sm cursor-pointer"
           >
             <RefreshCw className="w-4 h-4" />
             Atualizar
           </button>
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-700 text-slate-400 hover:text-rose-400 text-sm"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-700 text-slate-400 hover:text-rose-400 text-sm cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             Sair
@@ -408,7 +408,7 @@ export default function SuperadminDashboard() {
             </select>
             <button
               onClick={exportCsv}
-              className="flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 text-sm"
+              className="flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 text-sm cursor-pointer"
             >
               <Download className="w-4 h-4" />
               CSV
@@ -491,7 +491,7 @@ export default function SuperadminDashboard() {
                         onClick={() =>
                           navigateTo(`/superadmin/prova/${exam.id}`)
                         }
-                        className="flex items-center gap-1 text-amber-400 hover:text-amber-300 text-xs font-semibold"
+                        className="flex items-center gap-1 text-amber-400 hover:text-amber-300 text-xs font-semibold cursor-pointer"
                       >
                         Detalhes
                         <ChevronRight className="w-3 h-3" />
@@ -516,7 +516,7 @@ export default function SuperadminDashboard() {
                 onClick={() =>
                   setPagination((p) => ({ ...p, page: p.page - 1 }))
                 }
-                className="px-3 py-1 rounded border border-slate-700 disabled:opacity-40"
+                className="px-3 py-1 rounded border border-slate-700 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Anterior
               </button>
@@ -525,7 +525,7 @@ export default function SuperadminDashboard() {
                 onClick={() =>
                   setPagination((p) => ({ ...p, page: p.page + 1 }))
                 }
-                className="px-3 py-1 rounded border border-slate-700 disabled:opacity-40"
+                className="px-3 py-1 rounded border border-slate-700 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Próxima
               </button>

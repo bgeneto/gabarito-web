@@ -155,7 +155,7 @@ export default function SuperadminLogin() {
               <button
                 type="button"
                 onClick={() => setShowToken(!showToken)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 cursor-pointer"
               >
                 {showToken ? (
                   <EyeOff className="w-4 h-4" />
@@ -174,7 +174,7 @@ export default function SuperadminLogin() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-xl font-bold text-sm bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 hover:opacity-90 transition-opacity disabled:opacity-50"
+            className="w-full py-3 rounded-xl font-bold text-sm bg-gradient-to-r from-amber-500 to-orange-600 text-slate-950 hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Verificando..." : "Entrar no painel"}
           </button>
