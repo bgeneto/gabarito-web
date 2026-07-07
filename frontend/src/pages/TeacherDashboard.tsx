@@ -95,7 +95,7 @@ export default function TeacherDashboard({
   const handleCloseExam = async () => {
     if (!data) return;
     const hasConfirmed = await confirm(
-      "Tem certeza que deseja encerrar a prova? Uma vez encerrada, novos envios de alunos serão bloqueados e os resultados individuais estarão liberados.",
+      "Tem certeza que deseja encerrar a prova? Uma vez encerrada, novos envios de alunos serão bloqueados e os resultados individuais serão liberados.",
       {
         title: "Encerrar Prova",
         severity: "danger",

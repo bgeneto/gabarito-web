@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { navigateTo } from "../App";
 import { QRCodeSVG } from "qrcode.react";
 import {
@@ -12,8 +12,24 @@ import {
   ArrowLeft,
   Upload,
   Download,
+  Lock,
+  Eye,
+  EyeOff,
+  Monitor,
+  Printer,
+  MessageCircle,
+  X,
 } from "lucide-react";
 import { useModal } from "../components/ModalProvider";
+import {
+  buildAdminUrl,
+  buildPublicUrl,
+  downloadCredentialsTxt,
+  downloadQrCodePng,
+  formatCredentialsText,
+  formatWhatsAppStudentMessage,
+  openWhatsAppShare,
+} from "../utils/examCredentials";
 
 interface ItemInput {
   id: string;
@@ -49,8 +65,21 @@ export default function TeacherCreate() {
   const [result, setResult] = useState<CreationResult | null>(null);
   const [copiedPublic, setCopiedPublic] = useState(false);
   const [copiedAdmin, setCopiedAdmin] = useState(false);
+  const [copiedAll, setCopiedAll] = useState(false);
+  const [showAdminCredentials, setShowAdminCredentials] = useState(false);
+  const [presentationMode, setPresentationMode] = useState(false);
+  const qrCodeRef = useRef<SVGSVGElement>(null);
 
   const { alert, confirm } = useModal();
+
+  useEffect(() => {
+    if (!presentationMode) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPresentationMode(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [presentationMode]);
 
   const validateImportedData = (data: any): string | null => {
     if (!data || typeof data !== "object" || Array.isArray(data)) {
@@ -355,15 +384,62 @@ export default function TeacherCreate() {
     }
   };
 
-  const copyToClipboard = (text: string, type: "public" | "admin") => {
+  const copyToClipboard = (text: string, type: "public" | "admin" | "all") => {
     navigator.clipboard.writeText(text);
     if (type === "public") {
       setCopiedPublic(true);
       setTimeout(() => setCopiedPublic(false), 2000);
-    } else {
+    } else if (type === "admin") {
       setCopiedAdmin(true);
       setTimeout(() => setCopiedAdmin(false), 2000);
+    } else {
+      setCopiedAll(true);
+      setTimeout(() => setCopiedAll(false), 2000);
     }
+  };
+
+  const getCredentialsInput = (creationResult: CreationResult) => ({
+    title: title.trim() || "Prova",
+    publicCode: creationResult.public_code,
+    adminToken: creationResult.admin_token,
+  });
+
+  const handleCopyAllCredentials = (creationResult: CreationResult) => {
+    copyToClipboard(
+      formatCredentialsText(getCredentialsInput(creationResult)),
+      "all",
+    );
+  };
+
+  const handleDownloadCredentialsTxt = (creationResult: CreationResult) => {
+    downloadCredentialsTxt(getCredentialsInput(creationResult));
+  };
+
+  const handleDownloadQrPng = async (creationResult: CreationResult) => {
+    const svg = qrCodeRef.current;
+    if (!svg) {
+      await alert("Não foi possível gerar a imagem do QR code.");
+      return;
+    }
+    try {
+      const safeCode = creationResult.public_code.replace(/[^a-zA-Z0-9-]/g, "");
+      await downloadQrCodePng(svg, `gabarito-${safeCode}-qr.png`);
+    } catch {
+      await alert("Erro ao baixar o QR code.");
+    }
+  };
+
+  const handleShareWhatsApp = (creationResult: CreationResult) => {
+    openWhatsAppShare(
+      formatWhatsAppStudentMessage({
+        title: title.trim() || "Prova",
+        publicCode: creationResult.public_code,
+      }),
+    );
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   const totalPoints = items.reduce(
@@ -373,37 +449,133 @@ export default function TeacherCreate() {
 
   // Exibição do Painel de Sucesso após a criação
   if (result) {
-    const publicUrl = `${window.location.origin}/prova/${result.public_code}`;
-    const adminUrl = `${window.location.origin}/admin/${result.admin_token}`;
+    const publicUrl = buildPublicUrl(result.public_code);
+    const adminUrl = buildAdminUrl(result.admin_token);
+    const examTitle = title.trim() || "Prova";
 
     return (
-      <div className="max-w-2xl mx-auto w-full space-y-6 animate-fade-in">
-        <div className="glass-panel border border-emerald-500/20 bg-emerald-950/5 rounded-2xl p-6 text-center">
-          <div className="w-14 h-14 bg-emerald-950/80 border border-emerald-800/40 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Check className="w-8 h-8 text-emerald-400" />
+      <>
+        <div
+          id="exam-credentials-print"
+          className="hidden print:block print-credentials"
+        >
+          <div className="print-page">
+            <h1>GabaritoWEB — Acesso dos Alunos</h1>
+            <p className="print-subtitle">{examTitle}</p>
+            <div className="print-qr">
+              <QRCodeSVG value={publicUrl} size={200} />
+            </div>
+            <p>
+              <strong>Código da prova:</strong> {result.public_code}
+            </p>
+            <p className="print-break-word">
+              <strong>Link de resposta:</strong> {publicUrl}
+            </p>
           </div>
-          <h2 className="text-2xl font-black text-emerald-400">
-            Gabarito Criado com Sucesso!
-          </h2>
-          <p className="text-sm text-slate-400 mt-1">
-            A prova foi publicada e está pronta para receber submissões.
-          </p>
-          <div className="mt-4 flex justify-center">
-            <button
-              onClick={handleExportFile}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 hover:border-emerald-500/50 rounded-xl text-xs font-bold text-emerald-400 transition-all cursor-pointer"
-              title="Baixar arquivo JSON do gabarito"
-            >
-              <Download className="w-3.5 h-3.5" />
-              Exportar Gabarito (JSON)
-            </button>
+          <div className="print-page print-page-break">
+            <h1>GabaritoWEB — Acesso do Professor</h1>
+            <p className="print-subtitle">{examTitle}</p>
+            <p className="print-warning">
+              ATENÇÃO: Guarde este documento em local seguro. Por motivos de
+              segurança, o link administrativo não poderá ser consultado
+              novamente. Não divulgue para os alunos.
+            </p>
+            <p>
+              <strong>Token administrativo:</strong> {result.admin_token}
+            </p>
+            <p className="print-break-word">
+              <strong>Link do painel admin:</strong> {adminUrl}
+            </p>
           </div>
         </div>
 
-        {/* Informações da Prova */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Lado do Aluno */}
-          <div className="glass-panel border border-slate-800 rounded-2xl p-5 flex flex-col justify-between">
+        {presentationMode && (
+          <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center p-6 no-print">
+            <button
+              onClick={() => setPresentationMode(false)}
+              className="absolute top-4 right-4 p-3 bg-slate-900 border border-slate-800 rounded-xl text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+              title="Sair (Esc)"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="text-center space-y-6 max-w-md w-full">
+              <h2 className="text-xl font-black text-slate-100">{examTitle}</h2>
+              <div className="flex items-center justify-center bg-white p-4 rounded-2xl mx-auto border border-slate-200">
+                <QRCodeSVG value={publicUrl} size={320} />
+              </div>
+              <div className="space-y-2">
+                <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                  Código da Prova
+                </p>
+                <p className="font-mono font-black text-3xl tracking-wider text-cyan-400">
+                  {result.public_code}
+                </p>
+              </div>
+              <p className="font-mono text-sm text-slate-400 break-all">
+                {publicUrl}
+              </p>
+              <button
+                onClick={() => setPresentationMode(false)}
+                className="px-6 py-3 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-xl text-sm font-bold text-slate-300 transition-colors cursor-pointer"
+              >
+                Sair do Modo Apresentação
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="max-w-lg mx-auto w-full space-y-6 animate-fade-in no-print">
+          <div className="glass-panel border border-emerald-500/20 bg-emerald-950/5 rounded-2xl p-6 text-center">
+            <div className="w-14 h-14 bg-emerald-950/80 border border-emerald-800/40 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Check className="w-8 h-8 text-emerald-400" />
+            </div>
+            <h2 className="text-2xl font-black text-emerald-400">
+              Gabarito Criado com Sucesso!
+            </h2>
+            <p className="text-sm text-slate-400 mt-1">
+              A prova foi publicada e está pronta para receber submissões.
+            </p>
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              <button
+                onClick={handleExportFile}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 hover:border-emerald-500/50 rounded-xl text-xs font-bold text-emerald-400 transition-all cursor-pointer"
+                title="Baixar arquivo JSON do gabarito"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Exportar Gabarito (JSON)
+              </button>
+              <button
+                onClick={() => handleCopyAllCredentials(result)}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-xl text-xs font-bold text-slate-300 transition-all cursor-pointer"
+                title="Copiar todas as credenciais"
+              >
+                {copiedAll ? (
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                ) : (
+                  <Copy className="w-3.5 h-3.5" />
+                )}
+                Copiar Credenciais
+              </button>
+              <button
+                onClick={() => handleDownloadCredentialsTxt(result)}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-xl text-xs font-bold text-slate-300 transition-all cursor-pointer"
+                title="Baixar credenciais em arquivo de texto"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Baixar Credenciais (.txt)
+              </button>
+              <button
+                onClick={handlePrint}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-xl text-xs font-bold text-slate-300 transition-all cursor-pointer"
+                title="Imprimir ou salvar como PDF"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                Imprimir / PDF
+              </button>
+            </div>
+          </div>
+
+          <div className="glass-panel border border-slate-800 rounded-2xl p-5 flex flex-col gap-4">
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <QrCode className="w-5 h-5 text-cyan-400" />
@@ -416,8 +588,8 @@ export default function TeacherCreate() {
                 enviem suas respostas.
               </p>
 
-              <div className="flex items-center justify-center bg-white p-3 rounded-xl max-w-[180px] mx-auto mb-4 border border-slate-200">
-                <QRCodeSVG value={publicUrl} size={156} />
+              <div className="flex items-center justify-center bg-white p-4 rounded-xl max-w-[220px] mx-auto mb-4 border border-slate-200">
+                <QRCodeSVG ref={qrCodeRef} value={publicUrl} size={220} />
               </div>
             </div>
 
@@ -433,7 +605,7 @@ export default function TeacherCreate() {
                 </div>
                 <button
                   onClick={() => copyToClipboard(result.public_code, "public")}
-                  className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition-colors"
+                  className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
                   title="Copiar Código"
                 >
                   {copiedPublic ? (
@@ -455,7 +627,7 @@ export default function TeacherCreate() {
                 </div>
                 <button
                   onClick={() => copyToClipboard(publicUrl, "public")}
-                  className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition-colors"
+                  className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
                   title="Copiar Link"
                 >
                   {copiedPublic ? (
@@ -466,89 +638,147 @@ export default function TeacherCreate() {
                 </button>
               </div>
             </div>
-          </div>
 
-          {/* Lado do Professor */}
-          <div className="glass-panel border border-slate-800 rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-full blur-2xl"></div>
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <ClipboardList className="w-5 h-5 text-rose-400" />
-                <h3 className="font-bold text-sm uppercase tracking-wider text-rose-400">
-                  Painel do Professor (Admin)
-                </h3>
-              </div>
-              <p className="text-xs text-slate-400 mb-4">
-                Use este token privado para acessar o painel de resultados e
-                encerrar a prova posteriormente.
-              </p>
-
-              <div className="bg-rose-950/20 border border-rose-900/30 p-3.5 rounded-xl text-xs text-rose-300 mb-4 flex gap-2">
-                <ShieldAlert className="w-5 h-5 shrink-0" />
-                <span>
-                  <strong>ATENÇÃO:</strong> Guarde este link administrativo! Por
-                  motivos de segurança, você não poderá consultá-lo novamente.
-                </span>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="bg-slate-900 border border-slate-850 rounded-xl px-3 py-2 flex items-center justify-between">
-                <div className="text-left truncate mr-2">
-                  <span className="text-[9px] uppercase font-bold text-slate-500 block">
-                    Token Administrativo
-                  </span>
-                  <span className="font-mono text-xs text-rose-400 block truncate font-bold">
-                    {result.admin_token}
-                  </span>
-                </div>
-                <button
-                  onClick={() => copyToClipboard(result.admin_token, "admin")}
-                  className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition-colors"
-                  title="Copiar Token"
-                >
-                  {copiedAdmin ? (
-                    <Check className="w-4 h-4 text-emerald-400" />
-                  ) : (
-                    <Copy className="w-4 h-4" />
-                  )}
-                </button>
-              </div>
-
-              <div className="bg-slate-900 border border-slate-850 rounded-xl px-3 py-2 flex items-center justify-between">
-                <div className="text-left truncate mr-2">
-                  <span className="text-[9px] uppercase font-bold text-slate-500 block">
-                    Link do Painel Admin
-                  </span>
-                  <span className="font-mono text-xs text-rose-300 block truncate">
-                    {adminUrl}
-                  </span>
-                </div>
-                <button
-                  onClick={() => copyToClipboard(adminUrl, "admin")}
-                  className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition-colors"
-                  title="Copiar Link Admin"
-                >
-                  {copiedAdmin ? (
-                    <Check className="w-4 h-4 text-emerald-400" />
-                  ) : (
-                    <Copy className="w-4 h-4" />
-                  )}
-                </button>
-              </div>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <button
+                onClick={() => setPresentationMode(true)}
+                className="flex-1 min-w-[140px] inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-bold rounded-xl text-xs transition-all cursor-pointer"
+              >
+                <Monitor className="w-4 h-4" />
+                Mostrar para a turma
+              </button>
+              <button
+                onClick={() => handleDownloadQrPng(result)}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-xl text-xs font-bold text-slate-300 transition-all cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Baixar QR (PNG)
+              </button>
+              <button
+                onClick={() => handleShareWhatsApp(result)}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-all cursor-pointer"
+              >
+                <MessageCircle className="w-3.5 h-3.5" />
+                WhatsApp
+              </button>
             </div>
           </div>
-        </div>
 
-        <div className="text-center pt-4">
-          <button
-            onClick={() => navigateTo(`/admin/${result.admin_token}`)}
-            className="px-6 py-3 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-xl text-sm font-bold text-slate-200 transition-colors cursor-pointer"
-          >
-            Acessar Painel de Resultados →
-          </button>
+          {!showAdminCredentials ? (
+            <div className="glass-panel border border-slate-800 rounded-2xl p-5">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-center shrink-0">
+                  <Lock className="w-5 h-5 text-slate-400" />
+                </div>
+                <div className="flex-1 space-y-3">
+                  <p className="text-sm text-slate-400">
+                    Guarde o link administrativo em local seguro antes de exibir
+                    a prova para a turma.
+                  </p>
+                  <button
+                    onClick={() => setShowAdminCredentials(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 hover:border-rose-500/50 rounded-xl text-xs font-bold text-rose-400 transition-all cursor-pointer"
+                  >
+                    <Eye className="w-4 h-4" />
+                    Revelar link administrativo
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="glass-panel border border-slate-800 rounded-2xl p-5 flex flex-col gap-4 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-full blur-2xl"></div>
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <div className="flex items-center gap-2">
+                    <ClipboardList className="w-5 h-5 text-rose-400" />
+                    <h3 className="font-bold text-sm uppercase tracking-wider text-rose-400">
+                      Painel do Professor (Admin)
+                    </h3>
+                  </div>
+                  <button
+                    onClick={() => setShowAdminCredentials(false)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-lg text-[10px] font-bold text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+                  >
+                    <EyeOff className="w-3.5 h-3.5" />
+                    Ocultar
+                  </button>
+                </div>
+                <p className="text-xs text-slate-400 mb-4">
+                  Use este token privado para acessar o painel de resultados e
+                  encerrar a prova posteriormente.
+                </p>
+
+                <div className="bg-rose-950/20 border border-rose-900/30 p-3.5 rounded-xl text-xs text-rose-300 mb-4 flex gap-2">
+                  <ShieldAlert className="w-5 h-5 shrink-0" />
+                  <span>
+                    <strong>ATENÇÃO:</strong> Guarde este link! Por motivos de
+                    segurança, você não poderá consultá-lo novamente. Não
+                    divulgue ou mostre este link para seus alunos.
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="bg-slate-900 border border-slate-850 rounded-xl px-3 py-2 flex items-center justify-between">
+                  <div className="text-left truncate mr-2">
+                    <span className="text-[9px] uppercase font-bold text-slate-500 block">
+                      Token Administrativo
+                    </span>
+                    <span className="font-mono text-xs text-rose-400 block truncate font-bold">
+                      {result.admin_token}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard(result.admin_token, "admin")}
+                    className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+                    title="Copiar Token"
+                  >
+                    {copiedAdmin ? (
+                      <Check className="w-4 h-4 text-emerald-400" />
+                    ) : (
+                      <Copy className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+
+                <div className="bg-slate-900 border border-slate-850 rounded-xl px-3 py-2 flex items-center justify-between">
+                  <div className="text-left truncate mr-2">
+                    <span className="text-[9px] uppercase font-bold text-slate-500 block">
+                      Link do Painel Admin
+                    </span>
+                    <span className="font-mono text-xs text-rose-300 block truncate">
+                      {adminUrl}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard(adminUrl, "admin")}
+                    className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+                    title="Copiar Link Admin"
+                  >
+                    {copiedAdmin ? (
+                      <Check className="w-4 h-4 text-emerald-400" />
+                    ) : (
+                      <Copy className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {showAdminCredentials && (
+            <div className="text-center pt-2">
+              <button
+                onClick={() => navigateTo(`/admin/${result.admin_token}`)}
+                className="px-6 py-3 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-xl text-sm font-bold text-slate-200 transition-colors cursor-pointer"
+              >
+                Acessar Painel de Resultados →
+              </button>
+            </div>
+          )}
         </div>
-      </div>
+      </>
     );
   }
 

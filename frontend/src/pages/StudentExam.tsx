@@ -60,7 +60,11 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const persistDraft = useCallback(
-    (name: string, identifier: string, currentAnswers: Record<string, string>) => {
+    (
+      name: string,
+      identifier: string,
+      currentAnswers: Record<string, string>,
+    ) => {
       if (!exam) return;
 
       const itemIds = exam.items.map((item) => item.id);
@@ -156,14 +160,7 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
 
     window.addEventListener("pagehide", flushDraft);
     return () => window.removeEventListener("pagehide", flushDraft);
-  }, [
-    studentName,
-    studentIdentifier,
-    answers,
-    exam,
-    receiptId,
-    persistDraft,
-  ]);
+  }, [studentName, studentIdentifier, answers, exam, receiptId, persistDraft]);
 
   const handleUpdateAnswer = (itemId: string, val: string) => {
     setAnswers({
@@ -573,8 +570,7 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
           <div className="flex items-center justify-center gap-1.5 text-[10px] text-slate-500">
             <Save className="w-3 h-3 text-emerald-500/80" />
             <span>
-              Rascunho salvo no dispositivo •{" "}
-              {formatDraftSavedAt(draftSavedAt)}
+              Rascunho salvo no dispositivo • {formatDraftSavedAt(draftSavedAt)}
             </span>
           </div>
         )}

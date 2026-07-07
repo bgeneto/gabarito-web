@@ -66,17 +66,20 @@ test("examDraft utilities", async (t) => {
     assert.strictEqual(merged.hasRestorableContent, true);
   });
 
-  await t.test("mergeDraftWithExamItems fills new items with empty string", () => {
-    const draft = sampleDraft({ answers: { item1: "B" } });
-    const merged = mergeDraftWithExamItems(draft, [
-      { id: "item1" },
-      { id: "item3" },
-    ]);
+  await t.test(
+    "mergeDraftWithExamItems fills new items with empty string",
+    () => {
+      const draft = sampleDraft({ answers: { item1: "B" } });
+      const merged = mergeDraftWithExamItems(draft, [
+        { id: "item1" },
+        { id: "item3" },
+      ]);
 
-    assert.strictEqual(merged.answers.item1, "B");
-    assert.strictEqual(merged.answers.item3, "");
-    assert.strictEqual(merged.answers.item2, undefined);
-  });
+      assert.strictEqual(merged.answers.item1, "B");
+      assert.strictEqual(merged.answers.item3, "");
+      assert.strictEqual(merged.answers.item2, undefined);
+    },
+  );
 
   await t.test("mergeDraftWithExamItems drops obsolete item ids", () => {
     const draft = sampleDraft({
@@ -111,13 +114,9 @@ test("examDraft utilities", async (t) => {
   });
 
   await t.test("buildDraftFromForm builds valid draft shape", () => {
-    const draft = buildDraftFromForm(
-      "G26-TEST01",
-      "Ana",
-      "999",
-      { q1: "C" },
-      ["q1"],
-    );
+    const draft = buildDraftFromForm("G26-TEST01", "Ana", "999", { q1: "C" }, [
+      "q1",
+    ]);
 
     assert.strictEqual(draft.version, 1);
     assert.strictEqual(draft.publicCode, "G26-TEST01");
@@ -245,10 +244,7 @@ test("formatDraftSavedAt", async (t) => {
 
   await t.test("returns hour labels", () => {
     assert.strictEqual(formatDraftSavedAt(now - 90 * 60_000), "há 1 hora");
-    assert.strictEqual(
-      formatDraftSavedAt(now - 5 * 60 * 60_000),
-      "há 5 horas",
-    );
+    assert.strictEqual(formatDraftSavedAt(now - 5 * 60 * 60_000), "há 5 horas");
   });
 
   await t.test("returns formatted date for saves older than 24 hours", () => {
