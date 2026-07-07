@@ -18,7 +18,9 @@ import {
   generatePublicCode,
   generateSubmissionId,
 } from "./utils/generator.js";
-import { checkAnswer } from "./utils/normalizer.js";
+import { gradeItemAnswer } from "./utils/grading.js";
+import { recalculateExamScores } from "./utils/recalculate.js";
+import { validateItemFields } from "./utils/validateItem.js";
 
 const app = new Hono();
 
@@ -36,6 +38,10 @@ app.use(
   "/api/exams/:public_code/submissions",
   bodyLimit({ maxSize: 512 * 1024 }),
 ); // 512 KB para submissões
+app.use(
+  "/api/admin/exams/:admin_token/items/:item_id",
+  bodyLimit({ maxSize: 64 * 1024 }),
+);
 
 // Constantes de validação
 const MAX_TITLE_LENGTH = 200;
@@ -116,23 +122,16 @@ app.post("/api/exams", async (c) => {
         );
       }
 
-      const points = Number(item.points);
-      if (isNaN(points) || points <= 0) {
+      const validationError = validateItemFields({
+        points: item.points,
+        answer_type: item.answer_type,
+        answer_config: item.answer_config || { accepted: [] },
+      });
+      if (validationError) {
         return c.json(
           {
             error: "Validação de itens",
-            message: `A pontuação da questão ${qNum}${item.sub_label ? item.sub_label : ""} deve ser maior que zero.`,
-          },
-          400,
-        );
-      }
-
-      const accepted = item.answer_config?.accepted;
-      if (!Array.isArray(accepted) || accepted.length === 0) {
-        return c.json(
-          {
-            error: "Validação de itens",
-            message: `A questão ${qNum}${item.sub_label ? item.sub_label : ""} precisa de pelo menos uma resposta correta.`,
+            message: `Questão ${qNum}${item.sub_label ? item.sub_label : ""}: ${validationError}`,
           },
           400,
         );
@@ -458,13 +457,10 @@ app.post("/api/exams/:public_code/submissions", rateLimiter, async (c) => {
       const rawAnswer =
         answers[item.id] !== undefined ? String(answers[item.id]) : "";
 
-      const { isCorrect, normalizedAnswer } = checkAnswer(
+      const { isCorrect, normalizedAnswer, scoreAwarded } = gradeItemAnswer(
+        item,
         rawAnswer,
-        item.answerType,
-        item.answerConfigJson,
       );
-
-      const scoreAwarded = isCorrect ? item.points : 0.0;
       totalScore += scoreAwarded;
 
       answerRecords.push({
@@ -664,6 +660,124 @@ app.get("/api/admin/exams/:admin_token", async (c) => {
     });
   } catch (error: any) {
     console.error("Erro no painel administrativo:", error);
+    return c.json(
+      { error: "Erro interno do servidor", message: error.message },
+      500,
+    );
+  }
+});
+
+// ROTA: Editar Item do Gabarito (Professor) - Requer Token Admin
+app.patch("/api/admin/exams/:admin_token/items/:item_id", async (c) => {
+  try {
+    const adminToken = c.req.param("admin_token");
+    const itemId = c.req.param("item_id");
+    const adminCodeHash = hashToken(adminToken);
+
+    const [exam] = await db
+      .select()
+      .from(exams)
+      .where(eq(exams.adminCodeHash, adminCodeHash));
+    if (!exam) {
+      return c.json(
+        { error: "Não autorizado", message: "Token administrativo inválido." },
+        401,
+      );
+    }
+
+    const [existingItem] = await db
+      .select()
+      .from(examItems)
+      .where(eq(examItems.id, itemId));
+    if (!existingItem || existingItem.examId !== exam.id) {
+      return c.json(
+        { error: "Não encontrado", message: "Item da prova não encontrado." },
+        404,
+      );
+    }
+
+    const body = await c.req.json();
+    const { answer_config, points, answer_type } = body;
+
+    if (
+      !answer_config ||
+      typeof answer_config !== "object" ||
+      points === undefined ||
+      !answer_type
+    ) {
+      return c.json(
+        {
+          error: "Parâmetros inválidos",
+          message:
+            "Os campos answer_config, points e answer_type são obrigatórios.",
+        },
+        400,
+      );
+    }
+
+    const validationError = validateItemFields({
+      points,
+      answer_type,
+      answer_config,
+    });
+    if (validationError) {
+      return c.json({ error: "Validação", message: validationError }, 400);
+    }
+
+    const newAnswerConfigJson = JSON.stringify(answer_config);
+    const newPoints = Number(points);
+    const newAnswerType = answer_type as "choice" | "true_false" | "text_exact";
+
+    const hasChanges =
+      existingItem.answerConfigJson !== newAnswerConfigJson ||
+      existingItem.points !== newPoints ||
+      existingItem.answerType !== newAnswerType;
+
+    if (!hasChanges) {
+      return c.json({
+        item: {
+          id: existingItem.id,
+          question_number: existingItem.questionNumber,
+          sub_label: existingItem.subLabel,
+          points: existingItem.points,
+          answer_type: existingItem.answerType,
+          answer_config: JSON.parse(existingItem.answerConfigJson),
+        },
+        recalculation: { submissions_updated: 0, answers_updated: 0 },
+        message: "Nenhuma alteração detectada.",
+      });
+    }
+
+    const recalculation = db.transaction((tx) => {
+      tx.update(examItems)
+        .set({
+          points: newPoints,
+          answerType: newAnswerType,
+          answerConfigJson: newAnswerConfigJson,
+        })
+        .where(eq(examItems.id, itemId))
+        .run();
+
+      return recalculateExamScores(exam.id, tx);
+    });
+
+    return c.json({
+      item: {
+        id: existingItem.id,
+        question_number: existingItem.questionNumber,
+        sub_label: existingItem.subLabel,
+        points: newPoints,
+        answer_type: newAnswerType,
+        answer_config,
+      },
+      recalculation: {
+        submissions_updated: recalculation.submissionsUpdated,
+        answers_updated: recalculation.answersUpdated,
+      },
+      message: "Gabarito atualizado e notas recalculadas.",
+    });
+  } catch (error: any) {
+    console.error("Erro ao editar item do gabarito:", error);
     return c.json(
       { error: "Erro interno do servidor", message: error.message },
       500,

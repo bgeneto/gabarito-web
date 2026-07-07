@@ -172,7 +172,7 @@ export default function Home() {
           <div className="relative flex py-5 items-center">
             <div className="flex-grow border-t border-slate-900"></div>
             <span className="flex-shrink mx-4 text-slate-600 text-[10px] uppercase font-bold tracking-widest">
-              Ou consulte um envio
+              Consulte seu envio e nota
             </span>
             <div className="flex-grow border-t border-slate-900"></div>
           </div>

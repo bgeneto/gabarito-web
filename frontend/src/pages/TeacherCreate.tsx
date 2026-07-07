@@ -68,7 +68,18 @@ export default function TeacherCreate() {
   const [copiedAll, setCopiedAll] = useState(false);
   const [showAdminCredentials, setShowAdminCredentials] = useState(false);
   const [presentationMode, setPresentationMode] = useState(false);
+  const [showSaveCredentialsModal, setShowSaveCredentialsModal] =
+    useState(false);
+  const [credentialsSavedAcknowledged, setCredentialsSavedAcknowledged] =
+    useState(false);
+  const [autoDownloadStatus, setAutoDownloadStatus] = useState<
+    "success" | "blocked" | null
+  >(null);
+  const [autoCopyStatus, setAutoCopyStatus] = useState<
+    "success" | "failed" | null
+  >(null);
   const qrCodeRef = useRef<SVGSVGElement>(null);
+  const autoSaveRanForRef = useRef<string | null>(null);
 
   const { alert, confirm } = useModal();
 
@@ -80,6 +91,38 @@ export default function TeacherCreate() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [presentationMode]);
+
+  useEffect(() => {
+    if (!result) {
+      autoSaveRanForRef.current = null;
+      return;
+    }
+    if (autoSaveRanForRef.current === result.id) return;
+    autoSaveRanForRef.current = result.id;
+
+    setShowSaveCredentialsModal(true);
+    setCredentialsSavedAcknowledged(false);
+    setAutoDownloadStatus(null);
+    setAutoCopyStatus(null);
+
+    const credentials = {
+      title: title.trim() || "Prova",
+      publicCode: result.public_code,
+      adminToken: result.admin_token,
+    };
+
+    navigator.clipboard
+      .writeText(formatCredentialsText(credentials))
+      .then(() => setAutoCopyStatus("success"))
+      .catch(() => setAutoCopyStatus("failed"));
+
+    try {
+      downloadCredentialsTxt(credentials);
+      setAutoDownloadStatus("success");
+    } catch {
+      setAutoDownloadStatus("blocked");
+    }
+  }, [result, title]);
 
   const validateImportedData = (data: any): string | null => {
     if (!data || typeof data !== "object" || Array.isArray(data)) {
@@ -442,6 +485,31 @@ export default function TeacherCreate() {
     window.print();
   };
 
+  const requireCredentialsSaved = () => {
+    if (credentialsSavedAcknowledged) return true;
+    setShowSaveCredentialsModal(true);
+    return false;
+  };
+
+  const handleOpenPresentation = () => {
+    if (!requireCredentialsSaved()) return;
+    setPresentationMode(true);
+  };
+
+  const handleRevealAdmin = () => {
+    if (!requireCredentialsSaved()) return;
+    setShowAdminCredentials(true);
+  };
+
+  const handleConfirmCredentialsSaved = () => {
+    if (!credentialsSavedAcknowledged) return;
+    setShowSaveCredentialsModal(false);
+  };
+
+  const credentialsFilename = result
+    ? `gabarito-${result.public_code.replace(/[^a-zA-Z0-9-]/g, "")}-credenciais.txt`
+    : "";
+
   const totalPoints = items.reduce(
     (acc, curr) => acc + Number(curr.points || 0),
     0,
@@ -488,6 +556,127 @@ export default function TeacherCreate() {
             </p>
           </div>
         </div>
+
+        {showSaveCredentialsModal && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 no-print">
+            <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-sm" />
+            <div className="glass-panel w-full max-w-md rounded-2xl p-6 shadow-2xl relative z-10 overflow-hidden animate-modal-in border border-amber-500/20">
+              <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full blur-3xl opacity-10 pointer-events-none bg-amber-500" />
+
+              <div className="flex items-start gap-4 mb-5">
+                <div className="w-12 h-12 bg-amber-950/85 border border-amber-800/40 rounded-2xl flex items-center justify-center text-amber-400 shrink-0">
+                  <ShieldAlert className="w-6 h-6" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-lg font-bold text-slate-100">
+                    Salve suas credenciais agora
+                  </h3>
+                  <p className="text-sm text-slate-400 leading-relaxed">
+                    O link administrativo{" "}
+                    <strong className="text-amber-300">
+                      não poderá ser recuperado depois
+                    </strong>
+                    . Guarde o arquivo em local seguro antes de exibir a prova
+                    para a turma.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2 mb-5">
+                {autoDownloadStatus === "success" && (
+                  <div className="flex items-start gap-2 text-xs text-emerald-300 bg-emerald-950/30 border border-emerald-900/40 rounded-xl p-3">
+                    <Check className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>
+                      Download iniciado:{" "}
+                      <span className="font-mono">{credentialsFilename}</span>.
+                      Verifique sua pasta de Downloads.
+                    </span>
+                  </div>
+                )}
+                {autoDownloadStatus === "blocked" && (
+                  <div className="flex items-start gap-2 text-xs text-amber-300 bg-amber-950/30 border border-amber-900/40 rounded-xl p-3">
+                    <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>
+                      O download automático foi bloqueado pelo navegador. Clique
+                      no botão abaixo para baixar manualmente.
+                    </span>
+                  </div>
+                )}
+                {autoCopyStatus === "success" && (
+                  <div className="flex items-start gap-2 text-xs text-cyan-300 bg-cyan-950/30 border border-cyan-900/40 rounded-xl p-3">
+                    <Check className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>
+                      Credenciais copiadas para a área de transferência. Você
+                      pode colar em um bloco de notas ou e-mail.
+                    </span>
+                  </div>
+                )}
+                {autoCopyStatus === "failed" && (
+                  <div className="flex items-start gap-2 text-xs text-slate-400 bg-slate-900/60 border border-slate-800 rounded-xl p-3">
+                    <Copy className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>
+                      Não foi possível copiar automaticamente. Use os botões
+                      abaixo para salvar manualmente.
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-2 mb-5">
+                <button
+                  onClick={() => handleDownloadCredentialsTxt(result)}
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-sm transition-all cursor-pointer"
+                >
+                  <Download className="w-4 h-4" />
+                  Baixar credenciais (.txt)
+                </button>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={handlePrint}
+                    className="inline-flex items-center justify-center gap-2 px-3 py-2.5 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-xl text-xs font-bold text-slate-300 transition-all cursor-pointer"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    Imprimir / PDF
+                  </button>
+                  <button
+                    onClick={() => handleCopyAllCredentials(result)}
+                    className="inline-flex items-center justify-center gap-2 px-3 py-2.5 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-xl text-xs font-bold text-slate-300 transition-all cursor-pointer"
+                  >
+                    {copiedAll ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                    Copiar tudo
+                  </button>
+                </div>
+              </div>
+
+              <label className="flex items-start gap-3 p-3.5 bg-slate-900/60 border border-slate-800 rounded-xl cursor-pointer mb-4">
+                <input
+                  type="checkbox"
+                  checked={credentialsSavedAcknowledged}
+                  onChange={(e) =>
+                    setCredentialsSavedAcknowledged(e.target.checked)
+                  }
+                  className="mt-0.5 w-4 h-4 rounded border-slate-600 bg-slate-900 text-amber-500 focus:ring-amber-500/30 cursor-pointer"
+                />
+                <span className="text-sm text-slate-300 leading-relaxed">
+                  Já salvei as credenciais em local seguro (arquivo, e-mail ou
+                  bloco de notas).
+                </span>
+              </label>
+
+              <button
+                onClick={handleConfirmCredentialsSaved}
+                disabled={!credentialsSavedAcknowledged}
+                className="w-full px-5 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 disabled:from-slate-800 disabled:to-slate-800 disabled:text-slate-500 text-slate-950 font-bold rounded-xl text-sm transition-all cursor-pointer disabled:cursor-not-allowed"
+              >
+                Continuar
+              </button>
+            </div>
+          </div>
+        )}
 
         {presentationMode && (
           <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center p-6 no-print">
@@ -641,8 +830,14 @@ export default function TeacherCreate() {
 
             <div className="flex flex-wrap gap-2 pt-1">
               <button
-                onClick={() => setPresentationMode(true)}
-                className="flex-1 min-w-[140px] inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-bold rounded-xl text-xs transition-all cursor-pointer"
+                onClick={handleOpenPresentation}
+                disabled={!credentialsSavedAcknowledged}
+                className="flex-1 min-w-[140px] inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-cyan-500 hover:bg-cyan-600 disabled:bg-cyan-900/30 disabled:text-cyan-700 text-slate-950 font-bold rounded-xl text-xs transition-all cursor-pointer disabled:cursor-not-allowed"
+                title={
+                  credentialsSavedAcknowledged
+                    ? "Abrir modo apresentação"
+                    : "Salve as credenciais antes de exibir para a turma"
+                }
               >
                 <Monitor className="w-4 h-4" />
                 Mostrar para a turma
@@ -664,6 +859,16 @@ export default function TeacherCreate() {
             </div>
           </div>
 
+          {!credentialsSavedAcknowledged && (
+            <div className="flex items-start gap-2 text-xs text-amber-300/90 bg-amber-950/20 border border-amber-900/30 rounded-xl p-3">
+              <Lock className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>
+                Salve as credenciais administrativas antes de exibir a prova
+                para a turma ou revelar o link admin.
+              </span>
+            </div>
+          )}
+
           {!showAdminCredentials ? (
             <div className="glass-panel border border-slate-800 rounded-2xl p-5">
               <div className="flex items-start gap-3">
@@ -676,8 +881,9 @@ export default function TeacherCreate() {
                     a prova para a turma.
                   </p>
                   <button
-                    onClick={() => setShowAdminCredentials(true)}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 hover:border-rose-500/50 rounded-xl text-xs font-bold text-rose-400 transition-all cursor-pointer"
+                    onClick={handleRevealAdmin}
+                    disabled={!credentialsSavedAcknowledged}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 disabled:bg-slate-900 disabled:border-slate-800 border border-rose-500/30 hover:border-rose-500/50 disabled:hover:border-slate-800 rounded-xl text-xs font-bold text-rose-400 disabled:text-slate-500 transition-all cursor-pointer disabled:cursor-not-allowed"
                   >
                     <Eye className="w-4 h-4" />
                     Revelar link administrativo

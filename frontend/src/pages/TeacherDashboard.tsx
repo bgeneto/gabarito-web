@@ -7,9 +7,11 @@ import {
   Download,
   FileSpreadsheet,
   Lock,
+  Pencil,
   ShieldCheck,
   Trophy,
   Users,
+  X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { navigateTo } from "../App";
@@ -28,7 +30,7 @@ interface ExamItem {
   question_number: number;
   sub_label: string | null;
   points: number;
-  answer_type: string;
+  answer_type: "choice" | "true_false" | "text_exact";
   answer_config: {
     accepted: string[];
   };
@@ -45,6 +47,13 @@ interface ExamData {
   submissions: Submission[];
 }
 
+interface ItemEditDraft {
+  points: number;
+  answer_type: "choice" | "true_false" | "text_exact";
+  accepted: string[];
+  tempVariant: string;
+}
+
 export default function TeacherDashboard({
   adminToken,
 }: {
@@ -56,6 +65,9 @@ export default function TeacherDashboard({
   const [error, setError] = useState("");
   const [closeLoading, setCloseLoading] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [editingItem, setEditingItem] = useState<ExamItem | null>(null);
+  const [editDraft, setEditDraft] = useState<ItemEditDraft | null>(null);
+  const [saveLoading, setSaveLoading] = useState(false);
 
   const fetchDashboardData = async (silent = false) => {
     try {
@@ -138,6 +150,123 @@ export default function TeacherDashboard({
     navigator.clipboard.writeText(data.public_code);
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2000);
+  };
+
+  const openEditModal = (item: ExamItem) => {
+    setEditingItem(item);
+    setEditDraft({
+      points: item.points,
+      answer_type: item.answer_type,
+      accepted: [...item.answer_config.accepted],
+      tempVariant: "",
+    });
+  };
+
+  const closeEditModal = () => {
+    if (saveLoading) return;
+    setEditingItem(null);
+    setEditDraft(null);
+  };
+
+  const updateEditDraft = (fields: Partial<ItemEditDraft>) => {
+    setEditDraft((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...fields };
+      if (fields.answer_type && fields.answer_type !== prev.answer_type) {
+        if (fields.answer_type === "choice") {
+          updated.accepted = ["A"];
+        } else if (fields.answer_type === "true_false") {
+          updated.accepted = ["V"];
+        } else {
+          updated.accepted = [];
+        }
+      }
+      return updated;
+    });
+  };
+
+  const handleAddTextVariant = () => {
+    if (!editDraft) return;
+    const variant = editDraft.tempVariant.trim();
+    if (!variant || editDraft.accepted.includes(variant)) return;
+    updateEditDraft({
+      accepted: [...editDraft.accepted, variant],
+      tempVariant: "",
+    });
+  };
+
+  const handleRemoveTextVariant = (index: number) => {
+    if (!editDraft) return;
+    updateEditDraft({
+      accepted: editDraft.accepted.filter((_, i) => i !== index),
+    });
+  };
+
+  const handleSaveItem = async () => {
+    if (!data || !editingItem || !editDraft) return;
+
+    if (editDraft.accepted.length === 0) {
+      await alert("Adicione pelo menos uma resposta correta.", {
+        title: "Gabarito incompleto",
+        severity: "warning",
+      });
+      return;
+    }
+
+    const submissionCount = data.submissions.length;
+    const confirmMessage =
+      submissionCount > 0
+        ? `Alterar o gabarito recalculará automaticamente as notas de ${submissionCount} aluno${submissionCount > 1 ? "s" : ""}. Esta ação não pode ser desfeita.`
+        : "Deseja salvar as alterações neste item do gabarito?";
+
+    const hasConfirmed = await confirm(confirmMessage, {
+      title: "Confirmar alteração",
+      severity: "warning",
+      confirmText: "Salvar e recalcular",
+      cancelText: "Cancelar",
+    });
+    if (!hasConfirmed) return;
+
+    setSaveLoading(true);
+    try {
+      const response = await fetch(
+        `/api/admin/exams/${adminToken}/items/${editingItem.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            points: editDraft.points,
+            answer_type: editDraft.answer_type,
+            answer_config: { accepted: editDraft.accepted },
+          }),
+        },
+      );
+      const resData = await response.json();
+      if (!response.ok) {
+        throw new Error(resData.message || "Erro ao salvar alterações.");
+      }
+
+      closeEditModal();
+      await fetchDashboardData(true);
+
+      const recalcCount = resData.recalculation?.submissions_updated ?? 0;
+      const successMessage =
+        recalcCount > 0
+          ? `Gabarito atualizado. ${recalcCount} nota${recalcCount > 1 ? "s" : ""} recalculada${recalcCount > 1 ? "s" : ""}.`
+          : resData.message || "Gabarito atualizado com sucesso.";
+
+      await alert(successMessage, {
+        title: "Gabarito atualizado",
+        severity: "info",
+      });
+    } catch (err: any) {
+      await alert(err.message || "Houve um erro ao salvar o gabarito.", {
+        title: "Erro ao salvar",
+        severity: "danger",
+      });
+    } finally {
+      setSaveLoading(false);
+    }
   };
 
   const sanitizeCsvField = (value: string): string => {
@@ -418,9 +547,9 @@ export default function TeacherDashboard({
           {data.items.map((item) => (
             <div
               key={item.id}
-              className="bg-slate-900/55 border border-slate-850 rounded-xl p-3.5 flex items-start justify-between"
+              className="bg-slate-900/55 border border-slate-850 rounded-xl p-3.5 flex items-start justify-between gap-2"
             >
-              <div>
+              <div className="min-w-0 flex-1">
                 <span className="font-bold text-sm block">
                   Questão {item.question_number}
                   {item.sub_label && (
@@ -438,7 +567,6 @@ export default function TeacherDashboard({
                       : "Texto Exato"}
                 </span>
 
-                {/* Accepted answers */}
                 <div className="flex flex-wrap gap-1 mt-2">
                   {item.answer_config.accepted.map((val, idx) => (
                     <span
@@ -457,13 +585,206 @@ export default function TeacherDashboard({
                 </div>
               </div>
 
-              <span className="text-xs font-bold text-slate-400 bg-slate-950 border border-slate-850 px-2 py-0.5 rounded-md">
-                {item.points.toFixed(1)} pts
-              </span>
+              <div className="flex flex-col items-end gap-1.5 shrink-0">
+                <span className="text-xs font-bold text-slate-400 bg-slate-950 border border-slate-850 px-2 py-0.5 rounded-md">
+                  {item.points.toFixed(1)} pts
+                </span>
+                <button
+                  onClick={() => openEditModal(item)}
+                  className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold text-slate-400 hover:text-cyan-400 bg-slate-950 border border-slate-850 hover:border-cyan-800/40 rounded-md transition-colors cursor-pointer"
+                  title="Editar gabarito"
+                >
+                  <Pencil className="w-3 h-3" />
+                  Editar
+                </button>
+              </div>
             </div>
           ))}
         </div>
       </div>
+
+      {editingItem && editDraft && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+          <div className="glass-panel border border-slate-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-5 border-b border-slate-800">
+              <div>
+                <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-300">
+                  Editar Gabarito
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Questão {editingItem.question_number}
+                  {editingItem.sub_label && (
+                    <span className="text-cyan-400 uppercase">
+                      {editingItem.sub_label}
+                    </span>
+                  )}
+                </p>
+              </div>
+              <button
+                onClick={closeEditModal}
+                disabled={saveLoading}
+                className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition-colors cursor-pointer disabled:opacity-40"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
+                  Pontos
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  min="0.1"
+                  value={editDraft.points}
+                  onChange={(e) =>
+                    updateEditDraft({
+                      points: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                  disabled={saveLoading}
+                  className="w-full bg-slate-900 border border-slate-850 rounded-xl px-3 py-2 text-sm text-center font-bold text-blue-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase">
+                  Tipo de Resposta
+                </label>
+                <select
+                  value={editDraft.answer_type}
+                  onChange={(e) =>
+                    updateEditDraft({
+                      answer_type: e.target
+                        .value as ItemEditDraft["answer_type"],
+                    })
+                  }
+                  disabled={saveLoading}
+                  className="w-full bg-slate-900 border border-slate-850 rounded-xl px-3 py-2 text-sm focus:outline-none"
+                >
+                  <option value="choice">Múltipla Escolha</option>
+                  <option value="true_false">Verdadeiro ou Falso (V/F)</option>
+                  <option value="text_exact">Texto Exato Normalizado</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase">
+                  Gabarito Oficial
+                </label>
+
+                {editDraft.answer_type === "choice" && (
+                  <div className="flex gap-1.5 justify-between">
+                    {["A", "B", "C", "D", "E"].map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => updateEditDraft({ accepted: [option] })}
+                        disabled={saveLoading}
+                        className={`flex-1 py-1.5 rounded-lg border text-sm font-bold transition-all cursor-pointer disabled:opacity-40 ${
+                          editDraft.accepted.includes(option)
+                            ? "bg-cyan-500 text-slate-950 border-cyan-400"
+                            : "bg-slate-900 border-slate-850 text-slate-400 hover:border-slate-800"
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {editDraft.answer_type === "true_false" && (
+                  <div className="flex gap-2">
+                    {["V", "F"].map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => updateEditDraft({ accepted: [option] })}
+                        disabled={saveLoading}
+                        className={`flex-1 py-1.5 rounded-lg border text-sm font-bold transition-all cursor-pointer disabled:opacity-40 ${
+                          editDraft.accepted.includes(option)
+                            ? "bg-blue-500 text-white border-blue-400"
+                            : "bg-slate-900 border-slate-850 text-slate-400 hover:border-slate-800"
+                        }`}
+                      >
+                        {option === "V" ? "Verdadeiro (V)" : "Falso (F)"}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {editDraft.answer_type === "text_exact" && (
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Nova variação aceita..."
+                        value={editDraft.tempVariant}
+                        onChange={(e) =>
+                          updateEditDraft({ tempVariant: e.target.value })
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddTextVariant();
+                          }
+                        }}
+                        disabled={saveLoading}
+                        className="flex-1 bg-slate-900 border border-slate-850 rounded-xl px-3 py-1.5 text-xs placeholder:text-slate-600"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddTextVariant}
+                        disabled={saveLoading}
+                        className="px-3 bg-slate-900 border border-slate-850 hover:bg-slate-800 text-slate-300 rounded-xl text-xs font-bold cursor-pointer disabled:opacity-40"
+                      >
+                        Adicionar
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {editDraft.accepted.map((val, variantIdx) => (
+                        <span
+                          key={variantIdx}
+                          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-850 border border-slate-800 text-[10px] text-slate-300 font-mono"
+                        >
+                          {val}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveTextVariant(variantIdx)}
+                            disabled={saveLoading}
+                            className="text-slate-500 hover:text-rose-400 cursor-pointer disabled:opacity-40"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-2 p-5 border-t border-slate-800">
+              <button
+                onClick={closeEditModal}
+                disabled={saveLoading}
+                className="flex-1 px-4 py-2.5 bg-slate-900 border border-slate-850 rounded-xl text-sm font-bold text-slate-300 hover:bg-slate-800 transition-colors cursor-pointer disabled:opacity-40"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveItem}
+                disabled={saveLoading}
+                className="flex-1 px-4 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-sm font-bold transition-colors cursor-pointer disabled:opacity-60"
+              >
+                {saveLoading ? "Salvando..." : "Salvar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

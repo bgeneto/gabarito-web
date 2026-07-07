@@ -87,7 +87,7 @@ function App() {
             </div>
             <div className="flex items-center gap-4 text-xs font-semibold text-slate-400">
               <span className="px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800">
-                MVP v1.0
+                v1.0.1
               </span>
             </div>
           </div>

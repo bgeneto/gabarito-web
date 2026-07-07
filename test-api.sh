@@ -197,6 +197,103 @@ ADMIN_RESP=$(curl -s "$BASE_URL/admin/exams/$ADMIN_TOKEN")
 echo "Resposta do painel do professor:"
 echo "$ADMIN_RESP"
 
+# Verificar notas iniciais no painel admin
+SCORE_1_INIT=$(echo "$ADMIN_RESP" | jq '[.submissions[] | select(.student_identifier=="MAT10") | .total_score][0]')
+SCORE_2_INIT=$(echo "$ADMIN_RESP" | jq '[.submissions[] | select(.student_identifier=="MAT25") | .total_score][0]')
+echo "Nota inicial Aluno 1 (esperado 10.0): $SCORE_1_INIT"
+echo "Nota inicial Aluno 2 (esperado 2.5): $SCORE_2_INIT"
+if [ "$SCORE_1_INIT" != "10" ] && [ "$SCORE_1_INIT" != "10.0" ]; then
+  echo "FALHOU: nota inicial do Aluno 1 incorreta"
+  exit 1
+fi
+if [ "$SCORE_2_INIT" != "2.5" ]; then
+  echo "FALHOU: nota inicial do Aluno 2 incorreta"
+  exit 1
+fi
+
+# 7b. Editar gabarito do item 1 (choice A -> B) e recalcular notas
+echo -e "\n7b. Editando gabarito do item 1 (resposta correta: B)..."
+PATCH_1_RESP=$(curl -s -X PATCH "$BASE_URL/admin/exams/$ADMIN_TOKEN/items/$ITEM_1_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "points": 2.5,
+    "answer_type": "choice",
+    "answer_config": { "accepted": ["B"] }
+  }')
+echo "Resposta do PATCH item 1:"
+echo "$PATCH_1_RESP"
+
+PATCH_1_MSG=$(echo "$PATCH_1_RESP" | jq -r '.message // empty')
+if [ "$PATCH_1_MSG" != "Gabarito atualizado e notas recalculadas." ]; then
+  echo "FALHOU: PATCH item 1 não retornou mensagem de sucesso"
+  echo "$PATCH_1_RESP"
+  exit 1
+fi
+
+ADMIN_AFTER_PATCH_1=$(curl -s "$BASE_URL/admin/exams/$ADMIN_TOKEN")
+SCORE_1_AFTER_PATCH=$(echo "$ADMIN_AFTER_PATCH_1" | jq '[.submissions[] | select(.student_identifier=="MAT10") | .total_score][0]')
+SCORE_2_AFTER_PATCH=$(echo "$ADMIN_AFTER_PATCH_1" | jq '[.submissions[] | select(.student_identifier=="MAT25") | .total_score][0]')
+echo "Nota após PATCH Aluno 1 (esperado 7.5): $SCORE_1_AFTER_PATCH"
+echo "Nota após PATCH Aluno 2 (esperado 5.0): $SCORE_2_AFTER_PATCH"
+if [ "$SCORE_1_AFTER_PATCH" != "7.5" ]; then
+  echo "FALHOU: nota do Aluno 1 após recálculo incorreta"
+  exit 1
+fi
+if [ "$SCORE_2_AFTER_PATCH" != "5" ] && [ "$SCORE_2_AFTER_PATCH" != "5.0" ]; then
+  echo "FALHOU: nota do Aluno 2 após recálculo incorreta"
+  exit 1
+fi
+
+# 7c. Alterar pontuação do item 1 (2.5 -> 1.0) e recalcular
+echo -e "\n7c. Alterando pontuação do item 1 para 1.0..."
+PATCH_2_RESP=$(curl -s -X PATCH "$BASE_URL/admin/exams/$ADMIN_TOKEN/items/$ITEM_1_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "points": 1.0,
+    "answer_type": "choice",
+    "answer_config": { "accepted": ["B"] }
+  }')
+echo "Resposta do PATCH pontos:"
+echo "$PATCH_2_RESP"
+
+ADMIN_AFTER_PATCH_2=$(curl -s "$BASE_URL/admin/exams/$ADMIN_TOKEN")
+SCORE_2_AFTER_POINTS=$(echo "$ADMIN_AFTER_PATCH_2" | jq '[.submissions[] | select(.student_identifier=="MAT25") | .total_score][0]')
+echo "Nota após alteração de pontos Aluno 2 (esperado 3.5): $SCORE_2_AFTER_POINTS"
+if [ "$SCORE_2_AFTER_POINTS" != "3.5" ]; then
+  echo "FALHOU: nota do Aluno 2 após alteração de pontos incorreta"
+  exit 1
+fi
+
+# 7d. PATCH com token inválido (deve retornar 401)
+echo -e "\n7d. Testando PATCH com token inválido..."
+PATCH_BAD_TOKEN_HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X PATCH "$BASE_URL/admin/exams/token_invalido/items/$ITEM_1_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "points": 1.0,
+    "answer_type": "choice",
+    "answer_config": { "accepted": ["A"] }
+  }')
+echo "HTTP Code token inválido (esperado 401): $PATCH_BAD_TOKEN_HTTP"
+if [ "$PATCH_BAD_TOKEN_HTTP" != "401" ]; then
+  echo "FALHOU: PATCH com token inválido deveria retornar 401"
+  exit 1
+fi
+
+# 7e. PATCH com accepted vazio (deve retornar 400)
+echo -e "\n7e. Testando PATCH com gabarito vazio..."
+PATCH_EMPTY_HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X PATCH "$BASE_URL/admin/exams/$ADMIN_TOKEN/items/$ITEM_1_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "points": 1.0,
+    "answer_type": "choice",
+    "answer_config": { "accepted": [] }
+  }')
+echo "HTTP Code accepted vazio (esperado 400): $PATCH_EMPTY_HTTP"
+if [ "$PATCH_EMPTY_HTTP" != "400" ]; then
+  echo "FALHOU: PATCH com accepted vazio deveria retornar 400"
+  exit 1
+fi
+
 # 8. Encerrar Prova pelo Professor
 echo -e "\n8. Encerrando prova..."
 CLOSE_RESP=$(curl -s -X POST "$BASE_URL/admin/exams/$ADMIN_TOKEN/close")
@@ -206,12 +303,12 @@ echo "$CLOSE_RESP"
 # 9. Consultar Nota com Prova Fechada (deve retornar nota detalhada)
 echo -e "\n9. Consultando nota do Aluno 1 com prova FECHADA..."
 VAL_1_CLOSED=$(curl -s "$BASE_URL/submissions/$SUB_1_ID")
-echo "Resposta da nota (nota deve ser 10.0 e detalhada):"
+echo "Resposta da nota (nota deve refletir recálculo, ex: 7.5):"
 echo "$VAL_1_CLOSED"
 
 echo -e "\n10. Consultando nota do Aluno 2 com prova FECHADA..."
 VAL_2_CLOSED=$(curl -s "$BASE_URL/submissions/$SUB_2_ID")
-echo "Resposta da nota (nota deve ser 2.5):"
+echo "Resposta da nota (nota deve refletir recálculo, ex: 3.5):"
 echo "$VAL_2_CLOSED"
 
 echo -e "\n=== TESTES DE API CONCLUÍDOS ==="
