@@ -65,9 +65,7 @@ export default function SuperadminLogin() {
             "O servidor não recebeu o token (header Authorization pode estar bloqueado pelo proxy reverso/Caddy).",
           );
         } else if (msg.includes("Acesso negado")) {
-          setError(
-            "Seu IP não está em SUPERADMIN_ALLOWED_IPS. Ajuste a variável ou remova a restrição.",
-          );
+          setError("Acesso negado! Seu IP não é permitido.");
         } else {
           setError(
             `Token não confere com o configurado no servidor. Verifique se colou o token completo (${cleanToken.length} caracteres enviados).`,

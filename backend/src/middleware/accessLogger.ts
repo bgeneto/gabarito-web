@@ -65,7 +65,10 @@ export function writeAccessLog(entry: {
         })
         .run();
     } catch (err: any) {
-      if (err?.code === "SQLITE_ERROR" && String(err.message).includes("no such table")) {
+      if (
+        err?.code === "SQLITE_ERROR" &&
+        String(err.message).includes("no such table")
+      ) {
         return;
       }
       console.error("Erro ao gravar access_log:", err);
@@ -115,7 +118,10 @@ export function purgeOldAccessLogs() {
   try {
     db.delete(accessLogs).where(lt(accessLogs.timestamp, cutoff)).run();
   } catch (err: any) {
-    if (err?.code === "SQLITE_ERROR" && String(err.message).includes("no such table")) {
+    if (
+      err?.code === "SQLITE_ERROR" &&
+      String(err.message).includes("no such table")
+    ) {
       return;
     }
     console.error("Erro ao purgar access_logs:", err);
