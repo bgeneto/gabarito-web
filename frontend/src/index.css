@@ -45,6 +45,19 @@
   );
 }
 
+/* Back navigation — high contrast on dark backgrounds */
+.back-link {
+  @apply inline-flex items-center gap-1.5 text-sm font-semibold text-cyan-300 hover:text-cyan-200 transition-colors cursor-pointer;
+}
+
+.back-nav-btn {
+  @apply p-2 bg-slate-800 border border-slate-600 rounded-xl hover:bg-slate-700 hover:border-slate-500 transition-colors cursor-pointer shrink-0;
+}
+
+.back-nav-btn svg {
+  @apply w-4 h-4 text-cyan-300;
+}
+
 /* Glassmorphism utility */
 .glass-panel {
   background: rgba(15, 23, 42, 0.65);

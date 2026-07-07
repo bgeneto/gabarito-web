@@ -6,6 +6,7 @@ import {
   Key,
   ClipboardList,
   Receipt,
+  ArrowLeft,
 } from "lucide-react";
 
 function parseReceiptCode(raw: string): string {
@@ -116,11 +117,9 @@ export default function Home() {
       {/* Aluno View */}
       {role === "student" && (
         <div className="glass-panel border border-slate-800 rounded-2xl p-6 relative overflow-hidden">
-          <button
-            onClick={() => setRole(null)}
-            className="text-xs text-slate-400 hover:text-slate-200 mb-4 inline-block"
-          >
-            ← Voltar para seleção
+          <button onClick={() => setRole(null)} className="back-link mb-4">
+            <ArrowLeft className="w-4 h-4" />
+            Voltar para seleção
           </button>
 
           <div className="flex items-center gap-3 mb-5">
@@ -165,7 +164,7 @@ export default function Home() {
               type="submit"
               className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-slate-950 font-bold rounded-xl text-sm transition-all shadow-lg shadow-cyan-500/10 cursor-pointer"
             >
-              Acessar Gabarito
+              Informar Respostas
             </button>
           </form>
 
@@ -218,11 +217,9 @@ export default function Home() {
       {role === "teacher" && (
         <div className="space-y-6">
           <div className="glass-panel border border-slate-800 rounded-2xl p-6 relative overflow-hidden">
-            <button
-              onClick={() => setRole(null)}
-              className="text-xs text-slate-400 hover:text-slate-200 mb-4 inline-block"
-            >
-              ← Voltar para seleção
+            <button onClick={() => setRole(null)} className="back-link mb-4">
+              <ArrowLeft className="w-4 h-4" />
+              Voltar para seleção
             </button>
 
             <div className="text-center mb-6">

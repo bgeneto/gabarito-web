@@ -381,9 +381,10 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
       <div className="flex items-center gap-3">
         <button
           onClick={() => navigateTo("/")}
-          className="p-2 bg-slate-900 border border-slate-850 rounded-xl hover:bg-slate-800 transition-colors cursor-pointer"
+          className="back-nav-btn"
+          aria-label="Voltar para Home"
         >
-          <ArrowLeft className="w-4 h-4 text-slate-300" />
+          <ArrowLeft />
         </button>
         <div className="truncate">
           <h1 className="text-xl font-black truncate">{exam?.title}</h1>

@@ -995,9 +995,10 @@ export default function TeacherCreate() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigateTo("/")}
-            className="p-2 bg-slate-900 border border-slate-850 rounded-xl hover:bg-slate-800 transition-colors cursor-pointer"
+            className="back-nav-btn"
+            aria-label="Voltar para Home"
           >
-            <ArrowLeft className="w-4 h-4 text-slate-300" />
+            <ArrowLeft />
           </button>
           <div>
             <h1 className="text-2xl font-black">Configurar Prova</h1>
