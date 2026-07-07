@@ -14,9 +14,10 @@ services:
     environment:
       - NODE_ENV=development
       - DATABASE_PATH=/app/data/gabarito.db
+      - SUPERADMIN_TOKEN=${SUPERADMIN_TOKEN:-}
+      - SUPERADMIN_ALLOWED_IPS=${SUPERADMIN_ALLOWED_IPS:-}
     env_file:
-      - path: .env
-        required: false
+      - .env
 
   frontend:
     container_name: gabaritoweb-frontend-dev

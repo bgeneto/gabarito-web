@@ -335,17 +335,36 @@ O script detecta automaticamente se a API está no ar e, caso não esteja, sobe 
 
 ### Painel Superadmin
 
-URL: `/superadmin` (não aparece na página inicial). Configure no `.env`:
+URL: `/superadmin` (não aparece na página inicial). No **servidor de produção**, crie/edite o `.env` na raiz do projeto (mesmo diretório do `docker-compose.yml`):
 
 ```bash
-cp .env.example .env
-# Gere um token seguro:
 openssl rand -hex 32
-# Adicione ao .env:
-SUPERADMIN_TOKEN=seu_token_aqui
+# .env (sem aspas, uma linha, sem espaços extras):
+SUPERADMIN_TOKEN=efa4548dc2e10ea9517aa45cc43fc4a385e4f97718ad2752c2f596140a81ee4e
 ```
 
-Reinicie a API após definir o token. O painel exibe estatísticas globais de provas, submissões, tráfego e drill-down por prova — sem possibilidade de alterar dados.
+**Importante em produção:** alterar o `.env` não atualiza um container já em execução. Recrie a API:
+
+```bash
+./manage.sh prod-stop
+./manage.sh prod-start
+# ou: docker compose up -d --force-recreate gabarito-api
+```
+
+Confirme nos logs do container: `Superadmin: habilitado`.
+
+Teste direto na API (no servidor):
+
+```bash
+curl -s -o /dev/null -w "%{http_code}" \
+  -H "Authorization: Bearer SEU_TOKEN" \
+  http://localhost:3000/api/superadmin/session
+# Esperado: 200
+```
+
+Se retornar `401` com `Token ausente`, o **proxy reverso (Caddy/Nginx)** pode estar bloqueando o header `Authorization` — garanta que ele seja repassado à API.
+
+O painel exibe estatísticas globais de provas, submissões, tráfego e drill-down por prova — sem possibilidade de alterar dados.
 
 ---
 

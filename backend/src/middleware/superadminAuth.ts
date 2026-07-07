@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { Context, Next } from "hono";
 
+import { normalizeSuperadminToken } from "../utils/superadminToken.js";
 import { getClientIp } from "./rateLimiter.js";
 
 const WINDOW_MS = 60 * 1000;
@@ -12,9 +13,8 @@ function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
-const superadminTokenHash = process.env.SUPERADMIN_TOKEN
-  ? hashToken(process.env.SUPERADMIN_TOKEN)
-  : null;
+const configuredToken = normalizeSuperadminToken(process.env.SUPERADMIN_TOKEN);
+const superadminTokenHash = configuredToken ? hashToken(configuredToken) : null;
 
 const allowedIps = process.env.SUPERADMIN_ALLOWED_IPS
   ? process.env.SUPERADMIN_ALLOWED_IPS.split(",").map((ip) => ip.trim())
@@ -72,7 +72,7 @@ export async function superadminAuth(c: Context, next: Next) {
     return c.json({ error: "Não autorizado", message: "Acesso negado." }, 401);
   }
 
-  const token = extractBearerToken(c);
+  const token = normalizeSuperadminToken(extractBearerToken(c) ?? undefined);
   if (!token) {
     return c.json(
       { error: "Não autorizado", message: "Token de superadmin ausente." },

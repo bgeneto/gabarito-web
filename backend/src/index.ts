@@ -21,6 +21,7 @@ import {
 import { rateLimiter, getClientIp } from "./middleware/rateLimiter.js";
 import { telemetryRateLimiter } from "./middleware/telemetryRateLimiter.js";
 import superadmin from "./routes/superadmin.js";
+import { isSuperadminEnabled } from "./middleware/superadminAuth.js";
 import {
   categorizePagePath,
   normalizePagePath,
@@ -882,6 +883,9 @@ serve(
   (info) => {
     console.log(
       `[Servidor Hono] Rodando localmente em http://localhost:${info.port}`,
+    );
+    console.log(
+      `[Servidor Hono] Superadmin: ${isSuperadminEnabled() ? "habilitado" : "desabilitado (SUPERADMIN_TOKEN ausente)"}`,
     );
   },
 );

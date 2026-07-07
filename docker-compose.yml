@@ -17,9 +17,12 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_PATH=/app/data/gabarito.db
+      - SUPERADMIN_TOKEN=${SUPERADMIN_TOKEN:-}
+      - SUPERADMIN_ALLOWED_IPS=${SUPERADMIN_ALLOWED_IPS:-}
+      - ACCESS_LOG_RETENTION_DAYS=${ACCESS_LOG_RETENTION_DAYS:-90}
+      - CORS_ORIGIN=${CORS_ORIGIN:-}
     env_file:
-      - path: .env
-        required: false
+      - .env
     volumes:
       - ./data/prod:/app/data:z
     restart: always
