@@ -17,6 +17,9 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_PATH=/app/data/gabarito.db
+    env_file:
+      - path: .env
+        required: false
     volumes:
       - ./data/prod:/app/data:z
     restart: always

@@ -311,4 +311,70 @@ VAL_2_CLOSED=$(curl -s "$BASE_URL/submissions/$SUB_2_ID")
 echo "Resposta da nota (nota deve refletir recálculo, ex: 3.5):"
 echo "$VAL_2_CLOSED"
 
+# 11. Testes da área Superadmin
+echo -e "\n11. Testando área Superadmin..."
+SUPERADMIN_TOKEN="${SUPERADMIN_TOKEN:-test_superadmin_token_for_ci}"
+
+# Telemetria de page view
+PV_RESP=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/telemetry/pageview" \
+  -H "Content-Type: application/json" \
+  -d '{"path": "/prova/TEST"}')
+echo "HTTP Code pageview telemetry (esperado 200): $PV_RESP"
+if [ "$PV_RESP" != "200" ]; then
+  echo "FALHOU: telemetry pageview"
+  exit 1
+fi
+
+# Sem token de superadmin no header
+SA_NO_AUTH_HTTP=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/superadmin/overview" \
+  -H "Authorization: Bearer token_invalido_xyz")
+echo "HTTP Code superadmin token inválido (esperado 401 ou 404): $SA_NO_AUTH_HTTP"
+if [ "$SA_NO_AUTH_HTTP" != "401" ] && [ "$SA_NO_AUTH_HTTP" != "404" ]; then
+  echo "FALHOU: superadmin deveria retornar 401 ou 404 sem token válido"
+  exit 1
+fi
+
+# POST em rota superadmin deve ser 405 ou 404
+SA_POST_HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL/superadmin/overview" \
+  -H "Authorization: Bearer $SUPERADMIN_TOKEN")
+echo "HTTP Code POST superadmin (esperado 405 ou 404): $SA_POST_HTTP"
+if [ "$SA_POST_HTTP" != "405" ] && [ "$SA_POST_HTTP" != "404" ]; then
+  echo "FALHOU: POST em superadmin deveria retornar 405 ou 404"
+  exit 1
+fi
+
+# Com token válido (se feature habilitada no servidor)
+SA_SESSION_HTTP=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/superadmin/session" \
+  -H "Authorization: Bearer $SUPERADMIN_TOKEN")
+echo "HTTP Code superadmin session: $SA_SESSION_HTTP"
+
+if [ "$SA_SESSION_HTTP" = "200" ]; then
+  SA_OVERVIEW=$(curl -s "$BASE_URL/superadmin/overview" \
+    -H "Authorization: Bearer $SUPERADMIN_TOKEN")
+  SA_EXAMS_TOTAL=$(echo "$SA_OVERVIEW" | jq -r '.exams.total // empty')
+  echo "Total de provas no overview superadmin: $SA_EXAMS_TOTAL"
+  if [ -z "$SA_EXAMS_TOTAL" ]; then
+    echo "FALHOU: overview superadmin sem campo exams.total"
+    exit 1
+  fi
+
+  if echo "$SA_OVERVIEW" | grep -q "admin_code_hash"; then
+    echo "FALHOU: overview expõe admin_code_hash"
+    exit 1
+  fi
+
+  EXAM_ID=$(echo "$CREATE_RESP" | jq -r '.id')
+  SA_DETAIL=$(curl -s "$BASE_URL/superadmin/exams/$EXAM_ID" \
+    -H "Authorization: Bearer $SUPERADMIN_TOKEN")
+  SA_DETAIL_TITLE=$(echo "$SA_DETAIL" | jq -r '.title // empty')
+  if [ "$SA_DETAIL_TITLE" != "Física Geral I - MVP Test" ]; then
+    echo "FALHOU: detalhe superadmin da prova"
+    echo "$SA_DETAIL"
+    exit 1
+  fi
+  echo "OK: superadmin overview e detalhe de prova"
+else
+  echo "AVISO: superadmin desabilitado no servidor (session HTTP $SA_SESSION_HTTP). Defina SUPERADMIN_TOKEN para testes completos."
+fi
+
 echo -e "\n=== TESTES DE API CONCLUÍDOS ==="

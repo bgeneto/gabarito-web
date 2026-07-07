@@ -40,6 +40,7 @@ Professor encerra prova →  Aluno consulta nota detalhada
 | 📤 **Import/Export de gabarito** | Exporta e importa configurações de prova em formato JSON                                  |
 | 🌙 **Tema escuro**               | Interface moderna com glassmorphism, tema slate/ciano e suporte _mobile-first_            |
 | 🐳 **Docker pronto**             | Ambientes de desenvolvimento e produção via Docker Compose                                |
+| 🛡️ **Painel Superadmin**         | Visão global somente leitura de provas, estatísticas e tráfego (token via `.env`)         |
 
 ---
 
@@ -329,6 +330,22 @@ O script detecta automaticamente se a API está no ar e, caso não esteja, sobe 
 | **Rate limiting**        | Máximo de 5 submissões por IP por minuto na rota de envio de respostas             |
 | **Anti-duplicidade**     | Matrícula duplicada na mesma prova retorna `409 Conflict`                          |
 | **Comprovante compacto** | ID de submissão com 6 chars base36 com detecção de colisão e retry                 |
+| **Superadmin**           | Token estático em `SUPERADMIN_TOKEN`; área somente leitura em `/superadmin`        |
+| **Logs de acesso**       | IPs hasheados (SHA-256); retenção configurável via `ACCESS_LOG_RETENTION_DAYS`     |
+
+### Painel Superadmin
+
+URL: `/superadmin` (não aparece na página inicial). Configure no `.env`:
+
+```bash
+cp .env.example .env
+# Gere um token seguro:
+openssl rand -hex 32
+# Adicione ao .env:
+SUPERADMIN_TOKEN=seu_token_aqui
+```
+
+Reinicie a API após definir o token. O painel exibe estatísticas globais de provas, submissões, tráfego e drill-down por prova — sem possibilidade de alterar dados.
 
 ---
 

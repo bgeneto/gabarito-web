@@ -4,12 +4,12 @@ import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { getDatabasePath } from "./databasePath.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const dbPath =
-  process.env.DATABASE_PATH || path.resolve(__dirname, "../../gabarito.db");
+const dbPath = getDatabasePath();
 const dataDir = path.dirname(dbPath);
 const migrationsFolder = path.resolve(__dirname, "../../drizzle");
 

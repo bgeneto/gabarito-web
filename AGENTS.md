@@ -28,7 +28,14 @@ gabarito-web/
 │   │   │   ├── index.ts      # Conexão SQLite (WAL mode)
 │   │   │   └── schema.ts     # Schemas Drizzle ORM
 │   │   ├── middleware/
-│   │   │   └── rateLimiter.ts# Limitação de submissões por IP
+│   │   │   ├── rateLimiter.ts       # Limitação de submissões por IP
+│   │   │   ├── superadminAuth.ts    # Auth Bearer para superadmin
+│   │   │   ├── accessLogger.ts      # Logging de requisições API
+│   │   │   └── telemetryRateLimiter.ts
+│   │   ├── routes/
+│   │   │   └── superadmin.ts        # Endpoints GET somente leitura
+│   │   ├── services/
+│   │   │   └── superadminStats.ts   # Agregações e estatísticas globais
 │   │   ├── utils/
 │   │   │   └── normalizer.ts # Pipeline de limpeza e correção de textos
 │   │   └── index.ts          # Endpoints do Hono & servidor
@@ -36,7 +43,7 @@ gabarito-web/
 │   └── drizzle.config.ts     # Configuração do Drizzle Kit
 ├── frontend/                 # SPA React
 │   ├── src/
-│   │   ├── pages/            # Telas da aplicação (Home, Create, Dashboard, Exam, Result)
+│   │   ├── pages/            # Telas (Home, Teacher*, Student*, Superadmin*)
 │   │   ├── App.tsx           # Layout principal e roteador reativo customizado
 │   │   ├── main.tsx          # Ponto de entrada do React
 │   │   └── index.css         # Importações do Tailwind v4 e estilos base
@@ -82,6 +89,13 @@ As relações do banco de dados estão estruturadas da seguinte forma em `backen
    - `rawAnswer` (string) e `normalizedAnswer` (string): Respostas antes e depois do pipeline de limpeza.
    - `isCorrect` (integer: `1` ou `0`).
    - `scoreAwarded` (real).
+
+5. **`access_logs`**:
+   - Registro de acessos (requisições API e page views do SPA).
+   - `eventType`: `'api_request'` ou `'page_view'`.
+   - `path` normalizado (tokens/códigos substituídos por placeholders).
+   - `routeCategory`, `ipHash` (SHA-256 do IP), `examId` opcional, `responseTimeMs` opcional.
+   - Retenção configurável via `ACCESS_LOG_RETENTION_DAYS` (padrão 90 dias).
 
 ---
 
@@ -193,6 +207,16 @@ O projeto fornece um script central de gerenciamento no host ([manage.sh](file:/
 - `./manage.sh format`: Formata recursivamente todo o código-fonte do repositório utilizando Prettier.
 - `./manage.sh db-push`: Sincroniza o schema com o SQLite.
 - `./manage.sh test`: Executa os testes de integração do `test-api.sh` (utilizando a instância ativa se disponível, ou subindo uma temporária automaticamente).
+
+### 5.7. Área Superadmin (Somente Leitura)
+
+Painel global para o operador do serviço, acessível em `/superadmin` (não linkado na Home).
+
+- **Autenticação**: `SUPERADMIN_TOKEN` no `.env` do servidor; enviado pelo frontend via header `Authorization: Bearer <token>` (armazenado em `sessionStorage`).
+- **Endpoints** (todos `GET`, prefixo `/api/superadmin/`): `session`, `overview`, `exams`, `exams/:examId`, `access`.
+- **Sem escrita**: Nenhum `POST`/`PATCH`/`DELETE` sob `/api/superadmin/*`. Respostas nunca incluem `admin_token` nem `admin_code_hash`.
+- **Telemetria**: `POST /api/telemetry/pageview` registra page views do SPA em `access_logs`; middleware `accessLogger` registra requisições API.
+- **Variáveis opcionais**: `SUPERADMIN_ALLOWED_IPS`, `ACCESS_LOG_RETENTION_DAYS`.
 
 ---
 

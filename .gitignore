@@ -17,10 +17,6 @@ data/dev/*
 data/prod/*
 !data/dev/.gitkeep
 !data/prod/.gitkeep
-/backend/gabarito.db
-/backend/gabarito.db-shm
-/backend/gabarito.db-wal
-/backend/gabarito.db-journal
 *.db
 *.db-shm
 *.db-wal

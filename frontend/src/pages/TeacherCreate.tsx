@@ -1115,7 +1115,7 @@ export default function TeacherCreate() {
                   </label>
                   <input
                     type="number"
-                    step="0.1"
+                    step="0.01"
                     min="0.1"
                     value={item.points}
                     onChange={(e) =>
@@ -1162,7 +1162,7 @@ export default function TeacherCreate() {
                     <option value="true_false">
                       Verdadeiro ou Falso (V/F)
                     </option>
-                    <option value="text_exact">Texto Exato Normalizado</option>
+                    <option value="text_exact">Texto</option>
                   </select>
                 </div>
 

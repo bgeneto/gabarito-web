@@ -364,7 +364,7 @@ export default function TeacherDashboard({
             </span>
           </div>
           <h1 className="text-2xl font-black">{data.title}</h1>
-          <div className="flex items-center gap-3 text-xs text-slate-500 mt-2 font-mono">
+          <div className="flex items-center gap-3 text-xs text-slate-500 mt-2">
             <span className="flex items-center gap-1">
               <Calendar className="w-3.5 h-3.5" />
               Criada em: {new Date(data.created_at).toLocaleDateString("pt-BR")}
@@ -372,7 +372,7 @@ export default function TeacherDashboard({
             <span>•</span>
             <span className="flex items-center gap-1">
               <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-              Código: {data.public_code}
+              Código: <span className="font-mono">{data.public_code}</span>
             </span>
           </div>
         </div>
@@ -401,7 +401,7 @@ export default function TeacherDashboard({
               Encerrar Prova
             </button>
           ) : (
-            <span className="flex items-center gap-1.5 px-4 py-2 bg-rose-950/20 border border-rose-900/30 rounded-xl text-xs font-bold text-rose-300 font-mono select-none">
+            <span className="flex items-center gap-1.5 px-4 py-2 bg-rose-950/20 border border-rose-900/30 rounded-xl text-xs font-bold text-rose-300 select-none">
               <Lock className="w-3.5 h-3.5" />
               Encerrada
             </span>
@@ -555,12 +555,12 @@ export default function TeacherDashboard({
                 <span className="font-bold text-sm block">
                   Questão {item.question_number}
                   {item.sub_label && (
-                    <span className="text-cyan-400 uppercase">
+                    <span className="ml-2 text-cyan-400 uppercase">
                       {item.sub_label}
                     </span>
                   )}
                 </span>
-                <span className="text-[10px] text-slate-500 block uppercase font-mono mt-0.5">
+                <span className="text-[10px] text-slate-500 block uppercase mt-0.5">
                   Tipo:{" "}
                   {item.answer_type === "choice"
                     ? "Múltipla Escolha"
@@ -616,7 +616,7 @@ export default function TeacherDashboard({
                 <p className="text-xs text-slate-500 mt-0.5">
                   Questão {editingItem.question_number}
                   {editingItem.sub_label && (
-                    <span className="text-cyan-400 uppercase">
+                    <span className="ml-2 text-cyan-400 uppercase">
                       {editingItem.sub_label}
                     </span>
                   )}
@@ -638,7 +638,7 @@ export default function TeacherDashboard({
                 </label>
                 <input
                   type="number"
-                  step="0.1"
+                  step="0.01"
                   min="0.1"
                   value={editDraft.points}
                   onChange={(e) =>
@@ -668,7 +668,7 @@ export default function TeacherDashboard({
                 >
                   <option value="choice">Múltipla Escolha</option>
                   <option value="true_false">Verdadeiro ou Falso (V/F)</option>
-                  <option value="text_exact">Texto Exato Normalizado</option>
+                  <option value="text_exact">Texto</option>
                 </select>
               </div>
 

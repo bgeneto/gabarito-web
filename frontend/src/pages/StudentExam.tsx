@@ -388,7 +388,7 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
         </button>
         <div className="truncate">
           <h1 className="text-xl font-black truncate">{exam?.title}</h1>
-          <p className="text-[10px] text-slate-500 font-mono uppercase mt-0.5">
+          <p className="text-[10px] text-slate-500 uppercase mt-0.5">
             Prova Aberta • {exam?.items.length} itens • {maxPoints.toFixed(1)}{" "}
             pontos max
           </p>
@@ -472,7 +472,7 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
                   <FileQuestion className="w-4 h-4 text-cyan-400" />
                   Questão {item.questionNumber}
                   {item.subLabel && (
-                    <span className="text-cyan-400 uppercase">
+                    <span className="ml-2 text-cyan-400 uppercase">
                       {item.subLabel}
                     </span>
                   )}

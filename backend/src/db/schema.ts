@@ -93,3 +93,30 @@ export const submissionAnswers = sqliteTable(
     itemIdIdx: index("submission_answers_item_id_idx").on(table.itemId),
   }),
 );
+
+export const accessLogs = sqliteTable(
+  "access_logs",
+  {
+    id: text("id").primaryKey(),
+    timestamp: integer("timestamp").notNull(),
+    eventType: text("event_type")
+      .$type<"api_request" | "page_view">()
+      .notNull(),
+    method: text("method"),
+    path: text("path").notNull(),
+    routeCategory: text("route_category").notNull(),
+    statusCode: integer("status_code"),
+    ipHash: text("ip_hash").notNull(),
+    userAgent: text("user_agent"),
+    examId: text("exam_id").references(() => exams.id),
+    responseTimeMs: integer("response_time_ms"),
+  },
+  (table) => ({
+    timestampIdx: index("access_logs_timestamp_idx").on(table.timestamp),
+    eventTypeIdx: index("access_logs_event_type_idx").on(table.eventType),
+    routeCategoryIdx: index("access_logs_route_category_idx").on(
+      table.routeCategory,
+    ),
+    examIdIdx: index("access_logs_exam_id_idx").on(table.examId),
+  }),
+);

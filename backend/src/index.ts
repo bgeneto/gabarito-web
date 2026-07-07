@@ -12,7 +12,19 @@ import {
   submissionAnswers,
   submissions,
 } from "./db/schema.js";
-import { rateLimiter } from "./middleware/rateLimiter.js";
+import {
+  accessLogger,
+  hashIp,
+  startAccessLogRetentionJob,
+  writeAccessLog,
+} from "./middleware/accessLogger.js";
+import { rateLimiter, getClientIp } from "./middleware/rateLimiter.js";
+import { telemetryRateLimiter } from "./middleware/telemetryRateLimiter.js";
+import superadmin from "./routes/superadmin.js";
+import {
+  categorizePagePath,
+  normalizePagePath,
+} from "./utils/pathNormalizer.js";
 import {
   generateAdminToken,
   generatePublicCode,
@@ -31,6 +43,7 @@ const corsOrigin =
     ? "https://gabarito.sistema.pro.br"
     : "*");
 app.use("/api/*", cors({ origin: corsOrigin }));
+app.use("/api/*", accessLogger);
 
 // Limites de tamanho de payload
 app.use("/api/exams", bodyLimit({ maxSize: 1024 * 1024 })); // 1 MB para criação de prova
@@ -42,6 +55,33 @@ app.use(
   "/api/admin/exams/:admin_token/items/:item_id",
   bodyLimit({ maxSize: 64 * 1024 }),
 );
+app.use("/api/telemetry/pageview", bodyLimit({ maxSize: 4 * 1024 }));
+
+// Telemetria de page views do SPA (público, rate limited)
+app.post("/api/telemetry/pageview", telemetryRateLimiter, async (c) => {
+  try {
+    const body = await c.req.json();
+    const rawPath = typeof body.path === "string" ? body.path : "/";
+    const normalizedPath = normalizePagePath(rawPath.split("?")[0]);
+    const ipHash = hashIp(getClientIp(c));
+    const userAgent = c.req.header("user-agent");
+
+    writeAccessLog({
+      eventType: "page_view",
+      path: normalizedPath,
+      routeCategory: categorizePagePath(normalizedPath),
+      ipHash,
+      userAgent,
+    });
+
+    return c.json({ ok: true });
+  } catch {
+    return c.json({ ok: true });
+  }
+});
+
+// Rotas superadmin (somente leitura)
+app.route("/api/superadmin", superadmin);
 
 // Constantes de validação
 const MAX_TITLE_LENGTH = 200;
@@ -832,6 +872,8 @@ app.post("/api/admin/exams/:admin_token/close", async (c) => {
 });
 
 // Inicialização do servidor Node.js
+startAccessLogRetentionJob();
+
 serve(
   {
     fetch: app.fetch,

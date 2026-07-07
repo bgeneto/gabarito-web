@@ -110,7 +110,7 @@ export default function StudentResult({
           </button>
           <div>
             <h1 className="text-lg font-black truncate">{data.exam_title}</h1>
-            <p className="text-[10px] text-slate-500 font-mono uppercase mt-0.5">
+            <p className="text-[10px] text-slate-500 uppercase mt-0.5">
               Status: Prova Aberta
             </p>
           </div>
@@ -139,16 +139,17 @@ export default function StudentResult({
           <span className="text-[10px] uppercase font-bold text-slate-500 block tracking-wider text-center">
             Dados do Registro
           </span>
-          <div className="space-y-2 font-mono bg-slate-950 p-3 rounded-xl border border-slate-900">
+          <div className="space-y-2 bg-slate-950 p-3 rounded-xl border border-slate-900">
             <p>
               <strong>Comprovante:</strong>{" "}
-              <span className="text-cyan-400">{data.id}</span>
+              <span className="text-cyan-400 font-mono">{data.id}</span>
             </p>
             <p>
               <strong>Aluno:</strong> {data.student_name}
             </p>
             <p>
-              <strong>Matrícula:</strong> {data.student_identifier}
+              <strong>Matrícula:</strong>{" "}
+              <span className="font-mono">{data.student_identifier}</span>
             </p>
             <p>
               <strong>Data de Envio:</strong>{" "}
@@ -191,7 +192,7 @@ export default function StudentResult({
         </button>
         <div>
           <h1 className="text-xl font-black truncate">{data.exam_title}</h1>
-          <p className="text-[10px] text-slate-500 font-mono uppercase mt-0.5">
+          <p className="text-[10px] text-slate-500 uppercase mt-0.5">
             Prova Encerrada • Nota Divulgada
           </p>
         </div>
@@ -221,8 +222,9 @@ export default function StudentResult({
         <h3 className="font-extrabold text-lg text-slate-200">
           {data.student_name}
         </h3>
-        <p className="text-xs text-slate-400 font-mono">
-          Matrícula: {data.student_identifier}
+        <p className="text-xs text-slate-400">
+          Matrícula:{" "}
+          <span className="font-mono">{data.student_identifier}</span>
         </p>
 
         {/* Desempenho Badge */}
@@ -265,13 +267,13 @@ export default function StudentResult({
                   <span className="font-bold text-sm">
                     Questão {ans.questionNumber}
                     {ans.subLabel && (
-                      <span className="text-cyan-400 uppercase">
+                      <span className="ml-2 text-cyan-400 uppercase">
                         {ans.subLabel}
                       </span>
                     )}
                   </span>
                   <span
-                    className={`inline-flex items-center whitespace-nowrap tabular-nums text-xs font-bold font-mono px-2 py-0.5 rounded ${
+                    className={`inline-flex items-center whitespace-nowrap tabular-nums text-xs font-bold px-2 py-0.5 rounded ${
                       ans.isCorrect
                         ? "bg-emerald-950 text-emerald-400"
                         : "bg-rose-950/50 text-rose-400"
@@ -283,7 +285,7 @@ export default function StudentResult({
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 text-xs font-mono">
+                <div className="grid grid-cols-2 gap-4 text-xs">
                   <div className="bg-slate-950/60 p-2 rounded-lg border border-slate-900/80">
                     <span className="text-[9px] uppercase font-bold text-slate-500 block">
                       Sua Resposta
@@ -304,7 +306,7 @@ export default function StudentResult({
                       <span className="text-[9px] uppercase font-bold text-slate-500 block">
                         Gabarito
                       </span>
-                      <span className="font-bold text-slate-300">
+                      <span className="font-bold text-slate-300 font-mono">
                         {ans.answerType === "true_false"
                           ? ans.acceptedAnswers?.[0] === "V"
                             ? "verdadeiro"

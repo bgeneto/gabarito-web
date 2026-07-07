@@ -110,7 +110,7 @@ case "$1" in
       ./test-api.sh
     else
       echo "API offline. Iniciando servidor temporário no host..."
-      npm --prefix backend run dev > /dev/null 2>&1 &
+      SUPERADMIN_TOKEN="${SUPERADMIN_TOKEN:-test_superadmin_token_for_ci}" npm --prefix backend run dev > /dev/null 2>&1 &
       API_PID=$!
       sleep 3
       ./test-api.sh
