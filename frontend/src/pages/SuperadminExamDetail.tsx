@@ -225,21 +225,46 @@ export default function SuperadminExamDetail({ examId }: { examId: string }) {
               Distribuição de notas
             </p>
           </div>
-          <div className="flex items-end gap-2 h-24">
+          <div className="flex gap-2 mb-1.5">
             {data.score_distribution.buckets.map((b) => (
-              <div
+              <span
                 key={b.label}
-                className="flex-1 flex flex-col items-center gap-1"
+                className="flex-1 text-center text-xs font-semibold text-slate-300 tabular-nums"
               >
-                <span className="text-xs text-slate-400">{b.count}</span>
+                {b.count}
+              </span>
+            ))}
+          </div>
+          <div
+            className="flex items-end gap-2 h-32 rounded-lg bg-slate-900/50 px-2 py-2 border border-slate-800/60"
+            role="img"
+            aria-label="Histograma da distribuição de notas por faixa percentual"
+          >
+            {data.score_distribution.buckets.map((b) => {
+              const barHeight =
+                b.count > 0 ? Math.max((b.count / maxBucket) * 100, 6) : 0;
+              return (
                 <div
-                  className="w-full bg-amber-500/80 rounded-t"
-                  style={{
-                    height: `${Math.max((b.count / maxBucket) * 100, 4)}%`,
-                  }}
-                />
-                <span className="text-[10px] text-slate-500">{b.label}</span>
-              </div>
+                  key={b.label}
+                  title={`${b.label}: ${b.count} aluno${b.count === 1 ? "" : "s"}`}
+                  className="group flex-1 flex flex-col justify-end h-full min-w-0"
+                >
+                  <div
+                    className="w-full rounded-t bg-gradient-to-t from-amber-600 to-amber-400/90 opacity-90 group-hover:opacity-100 transition-opacity"
+                    style={{ height: `${barHeight}%` }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex gap-2 mt-2">
+            {data.score_distribution.buckets.map((b) => (
+              <span
+                key={b.label}
+                className="flex-1 text-center text-[10px] text-slate-500 min-w-0"
+              >
+                {b.label}
+              </span>
             ))}
           </div>
         </div>

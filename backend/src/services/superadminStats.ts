@@ -47,6 +47,15 @@ function buildTimeline(
   return result;
 }
 
+/** 4xx/5xx sobre requisições API operacionais (exclui superadmin e telemetria). */
+function computeApiErrorRatePercent(
+  apiRequestCount: number,
+  apiErrorCount: number,
+): number {
+  if (apiRequestCount <= 0) return 0;
+  return Math.round((apiErrorCount / apiRequestCount) * 1000) / 10;
+}
+
 export async function getOverview() {
   const now = Date.now();
   const sevenDaysAgo = daysAgo(7);
@@ -110,8 +119,8 @@ export async function getOverview() {
       apiRequests: sql<number>`sum(case when ${accessLogs.eventType} = 'api_request' then 1 else 0 end)`,
       pageViews: sql<number>`sum(case when ${accessLogs.eventType} = 'page_view' then 1 else 0 end)`,
       uniqueVisitors: countDistinct(accessLogs.ipHash),
-      errors: sql<number>`sum(case when ${accessLogs.statusCode} >= 400 then 1 else 0 end)`,
-      total: count(),
+      operationalApiRequests: sql<number>`sum(case when ${accessLogs.eventType} = 'api_request' and ${accessLogs.routeCategory} not in ('superadmin', 'telemetry') then 1 else 0 end)`,
+      operationalApiErrors: sql<number>`sum(case when ${accessLogs.eventType} = 'api_request' and ${accessLogs.routeCategory} not in ('superadmin', 'telemetry') and ${accessLogs.statusCode} >= 400 then 1 else 0 end)`,
     })
     .from(accessLogs)
     .where(gte(accessLogs.timestamp, sevenDaysAgo));
@@ -163,10 +172,10 @@ export async function getOverview() {
       sql`strftime('%Y-%m-%d', ${accessLogs.timestamp} / 1000, 'unixepoch')`,
     );
 
-  const errorRate =
-    access7d.total > 0
-      ? Math.round(((access7d.errors ?? 0) / access7d.total) * 1000) / 10
-      : 0;
+  const errorRate = computeApiErrorRatePercent(
+    Number(access7d.operationalApiRequests ?? 0),
+    Number(access7d.operationalApiErrors ?? 0),
+  );
 
   return {
     generated_at: now,

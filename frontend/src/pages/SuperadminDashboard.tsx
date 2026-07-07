@@ -311,7 +311,7 @@ export default function SuperadminDashboard() {
             <KpiCard
               label="Tráfego (7d)"
               value={overview.access.page_views_last_7d}
-              sub={`${overview.access.unique_visitors_last_7d} visitantes · ${overview.access.error_rate_7d_percent}% erros`}
+              sub={`${overview.access.unique_visitors_last_7d} visitantes · ${overview.access.error_rate_7d_percent}% erros API`}
               icon={Activity}
             />
           </div>
@@ -369,7 +369,9 @@ export default function SuperadminDashboard() {
 
       <div className="glass-panel rounded-xl border border-slate-800 overflow-hidden">
         <div className="p-4 border-b border-slate-800 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
-          <h2 className="font-bold text-slate-100">Todas as provas</h2>
+          <h2 className="font-bold text-slate-100">
+            Todas as provas ({overview.exams.total})
+          </h2>
           <div className="flex flex-wrap gap-2">
             <form onSubmit={handleSearch} className="flex gap-2">
               <div className="relative">
