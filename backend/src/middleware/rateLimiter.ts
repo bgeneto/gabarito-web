@@ -68,17 +68,17 @@ export function refundRateLimitSlot(key: string): void {
 }
 
 function extractStudentIdentifier(body: unknown): string {
-  if (
-    typeof body === "object" &&
-    body !== null &&
-    "student_identifier" in body &&
-    typeof (body as Record<string, unknown>).student_identifier === "string"
-  ) {
-    return (body as Record<string, unknown>).student_identifier
-      .trim()
-      .toUpperCase();
+  if (typeof body !== "object" || body === null) {
+    return "";
   }
-  return "";
+
+  const studentIdentifier = (body as Record<string, unknown>)
+    .student_identifier;
+  if (typeof studentIdentifier !== "string") {
+    return "";
+  }
+
+  return studentIdentifier.trim().toUpperCase();
 }
 
 export function getSubmissionRequestBody(c: Context): unknown {

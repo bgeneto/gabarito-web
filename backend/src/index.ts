@@ -383,7 +383,8 @@ app.post(
         !student_name ||
         !student_identifier ||
         !answers ||
-        typeof answers !== "object"
+        typeof answers !== "object" ||
+        answers === null
       ) {
         return c.json(
           {
@@ -504,12 +505,22 @@ app.post(
       }
       const now = Date.now();
 
+      const answersMap = answers as Record<string, unknown>;
+
       // Preparar registros de respostas
-      const answerRecords = [];
+      const answerRecords: {
+        id: string;
+        submissionId: string;
+        itemId: string;
+        rawAnswer: string;
+        normalizedAnswer: string;
+        isCorrect: number;
+        scoreAwarded: number;
+      }[] = [];
 
       for (const item of itemsList) {
         const rawAnswer =
-          answers[item.id] !== undefined ? String(answers[item.id]) : "";
+          answersMap[item.id] !== undefined ? String(answersMap[item.id]) : "";
 
         const { isCorrect, normalizedAnswer, scoreAwarded } = gradeItemAnswer(
           item,

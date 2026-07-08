@@ -73,7 +73,7 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
   const submitInFlightRef = useRef(false);
 
   const completeSubmission = useCallback(
-    (submissionId: string, name: string, identifier: string) => {
+    (submissionId: string, identifier: string) => {
       clearDraft(publicCode);
       saveSubmissionReceipt({
         version: 1,
@@ -94,11 +94,7 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
       const stored = loadSubmissionReceipt(publicCode, identifier);
       if (!stored) return false;
 
-      completeSubmission(
-        stored.submissionId,
-        studentName || "Estudante",
-        identifier,
-      );
+      completeSubmission(stored.submissionId, identifier);
       return true;
     },
     [completeSubmission, publicCode, studentName],
@@ -296,11 +292,7 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
         data.submission_id &&
         typeof data.submission_id === "string"
       ) {
-        completeSubmission(
-          data.submission_id,
-          studentName.trim(),
-          studentIdentifier.trim(),
-        );
+        completeSubmission(data.submission_id, studentIdentifier.trim());
         return;
       }
 
@@ -312,11 +304,7 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
         throw new Error("Resposta inválida do servidor ao registrar envio.");
       }
 
-      completeSubmission(
-        data.submission_id,
-        studentName.trim(),
-        studentIdentifier.trim(),
-      );
+      completeSubmission(data.submission_id, studentIdentifier.trim());
     } catch (err: unknown) {
       setSubmitError(
         formatFetchErrorMessage(err, "Houve um erro de rede ao enviar."),
