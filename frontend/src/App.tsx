@@ -114,7 +114,7 @@ function App() {
     <ModalProvider>
       <div className="min-h-screen bg-slate-950 bg-gradient-radial text-slate-100 flex flex-col">
         {/* Header Fixo */}
-        <header className="border-b border-slate-900 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
+        <header className="no-print border-b border-slate-900 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
           <div
             className={`${isSuperadmin ? "max-w-6xl" : "max-w-4xl"} mx-auto px-4 h-16 flex items-center justify-between`}
           >
@@ -150,7 +150,7 @@ function App() {
         </main>
 
         {/* Footer */}
-        <footer className="border-t border-slate-900 py-6 text-center text-xs text-slate-600">
+        <footer className="no-print border-t border-slate-900 py-6 text-center text-xs text-slate-600">
           <p>
             © 2026-{new Date().getFullYear()} GabaritoWEB. Desenvolvido com ❤️
             para facilitar a vida de professores e alunos.
