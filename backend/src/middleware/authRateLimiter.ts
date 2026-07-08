@@ -20,22 +20,31 @@ function setTooManyRequests(c: Context, message: string) {
     },
     429,
   );
+  c.res.headers.set("Cache-Control", "no-store");
+  c.res.headers.set("Pragma", "no-cache");
+}
+
+function preventAdminResponseCaching(c: Context) {
+  c.res.headers.set("Cache-Control", "no-store");
+  c.res.headers.set("Pragma", "no-cache");
 }
 
 export async function adminAuthRateLimiter(c: Context, next: Next) {
   const ip = getClientIp(c);
   const failKey = `admin-auth-fail:${ip}`;
-  const lockedOut =
-    getRateLimitInfo(failKey).count >= MAX_ADMIN_AUTH_FAILURES_PER_MINUTE;
+  const failInfo = getRateLimitInfo(failKey);
+  const lockedOut = failInfo.count >= MAX_ADMIN_AUTH_FAILURES_PER_MINUTE;
 
   await next();
+
+  preventAdminResponseCaching(c);
 
   if (c.res.status === 401) {
     if (lockedOut) {
       setTooManyRequests(c, AUTH_RATE_LIMIT_MESSAGE);
       return;
     }
-    getRateLimitInfo(failKey).count++;
+    failInfo.count++;
   }
 }
 

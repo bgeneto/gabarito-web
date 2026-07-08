@@ -17,6 +17,7 @@ import { useEffect, useState } from "react";
 import { navigateTo } from "../App";
 import { useModal } from "../components/ModalProvider";
 import { getAdminToken } from "../utils/adminSession";
+import { adminApiFetch } from "../utils/adminApi";
 import { ShieldAlert } from "lucide-react";
 
 interface Submission {
@@ -76,7 +77,7 @@ export default function TeacherDashboard() {
     if (!adminToken) return;
 
     try {
-      const response = await fetch(`/api/admin/exams/${adminToken}`);
+      const response = await adminApiFetch(`/api/admin/exams/${adminToken}`);
       const resData = await response.json();
       if (!response.ok) {
         throw new Error(resData.message || "Erro ao buscar dados do painel.");
@@ -127,9 +128,12 @@ export default function TeacherDashboard() {
 
     setCloseLoading(true);
     try {
-      const response = await fetch(`/api/admin/exams/${adminToken}/close`, {
-        method: "POST",
-      });
+      const response = await adminApiFetch(
+        `/api/admin/exams/${adminToken}/close`,
+        {
+          method: "POST",
+        },
+      );
       const resData = await response.json();
       if (!response.ok) {
         throw new Error(resData.message || "Erro ao encerrar a prova.");
@@ -235,7 +239,7 @@ export default function TeacherDashboard() {
 
     setSaveLoading(true);
     try {
-      const response = await fetch(
+      const response = await adminApiFetch(
         `/api/admin/exams/${adminToken}/items/${editingItem.id}`,
         {
           method: "PATCH",

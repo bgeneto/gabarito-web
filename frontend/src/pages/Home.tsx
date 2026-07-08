@@ -9,6 +9,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { setAdminToken as persistAdminToken } from "../utils/adminSession";
+import { adminApiFetch } from "../utils/adminApi";
 import { normalizeAdminToken } from "../utils/adminTokenUrl";
 
 function parseReceiptCode(raw: string): string {
@@ -68,7 +69,7 @@ export default function Home() {
 
     setTeacherLoading(true);
     try {
-      const response = await fetch(
+      const response = await adminApiFetch(
         `/api/admin/exams/${encodeURIComponent(token)}`,
       );
       const data = await response.json().catch(() => ({}));

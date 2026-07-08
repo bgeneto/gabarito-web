@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { navigateReplace, navigateTo } from "../App";
 import { ShieldAlert } from "lucide-react";
 import { setAdminToken } from "../utils/adminSession";
+import { adminApiFetch } from "../utils/adminApi";
 import { parseAdminTokenFromUrlSegment } from "../utils/adminTokenUrl";
 import TeacherDashboard from "./TeacherDashboard";
 
@@ -20,7 +21,7 @@ export default function TeacherAdminEntry({ segment }: { segment: string }) {
 
     const validateAndStore = async () => {
       try {
-        const response = await fetch(
+        const response = await adminApiFetch(
           `/api/admin/exams/${encodeURIComponent(token)}`,
         );
         if (!response.ok) {
