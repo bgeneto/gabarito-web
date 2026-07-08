@@ -45,6 +45,11 @@ import { gradeItemAnswer } from "./utils/grading.js";
 import { recalculateExamScores } from "./utils/recalculate.js";
 import { validateItemFields } from "./utils/validateItem.js";
 import { createAdminSession } from "./utils/adminSessions.js";
+import {
+  buildScoreDistribution,
+  getExamAggregates,
+  getItemDifficultyStats,
+} from "./services/examStats.js";
 import { internalServerError } from "./utils/errorResponse.js";
 import { normalizeStudentIdentifier } from "./utils/normalizer.js";
 
@@ -71,6 +76,11 @@ app.use(
 app.use("/api/admin/exams/items/:item_id", bodyLimit({ maxSize: 64 * 1024 }));
 app.use("/api/admin/session", bodyLimit({ maxSize: 4 * 1024 }));
 app.use("/api/telemetry/pageview", bodyLimit({ maxSize: 4 * 1024 }));
+app.use(
+  "/api/superadmin/backup/restore",
+  bodyLimit({ maxSize: 32 * 1024 * 1024 }),
+);
+app.use("/api/superadmin/backup/export", bodyLimit({ maxSize: 64 * 1024 }));
 
 // Telemetria de page views do SPA (público, rate limited)
 app.post("/api/telemetry/pageview", telemetryRateLimiter, async (c) => {
@@ -95,7 +105,7 @@ app.post("/api/telemetry/pageview", telemetryRateLimiter, async (c) => {
   }
 });
 
-// Rotas superadmin (somente leitura)
+// Rotas superadmin (leitura + backup seletivo)
 app.route("/api/superadmin", superadmin);
 
 // Constantes de validação
@@ -742,20 +752,15 @@ async function buildAdminExamPayload(exam: typeof exams.$inferSelect) {
     .where(eq(examItems.examId, exam.id))
     .orderBy(examItems.position);
 
-  const formattedItems = itemsList.map((item) => ({
-    id: item.id,
-    question_number: item.questionNumber,
-    sub_label: item.subLabel,
-    points: item.points,
-    answer_type: item.answerType,
-    answer_config: JSON.parse(item.answerConfigJson),
-  }));
-
   const subsList = await db
     .select()
     .from(submissions)
     .where(eq(submissions.examId, exam.id))
     .orderBy(submissions.submittedAt);
+
+  const agg = await getExamAggregates(exam.id, { includeAccess: false });
+  const itemStats = await getItemDifficultyStats(itemsList);
+  const scoreDistribution = buildScoreDistribution(subsList, agg.max_score);
 
   const formattedSubs = subsList.map((s) => ({
     id: s.id,
@@ -772,7 +777,10 @@ async function buildAdminExamPayload(exam: typeof exams.$inferSelect) {
     status: exam.status,
     created_at: exam.createdAt,
     closed_at: exam.closedAt,
-    items: formattedItems,
+    max_score: agg.max_score,
+    score_stats: agg.score_stats,
+    score_distribution: scoreDistribution,
+    items: itemStats,
     submissions: formattedSubs,
   };
 }

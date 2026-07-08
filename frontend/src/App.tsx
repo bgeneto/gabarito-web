@@ -144,7 +144,7 @@ function App() {
             <div className="flex items-center gap-4 text-xs font-semibold text-slate-400">
               {isSuperadmin && (
                 <span className="px-2.5 py-1 rounded-full bg-amber-950 border border-amber-800 text-amber-400">
-                  Somente leitura
+                  Leitura + backup
                 </span>
               )}
               <span className="px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800">

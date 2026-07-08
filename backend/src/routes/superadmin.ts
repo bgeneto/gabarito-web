@@ -6,8 +6,10 @@ import {
   getExamsList,
   getOverview,
 } from "../services/superadminStats.js";
+import { exportExams, restoreExams } from "../services/superadminBackup.js";
 import {
   getSuperadminSessionTtlMs,
+  isSuperadminBackupEnabled,
   isSuperadminEnabled,
   superadminAuth,
 } from "../middleware/superadminAuth.js";
@@ -15,18 +17,33 @@ import { internalServerError } from "../utils/errorResponse.js";
 
 const superadmin = new Hono();
 
+function isBackupPath(path: string): boolean {
+  return path.endsWith("/backup/export") || path.endsWith("/backup/restore");
+}
+
 superadmin.use("*", async (c, next) => {
   if (c.req.method !== "GET") {
     if (!isSuperadminEnabled()) {
       return c.json({ error: "Não encontrado" }, 404);
     }
-    return c.json(
-      {
-        error: "Método não permitido",
-        message: "Área superadmin é somente leitura.",
-      },
-      405,
-    );
+    if (!isBackupPath(c.req.path)) {
+      return c.json(
+        {
+          error: "Método não permitido",
+          message: "Área superadmin é somente leitura.",
+        },
+        405,
+      );
+    }
+    if (!isSuperadminBackupEnabled()) {
+      return c.json(
+        {
+          error: "Não encontrado",
+          message: "Backup superadmin desabilitado.",
+        },
+        404,
+      );
+    }
   }
   await next();
 });
@@ -118,6 +135,68 @@ superadmin.get("/access", async (c) => {
     return c.json(data);
   } catch (error: unknown) {
     return internalServerError(c, "Erro no relatório de acesso:", error);
+  }
+});
+
+superadmin.post("/backup/export", async (c) => {
+  try {
+    const body = await c.req.json();
+    const examIds = Array.isArray(body.exam_ids)
+      ? body.exam_ids.map(String)
+      : [];
+
+    const { buffer, filename } = await exportExams(examIds);
+
+    return new Response(new Uint8Array(buffer), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/gzip",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+      },
+    });
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "Erro ao exportar backup.";
+    if (
+      message.includes("Informe") ||
+      message.includes("Máximo") ||
+      message.includes("Nenhuma prova")
+    ) {
+      return c.json({ error: "Requisição inválida", message }, 400);
+    }
+    return internalServerError(c, "Erro no backup superadmin:", error);
+  }
+});
+
+superadmin.post("/backup/restore", async (c) => {
+  try {
+    const body = await c.req.parseBody();
+    const file = body.file;
+
+    if (!file || typeof file === "string") {
+      return c.json(
+        {
+          error: "Requisição inválida",
+          message: "Envie um arquivo no campo 'file'.",
+        },
+        400,
+      );
+    }
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const result = await restoreExams(buffer);
+    return c.json(result);
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "Erro ao restaurar backup.";
+    if (
+      message.includes("inválido") ||
+      message.includes("não reconhecido") ||
+      message.includes("Versão")
+    ) {
+      return c.json({ error: "Requisição inválida", message }, 400);
+    }
+    return internalServerError(c, "Erro na restauração superadmin:", error);
   }
 });
 

@@ -20,6 +20,14 @@ export function isSuperadminEnabled(): boolean {
   return superadminTokenHash !== null;
 }
 
+export function isSuperadminBackupEnabled(): boolean {
+  if (!isSuperadminEnabled()) return false;
+  const raw = process.env.SUPERADMIN_BACKUP_ENABLED;
+  if (raw === undefined || raw.trim() === "") return true;
+  const normalized = raw.trim().toLowerCase();
+  return normalized === "true" || normalized === "1";
+}
+
 const DEFAULT_SESSION_TTL_MINUTES = 0;
 
 /** 0 = sem expiração por tempo (apenas até fechar a aba do navegador). */

@@ -9,11 +9,17 @@ import {
   RefreshCw,
   Search,
   Shield,
+  Upload,
   Users,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { navigateTo } from "../App";
-import { superadminJson } from "../utils/superadminApi";
+import {
+  RestoreBackupResult,
+  superadminDownload,
+  superadminJson,
+  superadminUpload,
+} from "../utils/superadminApi";
 import { clearSuperadminToken } from "../utils/superadminSession";
 
 interface Overview {
@@ -145,6 +151,10 @@ export default function SuperadminDashboard() {
   const [sort, setSort] = useState("created_at");
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [restoreLoading, setRestoreLoading] = useState(false);
+  const restoreInputRef = useRef<HTMLInputElement>(null);
 
   const fetchData = useCallback(
     async (silent = false) => {
@@ -196,6 +206,81 @@ export default function SuperadminDashboard() {
     e.preventDefault();
     setSearch(searchInput);
     setPagination((p) => ({ ...p, page: 1 }));
+  };
+
+  const toggleExamSelection = (examId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(examId)) next.delete(examId);
+      else next.add(examId);
+      return next;
+    });
+  };
+
+  const toggleAllOnPage = () => {
+    const pageIds = exams.map((e) => e.id);
+    const allSelected = pageIds.every((id) => selectedIds.has(id));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allSelected) {
+        pageIds.forEach((id) => next.delete(id));
+      } else {
+        pageIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const handleBackup = async () => {
+    if (selectedIds.size === 0) return;
+    setBackupLoading(true);
+    try {
+      await superadminDownload(
+        "/api/superadmin/backup/export",
+        { exam_ids: [...selectedIds] },
+        `gabarito-backup-${new Date().toISOString().slice(0, 10)}.gbr.gz`,
+      );
+    } catch (err: any) {
+      alert(err.message || "Erro ao gerar backup.");
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const handleRestoreClick = () => {
+    restoreInputRef.current?.click();
+  };
+
+  const handleRestoreFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    const confirmed = window.confirm(
+      "Importar provas do backup que ainda não existem neste banco?",
+    );
+    if (!confirmed) return;
+
+    setRestoreLoading(true);
+    try {
+      const result = await superadminUpload<RestoreBackupResult>(
+        "/api/superadmin/backup/restore",
+        file,
+      );
+      const parts = [
+        `${result.imported.length} importada(s)`,
+        `${result.skipped.length} ignorada(s) (já existiam)`,
+      ];
+      if (result.errors.length > 0) {
+        parts.push(`${result.errors.length} com erro`);
+      }
+      alert(`Restauração concluída: ${parts.join(", ")}.`);
+      await fetchData(true);
+    } catch (err: any) {
+      alert(err.message || "Erro ao restaurar backup.");
+    } finally {
+      setRestoreLoading(false);
+    }
   };
 
   const exportCsv = () => {
@@ -257,7 +342,7 @@ export default function SuperadminDashboard() {
           <div className="flex items-center gap-2 mb-1">
             <Shield className="w-5 h-5 text-amber-400" />
             <span className="text-[10px] uppercase tracking-wider font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
-              Somente leitura
+              Leitura + backup
             </span>
           </div>
           <h1 className="text-2xl font-extrabold text-slate-100">
@@ -413,6 +498,36 @@ export default function SuperadminDashboard() {
               <Download className="w-4 h-4" />
               CSV
             </button>
+            <button
+              onClick={handleRestoreClick}
+              disabled={restoreLoading}
+              className="flex items-center gap-1 px-3 py-2 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Upload className="w-4 h-4" />
+              {restoreLoading ? "Restaurando..." : "Restaurar"}
+            </button>
+            {selectedIds.size > 0 && (
+              <>
+                <span className="self-center text-xs text-amber-400 font-medium">
+                  {selectedIds.size} selecionada(s)
+                </span>
+                <button
+                  onClick={handleBackup}
+                  disabled={backupLoading}
+                  className="flex items-center gap-1 px-3 py-2 rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-300 hover:text-amber-200 text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Download className="w-4 h-4" />
+                  {backupLoading ? "Gerando..." : "Backup"}
+                </button>
+              </>
+            )}
+            <input
+              ref={restoreInputRef}
+              type="file"
+              accept=".gbr.gz,.gz,application/gzip"
+              className="hidden"
+              onChange={handleRestoreFile}
+            />
           </div>
         </div>
 
@@ -420,6 +535,18 @@ export default function SuperadminDashboard() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-800">
+                <th className="p-3 w-10">
+                  <input
+                    type="checkbox"
+                    checked={
+                      exams.length > 0 &&
+                      exams.every((e) => selectedIds.has(e.id))
+                    }
+                    onChange={toggleAllOnPage}
+                    className="rounded border-slate-600 bg-slate-900 text-amber-500 focus:ring-amber-500/50 cursor-pointer"
+                    aria-label="Selecionar todas as provas desta página"
+                  />
+                </th>
                 <th className="p-3 font-bold">Prova</th>
                 <th className="p-3 font-bold">Status</th>
                 <th className="p-3 font-bold">Criada</th>
@@ -434,7 +561,7 @@ export default function SuperadminDashboard() {
             <tbody>
               {exams.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="p-8 text-center text-slate-500">
+                  <td colSpan={10} className="p-8 text-center text-slate-500">
                     Nenhuma prova encontrada.
                   </td>
                 </tr>
@@ -444,6 +571,15 @@ export default function SuperadminDashboard() {
                     key={exam.id}
                     className="border-b border-slate-800/50 hover:bg-slate-900/50"
                   >
+                    <td className="p-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(exam.id)}
+                        onChange={() => toggleExamSelection(exam.id)}
+                        className="rounded border-slate-600 bg-slate-900 text-amber-500 focus:ring-amber-500/50 cursor-pointer"
+                        aria-label={`Selecionar ${exam.title}`}
+                      />
+                    </td>
                     <td className="p-3">
                       <p className="font-medium text-slate-200 truncate max-w-[200px]">
                         {exam.title}

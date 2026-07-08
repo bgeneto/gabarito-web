@@ -209,15 +209,16 @@ O projeto fornece um script central de gerenciamento no host ([manage.sh](file:/
 - `./manage.sh db-push`: Sincroniza o schema com o SQLite.
 - `./manage.sh test`: Executa os testes de integração do `test-api.sh` (utilizando a instância ativa se disponível, ou subindo uma temporária automaticamente).
 
-### 5.7. Área Superadmin (Somente Leitura)
+### 5.7. Área Superadmin (Leitura + Backup Seletivo)
 
 Painel global para o operador do serviço, acessível em `/superadmin` (não linkado na Home).
 
 - **Autenticação**: `SUPERADMIN_TOKEN` no `.env` do servidor; enviado pelo frontend via header `Authorization: Bearer <token>` (armazenado em `sessionStorage`).
-- **Endpoints** (todos `GET`, prefixo `/api/superadmin/`): `session`, `overview`, `exams`, `exams/:examId`, `access`.
-- **Sem escrita**: Nenhum `POST`/`PATCH`/`DELETE` sob `/api/superadmin/*`. Respostas nunca incluem `admin_token` nem `admin_code_hash`.
+- **Endpoints de leitura** (`GET`, prefixo `/api/superadmin/`): `session`, `overview`, `exams`, `exams/:examId`, `access`.
+- **Backup seletivo** (`POST`, prefixo `/api/superadmin/backup/`): `export` (gzip JSON com provas selecionadas) e `restore` (importa provas ausentes; ignora conflitos de `id` ou `public_code`). Demais rotas superadmin permanecem somente leitura (405 em `POST`/`PATCH`/`DELETE`).
+- **Respostas JSON de leitura** nunca incluem `admin_token` nem `admin_code_hash` (arquivos de backup contêm `admin_code_hash` para recuperação do acesso do professor).
 - **Telemetria**: `POST /api/telemetry/pageview` registra page views do SPA em `access_logs`; middleware `accessLogger` registra requisições API.
-- **Variáveis opcionais**: `SUPERADMIN_ALLOWED_IPS`, `ACCESS_LOG_RETENTION_DAYS`.
+- **Variáveis opcionais**: `SUPERADMIN_ALLOWED_IPS`, `ACCESS_LOG_RETENTION_DAYS`, `SUPERADMIN_BACKUP_ENABLED` (padrão habilitado quando superadmin está ativo).
 
 ---
 

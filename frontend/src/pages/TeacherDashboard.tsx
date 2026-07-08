@@ -5,20 +5,35 @@ import {
   ChevronRight,
   Clipboard,
   Download,
-  FileSpreadsheet,
   Lock,
   Pencil,
   ShieldCheck,
-  Trophy,
-  Users,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { navigateTo } from "../App";
+import { DashboardTabBar } from "../components/exam/DashboardTabBar";
+import { ExamKpiGrid } from "../components/exam/ExamKpiGrid";
+import { QuestionDifficultyTable } from "../components/exam/QuestionDifficultyTable";
+import { ScoreDistributionChart } from "../components/exam/ScoreDistributionChart";
 import { useModal } from "../components/ModalProvider";
+import type {
+  ExamItemWithStats,
+  ScoreDistribution,
+  ScoreStats,
+} from "../types/examStats";
+import { answerTypeLabel } from "../utils/examFormat";
 import { getAdminSession } from "../utils/adminSession";
 import { adminApiFetch } from "../utils/adminApi";
 import { ShieldAlert } from "lucide-react";
+
+type TeacherTab = "resumo" | "submissoes" | "gabarito";
+
+const TEACHER_TABS: { id: TeacherTab; label: string }[] = [
+  { id: "resumo", label: "Resumo" },
+  { id: "submissoes", label: "Submissões" },
+  { id: "gabarito", label: "Gabarito" },
+];
 
 interface Submission {
   id: string;
@@ -28,15 +43,8 @@ interface Submission {
   total_score: number;
 }
 
-interface ExamItem {
-  id: string;
-  question_number: number;
-  sub_label: string | null;
-  points: number;
+interface ExamItem extends ExamItemWithStats {
   answer_type: "choice" | "true_false" | "short_text";
-  answer_config: {
-    accepted: string[];
-  };
 }
 
 interface ExamData {
@@ -46,6 +54,9 @@ interface ExamData {
   status: "open" | "closed";
   created_at: number;
   closed_at: number | null;
+  max_score: number;
+  score_stats: ScoreStats | null;
+  score_distribution: ScoreDistribution;
   items: ExamItem[];
   submissions: Submission[];
 }
@@ -70,6 +81,8 @@ export default function TeacherDashboard() {
   const [editingItem, setEditingItem] = useState<ExamItem | null>(null);
   const [editDraft, setEditDraft] = useState<ItemEditDraft | null>(null);
   const [saveLoading, setSaveLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<TeacherTab>("resumo");
+  const tabInitialized = useRef(false);
 
   useEffect(() => {
     setAdminSessionState(getAdminSession());
@@ -112,6 +125,16 @@ export default function TeacherDashboard() {
 
     return () => clearInterval(interval);
   }, [adminSession, data?.status]);
+
+  useEffect(() => {
+    if (!data || tabInitialized.current) return;
+    tabInitialized.current = true;
+    setActiveTab(
+      data.status === "open" && data.submissions.length > 0
+        ? "submissoes"
+        : "resumo",
+    );
+  }, [data]);
 
   const handleCloseExam = async () => {
     if (!data) return;
@@ -375,9 +398,8 @@ export default function TeacherDashboard() {
     );
   }
 
-  // Estatísticas Rápidas
   const totalSubmissions = data.submissions.length;
-  const maxPoints = data.items.reduce((acc, curr) => acc + curr.points, 0);
+  const maxPoints = data.max_score;
 
   return (
     <div className="space-y-6">
@@ -439,201 +461,169 @@ export default function TeacherDashboard() {
         </div>
       </div>
 
-      {/* Cards de Resumo */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Alunos Respondeu */}
-        <div className="glass-panel border border-slate-800 rounded-2xl p-5 flex items-center gap-4 relative overflow-hidden">
-          <div className="w-12 h-12 rounded-xl bg-cyan-950/50 border border-cyan-800/30 flex items-center justify-center">
-            <Users className="w-6 h-6 text-cyan-400" />
-          </div>
-          <div>
-            <span className="text-[10px] uppercase font-bold text-slate-500 block">
-              Submissões
-            </span>
-            <span className="text-2xl font-black">{totalSubmissions}</span>
-          </div>
-        </div>
+      <DashboardTabBar
+        tabs={TEACHER_TABS}
+        active={activeTab}
+        onChange={setActiveTab}
+      />
 
-        {/* Valor Total */}
-        <div className="glass-panel border border-slate-800 rounded-2xl p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-blue-950/50 border border-blue-800/30 flex items-center justify-center">
-            <Trophy className="w-6 h-6 text-blue-400" />
-          </div>
-          <div>
-            <span className="text-[10px] uppercase font-bold text-slate-500 block">
-              Valor da Prova
-            </span>
-            <span className="text-2xl font-black text-blue-400">
-              {maxPoints.toFixed(1)}{" "}
-              <span className="text-xs text-slate-500 font-normal">pts</span>
-            </span>
-          </div>
+      {activeTab === "resumo" && (
+        <div className="space-y-4">
+          <ExamKpiGrid
+            variant="teacher"
+            data={{
+              submission_count: totalSubmissions,
+              max_score: maxPoints,
+              score_stats: data.score_stats,
+            }}
+          />
+          <ScoreDistributionChart
+            buckets={data.score_distribution.buckets}
+            submissionCount={totalSubmissions}
+          />
+          <QuestionDifficultyTable items={data.items} hideGabaritoOnMobile />
         </div>
+      )}
 
-        {/* Média da Turma (Cálculo Dinâmico) */}
-        <div className="glass-panel border border-slate-800 rounded-2xl p-5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-950/50 border border-emerald-800/30 flex items-center justify-center">
-            <FileSpreadsheet className="w-6 h-6 text-emerald-400" />
+      {activeTab === "submissoes" && (
+        <div className="glass-panel border border-slate-800 rounded-2xl p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-400">
+              Submissões Recebidas
+            </h3>
+            {totalSubmissions > 0 && (
+              <button
+                onClick={exportCSV}
+                className="flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 font-bold transition-colors cursor-pointer"
+              >
+                <Download className="w-4 h-4" />
+                Exportar Planilha (CSV)
+              </button>
+            )}
           </div>
-          <div>
-            <span className="text-[10px] uppercase font-bold text-slate-500 block">
-              Média da Turma
-            </span>
-            <span className="text-2xl font-black text-emerald-400">
-              {totalSubmissions > 0
-                ? (
-                    data.submissions.reduce(
-                      (acc, curr) => acc + curr.total_score,
-                      0,
-                    ) / totalSubmissions
-                  ).toFixed(1)
-                : "0.0"}
-              <span className="text-xs text-slate-500 font-normal"> pts</span>
-            </span>
-          </div>
-        </div>
-      </div>
 
-      {/* Lista de Alunos e Notas */}
-      <div className="glass-panel border border-slate-800 rounded-2xl p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-400">
-            Submissões Recebidas
-          </h3>
-          {totalSubmissions > 0 && (
-            <button
-              onClick={exportCSV}
-              className="flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 font-bold transition-colors cursor-pointer"
-            >
-              <Download className="w-4 h-4" />
-              Exportar Planilha (CSV)
-            </button>
-          )}
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm border-collapse">
-            <thead>
-              <tr className="border-b border-slate-900 text-slate-500 font-bold text-xs uppercase">
-                <th className="py-3 px-4">Nome do Aluno</th>
-                <th className="py-3 px-4">Matrícula</th>
-                <th className="py-3 px-4">Enviado em</th>
-                <th className="py-3 px-4 text-center">Nota Final</th>
-                <th className="py-3 px-4"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.submissions.map((sub) => (
-                <tr
-                  key={sub.id}
-                  className="border-b border-slate-900/50 hover:bg-slate-900/20 transition-colors group"
-                >
-                  <td className="py-3.5 px-4 font-bold text-slate-200">
-                    {sub.student_name}
-                  </td>
-                  <td className="py-3.5 px-4 text-slate-400 font-mono text-xs">
-                    {sub.student_identifier}
-                  </td>
-                  <td className="py-3.5 px-4 text-slate-500 text-xs">
-                    {new Date(sub.submitted_at).toLocaleString("pt-BR")}
-                  </td>
-                  <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                    <span className="inline-flex items-center whitespace-nowrap tabular-nums font-extrabold text-slate-200 bg-slate-900 border border-slate-850 px-2.5 py-1 rounded-lg">
-                      {sub.total_score.toFixed(1)}
-                      <span className="mx-1 text-slate-500 font-normal">/</span>
-                      {maxPoints.toFixed(1)}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-right">
-                    <button
-                      onClick={() => navigateTo(`/submissao/${sub.id}`)}
-                      className="inline-flex items-center gap-1 text-xs font-bold text-cyan-400 hover:text-cyan-300 transition-all cursor-pointer"
-                    >
-                      Ver Detalhes
-                      <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                    </button>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm border-collapse">
+              <thead>
+                <tr className="border-b border-slate-900 text-slate-500 font-bold text-xs uppercase">
+                  <th className="py-3 px-4">Nome do Aluno</th>
+                  <th className="py-3 px-4">Matrícula</th>
+                  <th className="py-3 px-4">Enviado em</th>
+                  <th className="py-3 px-4 text-center">Nota Final</th>
+                  <th className="py-3 px-4"></th>
                 </tr>
-              ))}
-              {totalSubmissions === 0 && (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="py-12 text-center text-slate-600 italic"
+              </thead>
+              <tbody>
+                {data.submissions.map((sub) => (
+                  <tr
+                    key={sub.id}
+                    className="border-b border-slate-900/50 hover:bg-slate-900/20 transition-colors group"
                   >
-                    Aguardando primeiros alunos enviarem respostas...
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Lista do Gabarito Configurado */}
-      <div className="glass-panel border border-slate-800 rounded-2xl p-5 space-y-4">
-        <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-400">
-          Questões e Gabarito Configurado
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {data.items.map((item) => (
-            <div
-              key={item.id}
-              className="bg-slate-900/55 border border-slate-850 rounded-xl p-3.5 flex items-start justify-between gap-2"
-            >
-              <div className="min-w-0 flex-1">
-                <span className="font-bold text-sm block">
-                  Questão {item.question_number}
-                  {item.sub_label && (
-                    <span className="ml-2 text-cyan-400 uppercase">
-                      {item.sub_label}
-                    </span>
-                  )}
-                </span>
-                <span className="text-[10px] text-slate-500 block uppercase mt-0.5">
-                  Tipo:{" "}
-                  {item.answer_type === "choice"
-                    ? "Múltipla Escolha"
-                    : item.answer_type === "true_false"
-                      ? "Verd. ou Falso"
-                      : "Texto Curto"}
-                </span>
-
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {item.answer_config.accepted.map((val, idx) => (
-                    <span
-                      key={idx}
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${
-                        item.answer_type === "choice"
-                          ? "bg-cyan-950 text-cyan-400 border border-cyan-800/35"
-                          : item.answer_type === "true_false"
-                            ? "bg-blue-950 text-blue-400 border border-blue-800/35"
-                            : "bg-slate-800 text-slate-300 border border-slate-700/30"
-                      }`}
+                    <td className="py-3.5 px-4 font-bold text-slate-200">
+                      {sub.student_name}
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-400 font-mono text-xs">
+                      {sub.student_identifier}
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-500 text-xs">
+                      {new Date(sub.submitted_at).toLocaleString("pt-BR")}
+                    </td>
+                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                      <span className="inline-flex items-center whitespace-nowrap tabular-nums font-extrabold text-slate-200 bg-slate-900 border border-slate-850 px-2.5 py-1 rounded-lg">
+                        {sub.total_score.toFixed(1)}
+                        <span className="mx-1 text-slate-500 font-normal">
+                          /
+                        </span>
+                        {maxPoints.toFixed(1)}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <button
+                        onClick={() => navigateTo(`/submissao/${sub.id}`)}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-cyan-400 hover:text-cyan-300 transition-all cursor-pointer"
+                      >
+                        Ver Detalhes
+                        <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {totalSubmissions === 0 && (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="py-12 text-center text-slate-600 italic"
                     >
-                      {val}
-                    </span>
-                  ))}
+                      Aguardando primeiros alunos enviarem respostas...
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {activeTab === "gabarito" && (
+        <div className="glass-panel border border-slate-800 rounded-2xl p-5 space-y-4">
+          <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-400">
+            Questões e Gabarito Configurado
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {data.items.map((item) => (
+              <div
+                key={item.id}
+                className="bg-slate-900/55 border border-slate-850 rounded-xl p-3.5 flex items-start justify-between gap-2"
+              >
+                <div className="min-w-0 flex-1">
+                  <span className="font-bold text-sm block">
+                    Questão {item.question_number}
+                    {item.sub_label && (
+                      <span className="ml-2 text-cyan-400 uppercase">
+                        {item.sub_label}
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-[10px] text-slate-500 block uppercase mt-0.5">
+                    Tipo: {answerTypeLabel(item.answer_type)}
+                  </span>
+
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {item.answer_config.accepted.map((val, idx) => (
+                      <span
+                        key={idx}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${
+                          item.answer_type === "choice"
+                            ? "bg-cyan-950 text-cyan-400 border border-cyan-800/35"
+                            : item.answer_type === "true_false"
+                              ? "bg-blue-950 text-blue-400 border border-blue-800/35"
+                              : "bg-slate-800 text-slate-300 border border-slate-700/30"
+                        }`}
+                      >
+                        {val}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-end gap-1.5 shrink-0">
+                  <span className="text-xs font-bold text-slate-400 bg-slate-950 border border-slate-850 px-2 py-0.5 rounded-md">
+                    {item.points.toFixed(1)} pts
+                  </span>
+                  <button
+                    onClick={() => openEditModal(item)}
+                    className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold text-slate-400 hover:text-cyan-400 bg-slate-950 border border-slate-850 hover:border-cyan-800/40 rounded-md transition-colors cursor-pointer"
+                    title="Editar gabarito"
+                  >
+                    <Pencil className="w-3 h-3" />
+                    Editar
+                  </button>
                 </div>
               </div>
-
-              <div className="flex flex-col items-end gap-1.5 shrink-0">
-                <span className="text-xs font-bold text-slate-400 bg-slate-950 border border-slate-850 px-2 py-0.5 rounded-md">
-                  {item.points.toFixed(1)} pts
-                </span>
-                <button
-                  onClick={() => openEditModal(item)}
-                  className="flex items-center gap-1 px-2 py-1 text-[10px] font-bold text-slate-400 hover:text-cyan-400 bg-slate-950 border border-slate-850 hover:border-cyan-800/40 rounded-md transition-colors cursor-pointer"
-                  title="Editar gabarito"
-                >
-                  <Pencil className="w-3 h-3" />
-                  Editar
-                </button>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {editingItem && editDraft && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">

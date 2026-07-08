@@ -234,6 +234,25 @@ if [ "$SCORE_2_INIT" != "2.5" ]; then
   exit 1
 fi
 
+ADMIN_MAX_SCORE=$(echo "$ADMIN_RESP" | jq -r '.max_score // empty')
+ADMIN_BUCKET_COUNT=$(echo "$ADMIN_RESP" | jq '.score_distribution.buckets | length')
+ADMIN_ITEM_STATS=$(echo "$ADMIN_RESP" | jq -r '.items[0].stats.correct_rate_percent // empty')
+echo "max_score no painel admin: $ADMIN_MAX_SCORE"
+echo "buckets de distribuição: $ADMIN_BUCKET_COUNT"
+echo "taxa de acerto item 1: $ADMIN_ITEM_STATS%"
+if [ -z "$ADMIN_MAX_SCORE" ] || [ "$ADMIN_MAX_SCORE" = "null" ]; then
+  echo "FALHOU: painel admin sem max_score"
+  exit 1
+fi
+if [ "$ADMIN_BUCKET_COUNT" != "5" ]; then
+  echo "FALHOU: score_distribution.buckets deveria ter 5 faixas"
+  exit 1
+fi
+if [ -z "$ADMIN_ITEM_STATS" ] || [ "$ADMIN_ITEM_STATS" = "null" ]; then
+  echo "FALHOU: painel admin sem stats por item"
+  exit 1
+fi
+
 # 7b. Editar gabarito do item 1 (choice A -> B) e recalcular notas
 echo -e "\n7b. Editando gabarito do item 1 (resposta correta: B)..."
 PATCH_1_RESP=$(curl -s -X PATCH "$BASE_URL/admin/exams/items/$ITEM_1_ID" \
@@ -400,6 +419,38 @@ if [ "$SA_SESSION_HTTP" = "200" ]; then
     exit 1
   fi
   echo "OK: superadmin overview e detalhe de prova"
+
+  # Backup export
+  BACKUP_FILE=$(mktemp /tmp/gabarito-backup-XXXXXX.gbr.gz)
+  SA_EXPORT_HTTP=$(curl -s -o "$BACKUP_FILE" -w "%{http_code}" -X POST "$BASE_URL/superadmin/backup/export" \
+    -H "Authorization: Bearer $SUPERADMIN_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "{\"exam_ids\": [\"$EXAM_ID\"]}")
+  echo "HTTP Code backup export: $SA_EXPORT_HTTP"
+  if [ "$SA_EXPORT_HTTP" != "200" ]; then
+    echo "FALHOU: exportação de backup superadmin"
+    exit 1
+  fi
+  BACKUP_MAGIC=$(head -c 2 "$BACKUP_FILE" | od -An -tx1 | tr -d ' \n')
+  if [ "$BACKUP_MAGIC" != "1f8b" ]; then
+    echo "FALHOU: arquivo de backup não é gzip válido"
+    exit 1
+  fi
+
+  # Restore duplicado deve ignorar prova existente
+  SA_RESTORE_RESP=$(curl -s -X POST "$BASE_URL/superadmin/backup/restore" \
+    -H "Authorization: Bearer $SUPERADMIN_TOKEN" \
+    -F "file=@$BACKUP_FILE")
+  SA_SKIPPED=$(echo "$SA_RESTORE_RESP" | jq -r '.skipped | length // 0')
+  SA_IMPORTED=$(echo "$SA_RESTORE_RESP" | jq -r '.imported | length // 0')
+  echo "Backup restore: importadas=$SA_IMPORTED ignoradas=$SA_SKIPPED"
+  if [ "$SA_SKIPPED" -lt 1 ] || [ "$SA_IMPORTED" != "0" ]; then
+    echo "FALHOU: restore deveria ignorar prova já existente"
+    echo "$SA_RESTORE_RESP"
+    exit 1
+  fi
+  rm -f "$BACKUP_FILE"
+  echo "OK: backup export e restore (skip em duplicata)"
 else
   echo "AVISO: superadmin desabilitado no servidor (session HTTP $SA_SESSION_HTTP). Defina SUPERADMIN_TOKEN para testes completos."
 fi
