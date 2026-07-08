@@ -7,18 +7,15 @@ import {
   CheckCircle2,
   ArrowLeft,
   RefreshCw,
+  Printer,
 } from "lucide-react";
-
-interface AnswerDetail {
-  questionNumber: number;
-  subLabel: string | null;
-  points: number;
-  rawAnswer: string;
-  isCorrect: boolean;
-  scoreAwarded: number;
-  answerType: "choice" | "true_false" | "text_exact";
-  acceptedAnswers: string[];
-}
+import SubmissionReportPrint from "../components/SubmissionReportPrint";
+import {
+  type AnswerDetail,
+  exportSubmissionReportPdf,
+  formatAcceptedAnswer,
+  formatStudentAnswer,
+} from "../utils/submissionReport";
 
 interface SubmissionData {
   id: string;
@@ -178,9 +175,26 @@ export default function StudentResult({
     : 0;
   const score = data.total_score || 0;
   const percentScore = maxPoints > 0 ? (score / maxPoints) * 100 : 0;
+  const reportData = {
+    id: data.id,
+    student_name: data.student_name,
+    student_identifier: data.student_identifier,
+    submitted_at: data.submitted_at,
+    exam_title: data.exam_title,
+    total_score: score,
+    answers: data.answers!,
+  };
 
   return (
-    <div className="max-w-xl mx-auto w-full space-y-6">
+    <div className="max-w-xl mx-auto w-full space-y-6 no-print">
+      {data.answers && (
+        <SubmissionReportPrint
+          data={reportData}
+          maxPoints={maxPoints}
+          percentScore={percentScore}
+        />
+      )}
+
       {/* Header */}
       <div className="flex items-center gap-3">
         <button
@@ -227,12 +241,21 @@ export default function StudentResult({
           <span className="font-mono">{data.student_identifier}</span>
         </p>
 
-        {/* Desempenho Badge */}
-        <div className="mt-4 flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-850 text-xs text-slate-400 font-semibold">
-          <Award className="w-4 h-4 text-yellow-400" />
-          <span>
-            Aproveitamento de <strong>{percentScore.toFixed(0)}%</strong>
-          </span>
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-850 text-xs text-slate-400 font-semibold">
+            <Award className="w-4 h-4 text-yellow-400" />
+            <span>
+              Aproveitamento de <strong>{percentScore.toFixed(0)}%</strong>
+            </span>
+          </div>
+          <button
+            onClick={() => exportSubmissionReportPdf(reportData)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-950/60 border border-cyan-800/40 text-xs text-cyan-300 font-bold hover:bg-cyan-950 transition-colors cursor-pointer"
+            title="Salvar ou imprimir relatório em PDF"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            Exportar PDF
+          </button>
         </div>
       </div>
 
@@ -293,10 +316,10 @@ export default function StudentResult({
                     <span
                       className={`font-semibold ${ans.isCorrect ? "text-emerald-400" : "text-rose-450"}`}
                     >
-                      {ans.rawAnswer.trim() ? (
-                        ans.rawAnswer
-                      ) : (
+                      {formatStudentAnswer(ans.rawAnswer) === "Em branco" ? (
                         <em className="text-slate-700">Em Branco</em>
+                      ) : (
+                        ans.rawAnswer
                       )}
                     </span>
                   </div>
@@ -307,11 +330,7 @@ export default function StudentResult({
                         Gabarito
                       </span>
                       <span className="font-bold text-slate-300 font-mono">
-                        {ans.answerType === "true_false"
-                          ? ans.acceptedAnswers?.[0] === "V"
-                            ? "verdadeiro"
-                            : "falso"
-                          : ans.acceptedAnswers?.[0] || "-"}
+                        {formatAcceptedAnswer(ans)}
                       </span>
                     </div>
                   </div>
@@ -323,7 +342,14 @@ export default function StudentResult({
       </div>
 
       {/* Botões */}
-      <div className="text-center pt-2">
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+        <button
+          onClick={() => exportSubmissionReportPdf(reportData)}
+          className="inline-flex items-center gap-2 px-6 py-2.5 bg-cyan-950/60 border border-cyan-800/40 hover:bg-cyan-950 rounded-xl text-xs font-bold text-cyan-300 transition-colors cursor-pointer"
+        >
+          <Printer className="w-4 h-4" />
+          Exportar PDF
+        </button>
         <button
           onClick={() => navigateTo("/")}
           className="px-6 py-2.5 bg-slate-900 border border-slate-800 hover:bg-slate-850 rounded-xl text-xs font-bold text-slate-200 transition-colors cursor-pointer"
