@@ -51,7 +51,7 @@ Representa as questões e subitens respondíveis da prova (itens-folha).
 | `question_number`    | `INTEGER`   | Número da questão (ex: `1`, `2`).                                |
 | `sub_label`          | `TEXT`      | Rótulo do subitem (ex: `"a"`, `"b"` ou `NULL` para item único).  |
 | `points`             | `REAL`      | Pontuação atribuída ao item (ex: `1.5`).                         |
-| `answer_type`        | `TEXT`      | Tipo de correção: `'text_exact'`, `'choice'`, ou `'true_false'`. |
+| `answer_type`        | `TEXT`      | Tipo de correção: `'short_text'`, `'choice'`, ou `'true_false'`. |
 | `answer_config_json` | `TEXT`      | JSON contendo os parâmetros de resposta (gabarito aceito).       |
 | `position`           | `INTEGER`   | Ordem de exibição do item na prova.                              |
 
@@ -156,7 +156,7 @@ Todas as requisições e respostas utilizam `Content-Type: application/json`.
       "question_number": 1,
       "sub_label": "b",
       "points": 2.0,
-      "answer_type": "text_exact",
+      "answer_type": "short_text",
       "answer_config": {
         "accepted": ["MASSA", "PESO"]
       }
@@ -210,7 +210,7 @@ Todas as requisições e respostas utilizam `Content-Type: application/json`.
       "question_number": 1,
       "sub_label": "b",
       "points": 2.0,
-      "answer_type": "text_exact",
+      "answer_type": "short_text",
       "position": 2
     },
     {
@@ -341,7 +341,7 @@ Todas as requisições e respostas utilizam `Content-Type: application/json`.
       "question_number": 1,
       "sub_label": "b",
       "points": 2.0,
-      "answer_type": "text_exact",
+      "answer_type": "short_text",
       "answer_config": {
         "accepted": ["MASSA", "PESO"]
       }
@@ -404,7 +404,7 @@ Todas as strings fornecidas pelos alunos passam por um pipeline de limpeza antes
   - `"F"`, `"FALSO"`, `"NAO"`, `"N"`, `"FALSE"`
 - **Comparação**: Se a resposta normalizada for classificada em uma dessas opções, ela será comparada com o gabarito. Se não for reconhecida, é computada como errada.
 
-#### C. Texto Exato (`text_exact`)
+#### C. Texto Curto (`short_text`)
 
 - **Regra**: A resposta é correta se for idêntica (após normalização comum) a **qualquer** uma das variantes aceitáveis cadastradas no gabarito pelo professor.
 - **Exemplo**:

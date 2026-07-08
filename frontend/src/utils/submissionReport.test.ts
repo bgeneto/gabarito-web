@@ -16,7 +16,7 @@ const baseAnswer: AnswerDetail = {
   rawAnswer: "Massa",
   isCorrect: true,
   scoreAwarded: 2,
-  answerType: "text_exact",
+  answerType: "short_text",
   acceptedAnswers: ["massa"],
 };
 

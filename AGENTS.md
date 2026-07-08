@@ -74,7 +74,7 @@ As relações do banco de dados estão estruturadas da seguinte forma em `backen
    - `questionNumber` (integer): Número principal da questão (ex: `1`, `2`).
    - `subLabel` (string, nullable): Identificador de subitem (ex: `"a"`, `"b"`).
    - `points` (real): Pontuação do item.
-   - `answerType` (string): `'choice'`, `'true_false'`, ou `'text_exact'`.
+   - `answerType` (string): `'choice'`, `'true_false'`, ou `'short_text'`.
    - `answerConfigJson` (string): Contém o JSON `{ accepted: string[] }` com as respostas aceitas.
 
 3. **`submissions`**:
@@ -121,7 +121,7 @@ export function normalizeText(text: string): string {
 
 - **Múltipla Escolha (`choice`)**: Remove todos os caracteres que não sejam letras (`A-Z`) e compara em maiúsculo.
 - **Verd. ou Falso (`true_false`)**: Mapeia termos comuns como `"VERDADEIRO"`, `"SIM"`, `"TRUE"`, `"T"`, `"S"`, `"V"` para `"V"`. E `"FALSO"`, `"FALSE"`, `"NAO"`, `"N"`, `"F"` para `"F"`.
-- **Texto Exato (`text_exact`)**: Aplica a normalização padrão no input do aluno e compara contra as variações normalizadas do gabarito oficial.
+- **Texto Curto (`short_text`)**: Aplica a normalização padrão no input do aluno e compara contra as variações normalizadas do gabarito oficial.
 
 ---
 

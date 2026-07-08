@@ -22,6 +22,13 @@
       "when": 1783538400000,
       "tag": "0002_submissions_exam_student_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1783624800000,
+      "tag": "0003_rename_text_exact_to_short_text",
+      "breakpoints": true
     }
   ]
 }

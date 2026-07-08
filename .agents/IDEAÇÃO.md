@@ -92,7 +92,7 @@ Estrutura:
 
 ```json
 {
-  "type": "text_exact",
+  "type": "short_text",
   "accepted": ["O MESMO", "A MESMA", "IGUAL"]
 }
 ```
@@ -329,7 +329,7 @@ Exemplo para resposta textual:
 
 ```json
 {
-  "type": "text_exact",
+  "type": "short_text",
   "accepted": ["MASSA"]
 }
 ```
@@ -561,11 +561,11 @@ Depois, em uma segunda fase:
 ```
 
 Tipos de correção no escopo do MVP
-A proposta lista 5 tipos de validação (texto exato, numérico com/sem tolerância, numérico com unidade obrigatória, múltipla escolha). Implementar todos de uma vez aumenta bastante a complexidade do gabarito e da normalização (parsing de unidades, sinônimos, direção vetorial etc.).
+A proposta lista 5 tipos de validação (texto curto, numérico com/sem tolerância, numérico com unidade obrigatória, múltipla escolha). Implementar todos de uma vez aumenta bastante a complexidade do gabarito e da normalização (parsing de unidades, sinônimos, direção vetorial etc.).
 
 Quais tipos de correção devem entrar no MVP inicial?
 
-✅ A. Apenas texto exato normalizado (com lista de variantes aceitáveis) + múltipla escolha + verdadeiro ou falso
+✅ A. Apenas texto curto normalizado (com lista de variantes aceitáveis) + múltipla escolha + verdadeiro ou falso
 
 B. Texto exato + múltipla escolha + numérico simples (com tolerância, sem unidade)
 
@@ -646,7 +646,7 @@ C. Depende da questão: o professor decide se uma questão terá subitens (soma 
 Ótimo, todas as decisões estão alinhadas e sem ambiguidades pendentes. Aqui está o resumo consolidado do escopo do GabaritoWEB (MVP) que ficou definido:
 
 Escopo Consolidado do MVP
-Tipos de correção: apenas texto exato normalizado (com lista de variantes aceitáveis), múltipla escolha e verdadeiro/falso. Numérico com tolerância/unidade fica para fase 2.
+Tipos de correção: apenas texto curto normalizado (com lista de variantes aceitáveis), múltipla escolha e verdadeiro/falso. Numérico com tolerância/unidade fica para fase 2.
 
 Identificação do aluno: nome + matrícula, texto livre, sem verificação de unicidade.
 

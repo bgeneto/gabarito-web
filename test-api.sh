@@ -88,7 +88,7 @@ CREATE_RESP=$(curl -s -X POST "$BASE_URL/exams" \
         "question_number": 1,
         "sub_label": "b",
         "points": 2.5,
-        "answer_type": "text_exact",
+        "answer_type": "short_text",
         "answer_config": {
           "accepted": ["massa", "peso"]
         }

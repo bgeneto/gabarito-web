@@ -1,4 +1,4 @@
-const VALID_ANSWER_TYPES = ["choice", "true_false", "text_exact"] as const;
+const VALID_ANSWER_TYPES = ["choice", "true_false", "short_text"] as const;
 
 export function validateItemFields(item: {
   points: number;

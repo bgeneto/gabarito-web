@@ -31,7 +31,7 @@ interface ExamItem {
   questionNumber: number;
   subLabel: string | null;
   points: number;
-  answerType: "choice" | "true_false" | "text_exact";
+  answerType: "choice" | "true_false" | "short_text";
   position: number;
 }
 
@@ -603,7 +603,7 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
                   </div>
                 )}
 
-                {item.answerType === "text_exact" && (
+                {item.answerType === "short_text" && (
                   <input
                     type="text"
                     placeholder="Digite sua resposta..."

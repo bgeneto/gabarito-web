@@ -33,7 +33,7 @@ interface ExamItem {
   question_number: number;
   sub_label: string | null;
   points: number;
-  answer_type: "choice" | "true_false" | "text_exact";
+  answer_type: "choice" | "true_false" | "short_text";
   answer_config: {
     accepted: string[];
   };
@@ -52,7 +52,7 @@ interface ExamData {
 
 interface ItemEditDraft {
   points: number;
-  answer_type: "choice" | "true_false" | "text_exact";
+  answer_type: "choice" | "true_false" | "short_text";
   accepted: string[];
   tempVariant: string;
 }
@@ -596,7 +596,7 @@ export default function TeacherDashboard() {
                     ? "Múltipla Escolha"
                     : item.answer_type === "true_false"
                       ? "Verd. ou Falso"
-                      : "Texto Exato"}
+                      : "Texto Curto"}
                 </span>
 
                 <div className="flex flex-wrap gap-1 mt-2">
@@ -698,7 +698,7 @@ export default function TeacherDashboard() {
                 >
                   <option value="choice">Múltipla Escolha</option>
                   <option value="true_false">Verdadeiro ou Falso (V/F)</option>
-                  <option value="text_exact">Texto</option>
+                  <option value="short_text">Texto Curto</option>
                 </select>
               </div>
 
@@ -747,7 +747,7 @@ export default function TeacherDashboard() {
                   </div>
                 )}
 
-                {editDraft.answer_type === "text_exact" && (
+                {editDraft.answer_type === "short_text" && (
                   <div className="space-y-2">
                     <div className="flex gap-2">
                       <input

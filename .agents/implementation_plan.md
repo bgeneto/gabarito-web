@@ -107,7 +107,7 @@ Página inicial unificada oferecendo botões destacados: "Sou Aluno" e "Sou Prof
 
 #### [NEW] [TeacherCreate.tsx](file:///home/bgeneto/github/gabarito-web/frontend/src/pages/TeacherCreate.tsx)
 
-Painel do professor para criar prova. Permite definir título, adicionar questões de forma interativa, selecionar o tipo (texto exato, múltipla escolha, V/F), definir os valores de pontuação e o gabarito. Ao enviar, exibe os links administrativo e público, com geração do código QR.
+Painel do professor para criar prova. Permite definir título, adicionar questões de forma interativa, selecionar o tipo (texto curto, múltipla escolha, V/F), definir os valores de pontuação e o gabarito. Ao enviar, exibe os links administrativo e público, com geração do código QR.
 
 #### [NEW] [TeacherDashboard.tsx](file:///home/bgeneto/github/gabarito-web/frontend/src/pages/TeacherDashboard.tsx)
 

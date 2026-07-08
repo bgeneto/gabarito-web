@@ -57,7 +57,7 @@ export function normalizeChoice(text: string): string {
  */
 export function checkAnswer(
   rawAnswer: string,
-  answerType: "choice" | "true_false" | "text_exact",
+  answerType: "choice" | "true_false" | "short_text",
   answerConfigJson: string,
 ): { isCorrect: boolean; normalizedAnswer: string } {
   let config: { accepted: string[] };
@@ -89,7 +89,7 @@ export function checkAnswer(
     return { isCorrect, normalizedAnswer: studentTF };
   }
 
-  if (answerType === "text_exact") {
+  if (answerType === "short_text") {
     const studentNorm = normalizeText(rawAnswer);
     const normalizedAccepted = acceptedList.map((v) => normalizeText(v));
     const isCorrect =

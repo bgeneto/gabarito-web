@@ -860,7 +860,7 @@ app.patch("/api/admin/exams/items/:item_id", requireAdminSession, async (c) => {
 
     const newAnswerConfigJson = JSON.stringify(answer_config);
     const newPoints = Number(points);
-    const newAnswerType = answer_type as "choice" | "true_false" | "text_exact";
+    const newAnswerType = answer_type as "choice" | "true_false" | "short_text";
 
     const hasChanges =
       existingItem.answerConfigJson !== newAnswerConfigJson ||

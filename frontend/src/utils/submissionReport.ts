@@ -5,7 +5,7 @@ export interface AnswerDetail {
   rawAnswer: string;
   isCorrect: boolean;
   scoreAwarded: number;
-  answerType: "choice" | "true_false" | "text_exact";
+  answerType: "choice" | "true_false" | "short_text";
   acceptedAnswers: string[];
 }
 

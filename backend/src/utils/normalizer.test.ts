@@ -78,20 +78,20 @@ test("normalizer pipeline", async (t) => {
     assert.strictEqual(result3.normalizedAnswer, "INVALIDO");
   });
 
-  await t.test("checkAnswer text_exact comparison", () => {
+  await t.test("checkAnswer short_text comparison", () => {
     const config = JSON.stringify({ accepted: ["massa", "peso real"] });
 
     // Correct
-    const result1 = checkAnswer("  mássa  ", "text_exact", config);
+    const result1 = checkAnswer("  mássa  ", "short_text", config);
     assert.strictEqual(result1.isCorrect, true);
     assert.strictEqual(result1.normalizedAnswer, "MASSA");
 
-    const result2 = checkAnswer("peso   real", "text_exact", config);
+    const result2 = checkAnswer("peso   real", "short_text", config);
     assert.strictEqual(result2.isCorrect, true);
     assert.strictEqual(result2.normalizedAnswer, "PESO REAL");
 
     // Incorrect
-    const result3 = checkAnswer("volume", "text_exact", config);
+    const result3 = checkAnswer("volume", "short_text", config);
     assert.strictEqual(result3.isCorrect, false);
     assert.strictEqual(result3.normalizedAnswer, "VOLUME");
   });

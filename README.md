@@ -31,7 +31,7 @@ Professor encerra prova →  Aluno consulta nota detalhada
 | Funcionalidade                   | Descrição                                                                                 |
 | -------------------------------- | ----------------------------------------------------------------------------------------- |
 | 📋 **Criação de provas**         | Múltiplas questões com subitens, pontuações individuais e tipos variados                  |
-| 🔢 **Tipos de questão**          | Múltipla escolha, Verdadeiro/Falso e Texto exato                                          |
+| 🔢 **Tipos de questão**          | Múltipla escolha, Verdadeiro/Falso e Texto curto                                          |
 | 📱 **QR Code automático**        | Gerado na criação da prova para compartilhamento rápido                                   |
 | ✅ **Autocorreção**              | Correção instantânea no servidor com normalização de texto (acentos, maiúsculas, espaços) |
 | 🔒 **Sem gabarito exposto**      | O gabarito nunca trafega para o cliente; a correção ocorre 100% no servidor               |
@@ -238,7 +238,7 @@ erDiagram
 | ------------ | --------------------------- | ----------------------------------- |
 | `choice`     | Múltipla escolha (letra)    | `{ "accepted": ["A"] }`             |
 | `true_false` | Verdadeiro ou Falso         | `{ "accepted": ["V"] }`             |
-| `text_exact` | Texto exato (com variações) | `{ "accepted": ["MASSA", "PESO"] }` |
+| `short_text` | Texto curto (com variações) | `{ "accepted": ["MASSA", "PESO"] }` |
 
 ---
 
@@ -389,7 +389,7 @@ Para aceitar variações textuais sem exigir configuração complexa, o backend 
 | `V`, `VERDADEIRO`, `VERDADE`, `SIM`, `S`, `TRUE`, `T` | `V`               |
 | `F`, `FALSO`, `NAO`, `N`, `FALSE`                     | `F`               |
 
-**Exemplo `text_exact`:**
+**Exemplo `short_text`:**
 
 ```
 Gabarito:  ["o mesmo", "a mesma", "igual"]

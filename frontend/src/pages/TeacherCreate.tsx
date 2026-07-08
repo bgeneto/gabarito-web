@@ -38,9 +38,9 @@ interface ItemInput {
   questionNumber: number;
   subLabel: string;
   points: number;
-  answerType: "choice" | "true_false" | "text_exact";
+  answerType: "choice" | "true_false" | "short_text";
   accepted: string[];
-  tempVariant: string; // utilitário para input de texto exato
+  tempVariant: string; // utilitário para input de texto curto
 }
 
 interface CreationResult {
@@ -149,8 +149,8 @@ export default function TeacherCreate() {
       if (typeof item.points !== "number" || item.points <= 0) {
         return `A questão ${item.questionNumber} precisa ter uma pontuação ('points') maior que zero.`;
       }
-      if (!["choice", "true_false", "text_exact"].includes(item.answerType)) {
-        return `A questão ${item.questionNumber} possui um tipo de resposta ('answerType') inválido. Deve ser 'choice', 'true_false' ou 'text_exact'.`;
+      if (!["choice", "true_false", "short_text"].includes(item.answerType)) {
+        return `A questão ${item.questionNumber} possui um tipo de resposta ('answerType') inválido. Deve ser 'choice', 'true_false' ou 'short_text'.`;
       }
       if (!Array.isArray(item.accepted) || item.accepted.length === 0) {
         return `A questão ${item.questionNumber} precisa de pelo menos uma resposta correta no array 'accepted'.`;
@@ -1182,7 +1182,7 @@ export default function TeacherCreate() {
                     <option value="true_false">
                       Verdadeiro ou Falso (V/F)
                     </option>
-                    <option value="text_exact">Texto</option>
+                    <option value="short_text">Texto Curto</option>
                   </select>
                 </div>
 
@@ -1236,8 +1236,8 @@ export default function TeacherCreate() {
                     </div>
                   )}
 
-                  {/* Texto Exato com variantes */}
-                  {item.answerType === "text_exact" && (
+                  {/* Texto Curto com variantes */}
+                  {item.answerType === "short_text" && (
                     <div className="space-y-2">
                       <div className="flex gap-2">
                         <input
