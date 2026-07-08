@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import { setAdminSession } from "../utils/adminSession";
 import { exchangeAdminToken } from "../utils/adminApi";
-import { exchangeAdminToken } from "../utils/adminApi";
 import { normalizeAdminToken } from "../utils/adminTokenUrl";
 
 function parseReceiptCode(raw: string): string {
