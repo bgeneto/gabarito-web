@@ -14,13 +14,13 @@ test("admin auth rate limiter with production middleware order", async (t) => {
   });
 
   await t.test(
-    "blocks after 20 failures when accessLogger runs first",
+    "blocks after repeated failures when accessLogger runs first",
     async () => {
       const statuses: number[] = [];
       const app = new Hono();
       app.use("/api/*", accessLogger);
       app.use("/api/admin/*", adminAuthRateLimiter);
-      app.get("/api/admin/exams/:admin_token", async (c) => {
+      app.post("/api/admin/session", async (c) => {
         return c.json(
           {
             error: "Não autorizado",
@@ -31,7 +31,11 @@ test("admin auth rate limiter with production middleware order", async (t) => {
       });
 
       for (let i = 0; i < MAX_ADMIN_AUTH_FAILURES_PER_MINUTE + 2; i++) {
-        const response = await app.request("/api/admin/exams/adm_BADBAD");
+        const response = await app.request("/api/admin/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ admin_token: "adm_BADBAD" }),
+        });
         statuses.push(response.status);
       }
 
@@ -48,7 +52,11 @@ test("admin auth rate limiter with production middleware order", async (t) => {
         `expected lockout responses to be 429, got ${statuses.join(",")}`,
       );
 
-      const blocked = await app.request("/api/admin/exams/adm_BADBAD");
+      const blocked = await app.request("/api/admin/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ admin_token: "adm_BADBAD" }),
+      });
       assert.strictEqual(blocked.headers.get("cache-control"), "no-store");
     },
   );

@@ -30,7 +30,8 @@ import {
   formatWhatsAppStudentMessage,
   openWhatsAppShare,
 } from "../utils/examCredentials";
-import { setAdminToken } from "../utils/adminSession";
+import { setAdminSession } from "../utils/adminSession";
+import { exchangeAdminToken } from "../utils/adminApi";
 
 interface ItemInput {
   id: string;
@@ -977,9 +978,24 @@ export default function TeacherCreate() {
           {showAdminCredentials && (
             <div className="text-center pt-2">
               <button
-                onClick={() => {
-                  setAdminToken(result.admin_token);
-                  navigateTo("/admin");
+                onClick={async () => {
+                  try {
+                    const session = await exchangeAdminToken(
+                      result.admin_token,
+                    );
+                    setAdminSession(session.session_token);
+                    navigateTo("/admin");
+                  } catch (err: unknown) {
+                    await alert(
+                      err instanceof Error
+                        ? err.message
+                        : "Não foi possível acessar o painel administrativo.",
+                      {
+                        title: "Erro de acesso",
+                        severity: "danger",
+                      },
+                    );
+                  }
                 }}
                 className="px-6 py-3 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-xl text-sm font-bold text-slate-200 transition-colors cursor-pointer"
               >

@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert";
 import {
-  clearAdminToken,
-  getAdminToken,
-  hasAdminToken,
-  setAdminToken,
+  clearAdminSession,
+  getAdminSession,
+  hasAdminSession,
+  setAdminSession,
 } from "./adminSession.ts";
 
 function createSessionStorageMock() {
@@ -29,12 +29,12 @@ test("adminSession persistence", async () => {
   });
 
   try {
-    assert.strictEqual(hasAdminToken(), false);
-    setAdminToken("adm_TEST01");
-    assert.strictEqual(getAdminToken(), "adm_TEST01");
-    assert.strictEqual(hasAdminToken(), true);
-    clearAdminToken();
-    assert.strictEqual(getAdminToken(), null);
+    assert.strictEqual(hasAdminSession(), false);
+    setAdminSession("sess_TEST01");
+    assert.strictEqual(getAdminSession(), "sess_TEST01");
+    assert.strictEqual(hasAdminSession(), true);
+    clearAdminSession();
+    assert.strictEqual(getAdminSession(), null);
   } finally {
     Object.defineProperty(globalThis, "sessionStorage", {
       value: original,

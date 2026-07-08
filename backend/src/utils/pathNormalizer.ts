@@ -1,7 +1,9 @@
 /** Normaliza paths de API e SPA substituindo tokens/códigos dinâmicos por placeholders. */
 export function normalizeApiPath(path: string): string {
   return path
-    .replace(/\/api\/admin\/exams\/[^/]+/g, "/api/admin/exams/:token")
+    .replace(/\/api\/admin\/exams\/items\/[^/]+/g, "/api/admin/exams/items/:id")
+    .replace(/\/api\/admin\/exams\/close/g, "/api/admin/exams/close")
+    .replace(/\/api\/admin\/exams$/g, "/api/admin/exams")
     .replace(
       /\/api\/exams\/[^/]+\/submissions/g,
       "/api/exams/:code/submissions",
@@ -31,6 +33,7 @@ export function categorizeApiPath(
   if (normalizedPath === "/api/exams/:code/submissions")
     return "submission_create";
   if (normalizedPath === "/api/submissions/:id") return "submission";
+  if (normalizedPath === "/api/admin/session") return "admin_session";
   if (normalizedPath.startsWith("/api/admin/")) return "admin";
   if (normalizedPath.startsWith("/api/superadmin/")) return "superadmin";
   if (normalizedPath === "/api/telemetry/pageview") return "telemetry";

@@ -205,7 +205,18 @@ echo "$VAL_1_OPEN"
 
 # 7. Acessar Painel do Professor (Admin)
 echo -e "\n7. Acessando painel do professor (deve mostrar notas de todos)..."
-ADMIN_RESP=$(curl -s "$BASE_URL/admin/exams/$ADMIN_TOKEN")
+ADMIN_SESSION_RESP=$(curl -s -X POST "$BASE_URL/admin/session" \
+  -H "Content-Type: application/json" \
+  -d "{\"admin_token\": \"$ADMIN_TOKEN\"}")
+ADMIN_SESSION=$(echo "$ADMIN_SESSION_RESP" | jq -r '.session_token')
+if [ -z "$ADMIN_SESSION" ] || [ "$ADMIN_SESSION" = "null" ]; then
+  echo "Erro: não foi possível obter sessão administrativa"
+  echo "$ADMIN_SESSION_RESP"
+  exit 1
+fi
+ADMIN_AUTH_HEADER="Authorization: Bearer $ADMIN_SESSION"
+
+ADMIN_RESP=$(curl -s "$BASE_URL/admin/exams" -H "$ADMIN_AUTH_HEADER")
 echo "Resposta do painel do professor:"
 echo "$ADMIN_RESP"
 
@@ -225,7 +236,8 @@ fi
 
 # 7b. Editar gabarito do item 1 (choice A -> B) e recalcular notas
 echo -e "\n7b. Editando gabarito do item 1 (resposta correta: B)..."
-PATCH_1_RESP=$(curl -s -X PATCH "$BASE_URL/admin/exams/$ADMIN_TOKEN/items/$ITEM_1_ID" \
+PATCH_1_RESP=$(curl -s -X PATCH "$BASE_URL/admin/exams/items/$ITEM_1_ID" \
+  -H "$ADMIN_AUTH_HEADER" \
   -H "Content-Type: application/json" \
   -d '{
     "points": 2.5,
@@ -242,7 +254,7 @@ if [ "$PATCH_1_MSG" != "Gabarito atualizado e notas recalculadas." ]; then
   exit 1
 fi
 
-ADMIN_AFTER_PATCH_1=$(curl -s "$BASE_URL/admin/exams/$ADMIN_TOKEN")
+ADMIN_AFTER_PATCH_1=$(curl -s "$BASE_URL/admin/exams" -H "$ADMIN_AUTH_HEADER")
 SCORE_1_AFTER_PATCH=$(echo "$ADMIN_AFTER_PATCH_1" | jq '[.submissions[] | select(.student_identifier=="MAT10") | .total_score][0]')
 SCORE_2_AFTER_PATCH=$(echo "$ADMIN_AFTER_PATCH_1" | jq '[.submissions[] | select(.student_identifier=="MAT25") | .total_score][0]')
 echo "Nota após PATCH Aluno 1 (esperado 7.5): $SCORE_1_AFTER_PATCH"
@@ -258,7 +270,8 @@ fi
 
 # 7c. Alterar pontuação do item 1 (2.5 -> 1.0) e recalcular
 echo -e "\n7c. Alterando pontuação do item 1 para 1.0..."
-PATCH_2_RESP=$(curl -s -X PATCH "$BASE_URL/admin/exams/$ADMIN_TOKEN/items/$ITEM_1_ID" \
+PATCH_2_RESP=$(curl -s -X PATCH "$BASE_URL/admin/exams/items/$ITEM_1_ID" \
+  -H "$ADMIN_AUTH_HEADER" \
   -H "Content-Type: application/json" \
   -d '{
     "points": 1.0,
@@ -268,7 +281,7 @@ PATCH_2_RESP=$(curl -s -X PATCH "$BASE_URL/admin/exams/$ADMIN_TOKEN/items/$ITEM_
 echo "Resposta do PATCH pontos:"
 echo "$PATCH_2_RESP"
 
-ADMIN_AFTER_PATCH_2=$(curl -s "$BASE_URL/admin/exams/$ADMIN_TOKEN")
+ADMIN_AFTER_PATCH_2=$(curl -s "$BASE_URL/admin/exams" -H "$ADMIN_AUTH_HEADER")
 SCORE_2_AFTER_POINTS=$(echo "$ADMIN_AFTER_PATCH_2" | jq '[.submissions[] | select(.student_identifier=="MAT25") | .total_score][0]')
 echo "Nota após alteração de pontos Aluno 2 (esperado 3.5): $SCORE_2_AFTER_POINTS"
 if [ "$SCORE_2_AFTER_POINTS" != "3.5" ]; then
@@ -278,7 +291,8 @@ fi
 
 # 7d. PATCH com token inválido (deve retornar 401)
 echo -e "\n7d. Testando PATCH com token inválido..."
-PATCH_BAD_TOKEN_HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X PATCH "$BASE_URL/admin/exams/token_invalido/items/$ITEM_1_ID" \
+PATCH_BAD_TOKEN_HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X PATCH "$BASE_URL/admin/exams/items/$ITEM_1_ID" \
+  -H "Authorization: Bearer sessao_invalida" \
   -H "Content-Type: application/json" \
   -d '{
     "points": 1.0,
@@ -293,7 +307,8 @@ fi
 
 # 7e. PATCH com accepted vazio (deve retornar 400)
 echo -e "\n7e. Testando PATCH com gabarito vazio..."
-PATCH_EMPTY_HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X PATCH "$BASE_URL/admin/exams/$ADMIN_TOKEN/items/$ITEM_1_ID" \
+PATCH_EMPTY_HTTP=$(curl -s -o /dev/null -w "%{http_code}" -X PATCH "$BASE_URL/admin/exams/items/$ITEM_1_ID" \
+  -H "$ADMIN_AUTH_HEADER" \
   -H "Content-Type: application/json" \
   -d '{
     "points": 1.0,
@@ -308,7 +323,7 @@ fi
 
 # 8. Encerrar Prova pelo Professor
 echo -e "\n8. Encerrando prova..."
-CLOSE_RESP=$(curl -s -X POST "$BASE_URL/admin/exams/$ADMIN_TOKEN/close")
+CLOSE_RESP=$(curl -s -X POST "$BASE_URL/admin/exams/close" -H "$ADMIN_AUTH_HEADER")
 echo "Resposta do encerramento:"
 echo "$CLOSE_RESP"
 

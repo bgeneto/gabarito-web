@@ -16,7 +16,7 @@ import {
 import { useEffect, useState } from "react";
 import { navigateTo } from "../App";
 import { useModal } from "../components/ModalProvider";
-import { getAdminToken } from "../utils/adminSession";
+import { getAdminSession } from "../utils/adminSession";
 import { adminApiFetch } from "../utils/adminApi";
 import { ShieldAlert } from "lucide-react";
 
@@ -59,7 +59,9 @@ interface ItemEditDraft {
 
 export default function TeacherDashboard() {
   const { alert, confirm } = useModal();
-  const [adminToken, setAdminToken] = useState<string | null>(getAdminToken);
+  const [adminSession, setAdminSessionState] = useState<string | null>(
+    getAdminSession,
+  );
   const [data, setData] = useState<ExamData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -70,14 +72,14 @@ export default function TeacherDashboard() {
   const [saveLoading, setSaveLoading] = useState(false);
 
   useEffect(() => {
-    setAdminToken(getAdminToken());
+    setAdminSessionState(getAdminSession());
   }, []);
 
   const fetchDashboardData = async (silent = false) => {
-    if (!adminToken) return;
+    if (!adminSession) return;
 
     try {
-      const response = await adminApiFetch(`/api/admin/exams/${adminToken}`);
+      const response = await adminApiFetch("/api/admin/exams");
       const resData = await response.json();
       if (!response.ok) {
         throw new Error(resData.message || "Erro ao buscar dados do painel.");
@@ -97,19 +99,19 @@ export default function TeacherDashboard() {
   };
 
   useEffect(() => {
-    if (!adminToken) return;
+    if (!adminSession) return;
     fetchDashboardData();
-  }, [adminToken]);
+  }, [adminSession]);
 
   useEffect(() => {
-    if (!adminToken || !data || data.status !== "open") return;
+    if (!adminSession || !data || data.status !== "open") return;
 
     const interval = setInterval(() => {
       fetchDashboardData(true);
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [adminToken, data?.status]);
+  }, [adminSession, data?.status]);
 
   const handleCloseExam = async () => {
     if (!data) return;
@@ -128,12 +130,9 @@ export default function TeacherDashboard() {
 
     setCloseLoading(true);
     try {
-      const response = await adminApiFetch(
-        `/api/admin/exams/${adminToken}/close`,
-        {
-          method: "POST",
-        },
-      );
+      const response = await adminApiFetch("/api/admin/exams/close", {
+        method: "POST",
+      });
       const resData = await response.json();
       if (!response.ok) {
         throw new Error(resData.message || "Erro ao encerrar a prova.");
@@ -240,7 +239,7 @@ export default function TeacherDashboard() {
     setSaveLoading(true);
     try {
       const response = await adminApiFetch(
-        `/api/admin/exams/${adminToken}/items/${editingItem.id}`,
+        `/api/admin/exams/items/${editingItem.id}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -336,7 +335,7 @@ export default function TeacherDashboard() {
     );
   }
 
-  if (!adminToken) {
+  if (!adminSession) {
     return (
       <div className="max-w-md mx-auto text-center py-12 space-y-4">
         <div className="w-14 h-14 bg-rose-950/80 border border-rose-900/30 rounded-2xl flex items-center justify-center mx-auto">

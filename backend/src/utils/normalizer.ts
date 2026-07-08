@@ -7,6 +7,11 @@
  * 5. Conversão para Maiúsculas
  * 6. Colapso de múltiplos espaços consecutivos em um único espaço
  */
+/** Canonical form for student matrícula / identifier (dedup + rate-limit keys). */
+export function normalizeStudentIdentifier(identifier: string): string {
+  return normalizeText(identifier);
+}
+
 export function normalizeText(text: string): string {
   if (!text) return "";
   return text

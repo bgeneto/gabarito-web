@@ -20,7 +20,7 @@ test("admin auth rate limiter", async (t) => {
     async () => {
       let authorized = false;
       const app = new Hono();
-      app.get("/api/admin/exams/:admin_token", adminAuthRateLimiter, (c) => {
+      app.post("/api/admin/session", adminAuthRateLimiter, (c) => {
         if (!authorized) {
           return c.json(
             {
@@ -30,11 +30,18 @@ test("admin auth rate limiter", async (t) => {
             401,
           );
         }
-        return c.json({ ok: true }, 200);
+        return c.json(
+          { session_token: "sess_ok", expires_at: Date.now() },
+          200,
+        );
       });
 
       for (let i = 0; i < MAX_ADMIN_AUTH_FAILURES_PER_MINUTE; i++) {
-        const response = await app.request("/api/admin/exams/adm_BADBAD");
+        const response = await app.request("/api/admin/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ admin_token: "adm_BADBAD" }),
+        });
         assert.strictEqual(
           response.status,
           401,
@@ -42,11 +49,20 @@ test("admin auth rate limiter", async (t) => {
         );
       }
 
-      const blocked = await app.request("/api/admin/exams/adm_BADBAD");
+      const blocked = await app.request("/api/admin/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ admin_token: "adm_BADBAD" }),
+      });
       assert.strictEqual(blocked.status, 429);
 
       authorized = true;
-      const success = await app.request("/api/admin/exams/adm_GOOD01");
+      resetRateLimitStateForTests();
+      const success = await app.request("/api/admin/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ admin_token: "adm_GOOD01" }),
+      });
       assert.strictEqual(success.status, 200);
     },
   );
@@ -55,12 +71,16 @@ test("admin auth rate limiter", async (t) => {
     "successful admin requests do not consume the failure budget",
     async () => {
       const app = new Hono();
-      app.get("/api/admin/exams/:admin_token", adminAuthRateLimiter, (c) =>
-        c.json({ ok: true }, 200),
+      app.post("/api/admin/session", adminAuthRateLimiter, (c) =>
+        c.json({ session_token: "sess_ok", expires_at: Date.now() }, 200),
       );
 
       for (let i = 0; i < MAX_ADMIN_AUTH_FAILURES_PER_MINUTE + 5; i++) {
-        const response = await app.request("/api/admin/exams/adm_OK0001");
+        const response = await app.request("/api/admin/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ admin_token: "adm_OK0001" }),
+        });
         assert.strictEqual(
           response.status,
           200,

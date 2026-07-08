@@ -1,22 +1,34 @@
-const TOKEN_KEY = "gabarito:admin:token";
+const SESSION_KEY = "gabarito:admin:session";
 
-export function getAdminToken(): string | null {
+export function getAdminSession(): string | null {
   try {
-    const token = sessionStorage.getItem(TOKEN_KEY);
+    const token = sessionStorage.getItem(SESSION_KEY);
     return token && token.trim() ? token.trim() : null;
   } catch {
     return null;
   }
 }
 
-export function setAdminToken(token: string): void {
-  sessionStorage.setItem(TOKEN_KEY, token.trim());
+export function setAdminSession(sessionToken: string): void {
+  sessionStorage.setItem(SESSION_KEY, sessionToken.trim());
 }
 
-export function clearAdminToken(): void {
-  sessionStorage.removeItem(TOKEN_KEY);
+export function clearAdminSession(): void {
+  sessionStorage.removeItem(SESSION_KEY);
 }
 
-export function hasAdminToken(): boolean {
-  return Boolean(getAdminToken());
+export function hasAdminSession(): boolean {
+  return Boolean(getAdminSession());
 }
+
+/** @deprecated Use getAdminSession */
+export const getAdminToken = getAdminSession;
+
+/** @deprecated Use setAdminSession */
+export const setAdminToken = setAdminSession;
+
+/** @deprecated Use clearAdminSession */
+export const clearAdminToken = clearAdminSession;
+
+/** @deprecated Use hasAdminSession */
+export const hasAdminToken = hasAdminSession;

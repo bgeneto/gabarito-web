@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { navigateReplace, navigateTo } from "../App";
 import { ShieldAlert } from "lucide-react";
-import { setAdminToken } from "../utils/adminSession";
-import { adminApiFetch } from "../utils/adminApi";
+import { setAdminSession } from "../utils/adminSession";
+import { exchangeAdminToken } from "../utils/adminApi";
 import { parseAdminTokenFromUrlSegment } from "../utils/adminTokenUrl";
 import TeacherDashboard from "./TeacherDashboard";
 
@@ -21,24 +21,19 @@ export default function TeacherAdminEntry({ segment }: { segment: string }) {
 
     const validateAndStore = async () => {
       try {
-        const response = await adminApiFetch(
-          `/api/admin/exams/${encodeURIComponent(token)}`,
-        );
-        if (!response.ok) {
-          if (!cancelled) {
-            setError("Token administrativo inválido ou prova não encontrada.");
-          }
-          return;
-        }
+        const session = await exchangeAdminToken(token);
+        if (cancelled) return;
 
-        setAdminToken(token);
+        setAdminSession(session.session_token);
         navigateReplace("/admin");
+        setReadyToken(session.session_token);
+      } catch (err: unknown) {
         if (!cancelled) {
-          setReadyToken(token);
-        }
-      } catch {
-        if (!cancelled) {
-          setError("Não foi possível validar o acesso administrativo.");
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Não foi possível validar o acesso administrativo.",
+          );
         }
       }
     };

@@ -8,8 +8,9 @@ import {
   Receipt,
   ArrowLeft,
 } from "lucide-react";
-import { setAdminToken as persistAdminToken } from "../utils/adminSession";
-import { adminApiFetch } from "../utils/adminApi";
+import { setAdminSession } from "../utils/adminSession";
+import { exchangeAdminToken } from "../utils/adminApi";
+import { exchangeAdminToken } from "../utils/adminApi";
 import { normalizeAdminToken } from "../utils/adminTokenUrl";
 
 function parseReceiptCode(raw: string): string {
@@ -69,31 +70,15 @@ export default function Home() {
 
     setTeacherLoading(true);
     try {
-      const response = await adminApiFetch(
-        `/api/admin/exams/${encodeURIComponent(token)}`,
-      );
-      const data = await response.json().catch(() => ({}));
-
-      if (response.status === 429) {
-        setTeacherError(
-          data.message ||
-            "Muitas tentativas de acesso. Aguarde um minuto e tente novamente.",
-        );
-        return;
-      }
-
-      if (!response.ok) {
-        setTeacherError(
-          data.message ||
-            "Token administrativo inválido ou prova não encontrada.",
-        );
-        return;
-      }
-
-      persistAdminToken(token);
+      const session = await exchangeAdminToken(token);
+      setAdminSession(session.session_token);
       navigateTo("/admin");
-    } catch {
-      setTeacherError("Não foi possível validar o acesso administrativo.");
+    } catch (err: unknown) {
+      setTeacherError(
+        err instanceof Error
+          ? err.message
+          : "Não foi possível validar o acesso administrativo.",
+      );
     } finally {
       setTeacherLoading(false);
     }
@@ -260,9 +245,7 @@ export default function Home() {
             </button>
 
             <div className="text-center mb-6">
-              <h2 className="font-extrabold text-xl mb-1">
-                Área Administrativa
-              </h2>
+              <h2 className="font-extrabold text-xl mb-1">Área do Professor</h2>
               <p className="text-xs text-slate-500">
                 Crie novos gabaritos ou monitore as provas ativas.
               </p>

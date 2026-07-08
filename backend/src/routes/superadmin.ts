@@ -11,6 +11,7 @@ import {
   isSuperadminEnabled,
   superadminAuth,
 } from "../middleware/superadminAuth.js";
+import { internalServerError } from "../utils/errorResponse.js";
 
 const superadmin = new Hono();
 
@@ -46,12 +47,8 @@ superadmin.get("/overview", async (c) => {
   try {
     const data = await getOverview();
     return c.json(data);
-  } catch (error: any) {
-    console.error("Erro no overview superadmin:", error);
-    return c.json(
-      { error: "Erro interno do servidor", message: error.message },
-      500,
-    );
+  } catch (error: unknown) {
+    return internalServerError(c, "Erro no overview superadmin:", error);
   }
 });
 
@@ -82,12 +79,8 @@ superadmin.get("/exams", async (c) => {
       q,
     });
     return c.json(data);
-  } catch (error: any) {
-    console.error("Erro na listagem superadmin:", error);
-    return c.json(
-      { error: "Erro interno do servidor", message: error.message },
-      500,
-    );
+  } catch (error: unknown) {
+    return internalServerError(c, "Erro na listagem superadmin:", error);
   }
 });
 
@@ -102,12 +95,8 @@ superadmin.get("/exams/:examId", async (c) => {
       );
     }
     return c.json(data);
-  } catch (error: any) {
-    console.error("Erro no detalhe superadmin:", error);
-    return c.json(
-      { error: "Erro interno do servidor", message: error.message },
-      500,
-    );
+  } catch (error: unknown) {
+    return internalServerError(c, "Erro no detalhe superadmin:", error);
   }
 });
 
@@ -127,12 +116,8 @@ superadmin.get("/access", async (c) => {
           : undefined,
     });
     return c.json(data);
-  } catch (error: any) {
-    console.error("Erro no relatório de acesso:", error);
-    return c.json(
-      { error: "Erro interno do servidor", message: error.message },
-      500,
-    );
+  } catch (error: unknown) {
+    return internalServerError(c, "Erro no relatório de acesso:", error);
   }
 });
 

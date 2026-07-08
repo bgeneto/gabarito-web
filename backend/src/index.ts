@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
+import { secureHeaders } from "hono/secure-headers";
 
 import { db, pingDatabase } from "./db/index.js";
 import {
@@ -24,6 +25,10 @@ import {
   submissionRateLimiter,
 } from "./middleware/rateLimiter.js";
 import { adminAuthRateLimiter } from "./middleware/authRateLimiter.js";
+import {
+  ADMIN_EXAM_ID_KEY,
+  requireAdminSession,
+} from "./middleware/adminSessionAuth.js";
 import { telemetryRateLimiter } from "./middleware/telemetryRateLimiter.js";
 import superadmin from "./routes/superadmin.js";
 import { isSuperadminEnabled } from "./middleware/superadminAuth.js";
@@ -39,8 +44,13 @@ import {
 import { gradeItemAnswer } from "./utils/grading.js";
 import { recalculateExamScores } from "./utils/recalculate.js";
 import { validateItemFields } from "./utils/validateItem.js";
+import { createAdminSession } from "./utils/adminSessions.js";
+import { internalServerError } from "./utils/errorResponse.js";
+import { normalizeStudentIdentifier } from "./utils/normalizer.js";
 
 const app = new Hono();
+
+app.use("*", secureHeaders());
 
 // Configuração de CORS: aberto em desenvolvimento, restrito em produção
 const corsOrigin =
@@ -58,10 +68,8 @@ app.use(
   "/api/exams/:public_code/submissions",
   bodyLimit({ maxSize: 512 * 1024 }),
 ); // 512 KB para submissões
-app.use(
-  "/api/admin/exams/:admin_token/items/:item_id",
-  bodyLimit({ maxSize: 64 * 1024 }),
-);
+app.use("/api/admin/exams/items/:item_id", bodyLimit({ maxSize: 64 * 1024 }));
+app.use("/api/admin/session", bodyLimit({ maxSize: 4 * 1024 }));
 app.use("/api/telemetry/pageview", bodyLimit({ maxSize: 4 * 1024 }));
 
 // Telemetria de page views do SPA (público, rate limited)
@@ -97,6 +105,12 @@ const MAX_STUDENT_IDENTIFIER_LENGTH = 50;
 const MAX_ITEMS_PER_EXAM = 500;
 
 import { findExamByAdminToken, hashAdminToken } from "./utils/adminAuth.js";
+
+async function getExamFromAdminSession(c: { get: (key: string) => unknown }) {
+  const examId = c.get(ADMIN_EXAM_ID_KEY) as string;
+  const [exam] = await db.select().from(exams).where(eq(exams.id, examId));
+  return exam ?? null;
+}
 
 // ROTA: Health check público (liveness + conectividade do banco)
 app.get("/health", (c) => {
@@ -308,12 +322,8 @@ app.post("/api/exams", async (c) => {
       },
       201,
     );
-  } catch (error: any) {
-    console.error("Erro ao criar prova:", error);
-    return c.json(
-      { error: "Erro interno do servidor", message: error.message },
-      500,
-    );
+  } catch (error: unknown) {
+    return internalServerError(c, "Erro ao criar prova:", error);
   }
 });
 
@@ -356,12 +366,8 @@ app.get("/api/exams/:public_code", async (c) => {
       status: exam.status,
       items: itemsList,
     });
-  } catch (error: any) {
-    console.error("Erro ao buscar prova:", error);
-    return c.json(
-      { error: "Erro interno do servidor", message: error.message },
-      500,
-    );
+  } catch (error: unknown) {
+    return internalServerError(c, "Erro ao buscar prova:", error);
   }
 });
 
@@ -447,7 +453,7 @@ app.post(
       }
 
       // Verificar duplicidade: mesma matrícula na mesma prova
-      const cleanIdentifier = student_identifier.trim().toUpperCase();
+      const cleanIdentifier = normalizeStudentIdentifier(student_identifier);
       const [existingSub] = await db
         .select()
         .from(submissions)
@@ -594,12 +600,8 @@ app.post(
         },
         201,
       );
-    } catch (error: any) {
-      console.error("Erro ao salvar submissão:", error);
-      return c.json(
-        { error: "Erro interno do servidor", message: error.message },
-        500,
-      );
+    } catch (error: unknown) {
+      return internalServerError(c, "Erro ao salvar submissão:", error);
     }
   },
 );
@@ -689,19 +691,28 @@ app.get("/api/submissions/:submission_id", async (c) => {
       total_score: sub.totalScore,
       answers: formattedAnswers,
     });
-  } catch (error: any) {
-    console.error("Erro ao consultar submissão:", error);
-    return c.json(
-      { error: "Erro interno do servidor", message: error.message },
-      500,
-    );
+  } catch (error: unknown) {
+    return internalServerError(c, "Erro ao consultar submissão:", error);
   }
 });
 
-// ROTA: Consultar Painel da Prova (Professor) - Requer Token Admin
-app.get("/api/admin/exams/:admin_token", async (c) => {
+// ROTA: Trocar token administrativo por sessão opaca (Bearer)
+app.post("/api/admin/session", async (c) => {
   try {
-    const adminToken = c.req.param("admin_token");
+    const body = await c.req.json();
+    const adminToken =
+      typeof body.admin_token === "string" ? body.admin_token.trim() : "";
+
+    if (!adminToken) {
+      return c.json(
+        {
+          error: "Parâmetros inválidos",
+          message: "O campo admin_token é obrigatório.",
+        },
+        400,
+      );
+    }
+
     const exam = await findExamByAdminToken(adminToken);
     if (!exam) {
       return c.json(
@@ -710,65 +721,100 @@ app.get("/api/admin/exams/:admin_token", async (c) => {
       );
     }
 
-    // Buscar questões com o gabarito original (liberado para o professor)
-    const itemsList = await db
-      .select()
-      .from(examItems)
-      .where(eq(examItems.examId, exam.id))
-      .orderBy(examItems.position);
-
-    const formattedItems = itemsList.map((item) => ({
-      id: item.id,
-      question_number: item.questionNumber,
-      sub_label: item.subLabel,
-      points: item.points,
-      answer_type: item.answerType,
-      answer_config: JSON.parse(item.answerConfigJson),
-    }));
-
-    // Buscar todas as submissões dos alunos
-    const subsList = await db
-      .select()
-      .from(submissions)
-      .where(eq(submissions.examId, exam.id))
-      .orderBy(submissions.submittedAt);
-
-    const formattedSubs = subsList.map((s) => ({
-      id: s.id,
-      student_name: s.studentName,
-      student_identifier: s.studentIdentifier,
-      submitted_at: s.submittedAt,
-      total_score: s.totalScore,
-    }));
-
+    const { sessionToken, expiresAt } = createAdminSession(exam.id);
     return c.json({
-      id: exam.id,
-      title: exam.title,
-      public_code: exam.publicCode,
-      status: exam.status,
-      created_at: exam.createdAt,
-      closed_at: exam.closedAt,
-      items: formattedItems,
-      submissions: formattedSubs,
+      session_token: sessionToken,
+      expires_at: expiresAt,
     });
-  } catch (error: any) {
-    console.error("Erro no painel administrativo:", error);
-    return c.json(
-      { error: "Erro interno do servidor", message: error.message },
-      500,
+  } catch (error: unknown) {
+    return internalServerError(
+      c,
+      "Erro ao criar sessão administrativa:",
+      error,
     );
   }
 });
 
-// ROTA: Editar Item do Gabarito (Professor) - Requer Token Admin
-app.patch("/api/admin/exams/:admin_token/items/:item_id", async (c) => {
+async function buildAdminExamPayload(exam: typeof exams.$inferSelect) {
+  const itemsList = await db
+    .select()
+    .from(examItems)
+    .where(eq(examItems.examId, exam.id))
+    .orderBy(examItems.position);
+
+  const formattedItems = itemsList.map((item) => ({
+    id: item.id,
+    question_number: item.questionNumber,
+    sub_label: item.subLabel,
+    points: item.points,
+    answer_type: item.answerType,
+    answer_config: JSON.parse(item.answerConfigJson),
+  }));
+
+  const subsList = await db
+    .select()
+    .from(submissions)
+    .where(eq(submissions.examId, exam.id))
+    .orderBy(submissions.submittedAt);
+
+  const formattedSubs = subsList.map((s) => ({
+    id: s.id,
+    student_name: s.studentName,
+    student_identifier: s.studentIdentifier,
+    submitted_at: s.submittedAt,
+    total_score: s.totalScore,
+  }));
+
+  return {
+    id: exam.id,
+    title: exam.title,
+    public_code: exam.publicCode,
+    status: exam.status,
+    created_at: exam.createdAt,
+    closed_at: exam.closedAt,
+    items: formattedItems,
+    submissions: formattedSubs,
+  };
+}
+
+// ROTA: Consultar Painel da Prova (Professor) - Requer Sessão Admin
+app.get("/api/admin/exams", requireAdminSession, async (c) => {
   try {
-    const adminToken = c.req.param("admin_token");
-    const itemId = c.req.param("item_id");
-    const exam = await findExamByAdminToken(adminToken);
+    const exam = await getExamFromAdminSession(c);
     if (!exam) {
       return c.json(
-        { error: "Não autorizado", message: "Token administrativo inválido." },
+        {
+          error: "Não autorizado",
+          message: "Sessão administrativa inválida ou expirada.",
+        },
+        401,
+      );
+    }
+
+    return c.json(await buildAdminExamPayload(exam));
+  } catch (error: unknown) {
+    return internalServerError(c, "Erro no painel administrativo:", error);
+  }
+});
+
+// ROTA: Editar Item do Gabarito (Professor) - Requer Sessão Admin
+app.patch("/api/admin/exams/items/:item_id", requireAdminSession, async (c) => {
+  try {
+    const itemId = c.req.param("item_id");
+    if (!itemId) {
+      return c.json(
+        { error: "Não encontrado", message: "Item da prova não encontrado." },
+        404,
+      );
+    }
+
+    const exam = await getExamFromAdminSession(c);
+    if (!exam) {
+      return c.json(
+        {
+          error: "Não autorizado",
+          message: "Sessão administrativa inválida ou expirada.",
+        },
         401,
       );
     }
@@ -864,23 +910,21 @@ app.patch("/api/admin/exams/:admin_token/items/:item_id", async (c) => {
       },
       message: "Gabarito atualizado e notas recalculadas.",
     });
-  } catch (error: any) {
-    console.error("Erro ao editar item do gabarito:", error);
-    return c.json(
-      { error: "Erro interno do servidor", message: error.message },
-      500,
-    );
+  } catch (error: unknown) {
+    return internalServerError(c, "Erro ao editar item do gabarito:", error);
   }
 });
 
-// ROTA: Encerrar Prova (Professor) - Requer Token Admin
-app.post("/api/admin/exams/:admin_token/close", async (c) => {
+// ROTA: Encerrar Prova (Professor) - Requer Sessão Admin
+app.post("/api/admin/exams/close", requireAdminSession, async (c) => {
   try {
-    const adminToken = c.req.param("admin_token");
-    const exam = await findExamByAdminToken(adminToken);
+    const exam = await getExamFromAdminSession(c);
     if (!exam) {
       return c.json(
-        { error: "Não autorizado", message: "Token administrativo inválido." },
+        {
+          error: "Não autorizado",
+          message: "Sessão administrativa inválida ou expirada.",
+        },
         401,
       );
     }
@@ -905,12 +949,8 @@ app.post("/api/admin/exams/:admin_token/close", async (c) => {
       closed_at: now,
       message: "Prova encerrada com sucesso. Notas liberadas para os alunos.",
     });
-  } catch (error: any) {
-    console.error("Erro ao encerrar prova:", error);
-    return c.json(
-      { error: "Erro interno do servidor", message: error.message },
-      500,
-    );
+  } catch (error: unknown) {
+    return internalServerError(c, "Erro ao encerrar prova:", error);
   }
 });
 

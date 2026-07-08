@@ -1,4 +1,7 @@
 import { Context, Next } from "hono";
+import { getConnInfo } from "@hono/node-server/conninfo";
+
+import { normalizeStudentIdentifier } from "../utils/normalizer.js";
 
 interface RateLimitInfo {
   count: number;
@@ -12,17 +15,56 @@ export const MAX_SUBMISSION_ATTEMPTS_PER_STUDENT = 5;
 export const MAX_SUBMISSION_ATTEMPTS_PER_EXAM_IP = 60;
 export const SUBMISSION_BODY_KEY = "submissionBody";
 
+function shouldTrustProxyHeaders(c: Context): boolean {
+  if (process.env.TRUST_PROXY_HEADERS === "true") {
+    return true;
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    return false;
+  }
+
+  try {
+    const remote = getConnInfo(c).remote.address;
+    if (!remote) {
+      return false;
+    }
+
+    return (
+      remote === "127.0.0.1" ||
+      remote === "::1" ||
+      remote === "::ffff:127.0.0.1" ||
+      remote.startsWith("10.") ||
+      remote.startsWith("192.168.") ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(remote)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function getClientIp(c: Context): string {
-  const req = c.req;
-  const xForwardedFor = req.header("x-forwarded-for");
-  if (xForwardedFor) {
-    return xForwardedFor.split(",")[0].trim();
+  if (shouldTrustProxyHeaders(c)) {
+    const xForwardedFor = c.req.header("x-forwarded-for");
+    if (xForwardedFor) {
+      return xForwardedFor.split(",")[0].trim();
+    }
+    const realIp = c.req.header("x-real-ip");
+    if (realIp) {
+      return realIp;
+    }
   }
-  const realIp = req.header("x-real-ip");
-  if (realIp) {
-    return realIp;
+
+  try {
+    const remote = getConnInfo(c).remote.address;
+    if (remote) {
+      return remote;
+    }
+  } catch {
+    // Test harnesses may not provide connection metadata.
   }
-  return "local-ip";
+
+  return "unknown";
 }
 
 export function resetRateLimitStateForTests(): void {
@@ -78,7 +120,7 @@ function extractStudentIdentifier(body: unknown): string {
     return "";
   }
 
-  return studentIdentifier.trim().toUpperCase();
+  return normalizeStudentIdentifier(studentIdentifier);
 }
 
 export function getSubmissionRequestBody(c: Context): unknown {
