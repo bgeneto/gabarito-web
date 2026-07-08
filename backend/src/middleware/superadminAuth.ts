@@ -1,13 +1,9 @@
 import crypto from "crypto";
 import { Context, Next } from "hono";
 
+import { enforceSuperadminRateLimits } from "./authRateLimiter.js";
 import { normalizeSuperadminToken } from "../utils/superadminToken.js";
 import { getClientIp } from "./rateLimiter.js";
-
-const WINDOW_MS = 60 * 1000;
-const MAX_REQUESTS = 30;
-
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
 function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
@@ -58,55 +54,40 @@ function extractBearerToken(c: Context): string | null {
   return auth.slice(7).trim();
 }
 
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  let info = rateLimitMap.get(ip);
-
-  if (!info || now > info.resetTime) {
-    info = { count: 1, resetTime: now + WINDOW_MS };
-    rateLimitMap.set(ip, info);
-    return true;
-  }
-
-  info.count++;
-  return info.count <= MAX_REQUESTS;
-}
-
 export async function superadminAuth(c: Context, next: Next) {
   if (!isSuperadminEnabled()) {
     return c.json({ error: "Não encontrado" }, 404);
   }
 
-  const ip = getClientIp(c);
-  if (!checkRateLimit(ip)) {
-    return c.json(
-      {
-        error: "Too Many Requests",
-        message: "Limite de requisições excedido. Aguarde um minuto.",
-      },
-      429,
-    );
-  }
+  await enforceSuperadminRateLimits(c, async () => {
+    const ip = getClientIp(c);
 
-  if (allowedIps && !allowedIps.includes(ip)) {
-    return c.json({ error: "Não autorizado", message: "Acesso negado." }, 401);
-  }
+    if (allowedIps && !allowedIps.includes(ip)) {
+      c.res = c.json(
+        { error: "Não autorizado", message: "Acesso negado." },
+        401,
+      );
+      return;
+    }
 
-  const token = normalizeSuperadminToken(extractBearerToken(c) ?? undefined);
-  if (!token) {
-    return c.json(
-      { error: "Não autorizado", message: "Token de superadmin ausente." },
-      401,
-    );
-  }
+    const token = normalizeSuperadminToken(extractBearerToken(c) ?? undefined);
+    if (!token) {
+      c.res = c.json(
+        { error: "Não autorizado", message: "Token de superadmin ausente." },
+        401,
+      );
+      return;
+    }
 
-  const tokenHash = hashToken(token);
-  if (!timingSafeEqualHex(tokenHash, superadminTokenHash!)) {
-    return c.json(
-      { error: "Não autorizado", message: "Token de superadmin inválido." },
-      401,
-    );
-  }
+    const tokenHash = hashToken(token);
+    if (!timingSafeEqualHex(tokenHash, superadminTokenHash!)) {
+      c.res = c.json(
+        { error: "Não autorizado", message: "Token de superadmin inválido." },
+        401,
+      );
+      return;
+    }
 
-  await next();
+    await next();
+  });
 }

@@ -16,6 +16,7 @@ export function normalizePagePath(path: string): string {
     .replace(/^\/prova\/[^/]+/, "/prova/:code")
     .replace(/^\/submissao\/[^/]+/, "/submissao/:id")
     .replace(/^\/admin\/[^/]+/, "/admin/:token")
+    .replace(/^\/admin\/?$/, "/admin")
     .replace(/^\/superadmin\/prova\/[^/]+/, "/superadmin/prova/:id");
 }
 
@@ -41,7 +42,8 @@ export function categorizePagePath(normalizedPath: string): string {
   if (normalizedPath === "/criar-prova") return "page_teacher_create";
   if (normalizedPath.startsWith("/prova/")) return "page_student_exam";
   if (normalizedPath.startsWith("/submissao/")) return "page_student_result";
-  if (normalizedPath.startsWith("/admin/")) return "page_teacher_dashboard";
+  if (normalizedPath === "/admin" || normalizedPath.startsWith("/admin/"))
+    return "page_teacher_dashboard";
   if (normalizedPath.startsWith("/superadmin")) return "page_superadmin";
   return "page_other";
 }

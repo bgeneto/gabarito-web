@@ -185,6 +185,18 @@ DUP_RESP=$(curl -s -X POST "$BASE_URL/exams/$PUBLIC_CODE/submissions" \
 echo "Resposta da duplicada (deve ser 409):"
 echo "$DUP_RESP"
 
+DUP_STATUS=$(echo "$DUP_RESP" | jq -r '.error // empty')
+DUP_RECEIPT=$(echo "$DUP_RESP" | jq -r '.submission_id // empty')
+if [ "$DUP_RECEIPT" != "$SUB_1_ID" ]; then
+  echo "FALHOU: submissão duplicada deve retornar submission_id existente (esperado $SUB_1_ID, recebido $DUP_RECEIPT)"
+  exit 1
+fi
+if [ "$DUP_STATUS" != "Conflito" ]; then
+  echo "FALHOU: submissão duplicada deve retornar erro Conflito"
+  exit 1
+fi
+echo "OK: submissão duplicada retornou submission_id para recuperação"
+
 # 6. Consultar Nota com Prova Aberta (deve ocultar nota)
 echo -e "\n6. Consultando nota do Aluno 1 com prova ABERTA..."
 VAL_1_OPEN=$(curl -s "$BASE_URL/submissions/$SUB_1_ID")

@@ -1,3 +1,5 @@
+import { encodeAdminTokenForUrl } from "./adminTokenUrl";
+
 export interface ExamCredentialsInput {
   title: string;
   publicCode: string;
@@ -10,9 +12,22 @@ export function buildPublicUrl(publicCode: string, origin?: string): string {
   return `${base}/prova/${publicCode}`;
 }
 
-export function buildAdminUrl(adminToken: string, origin?: string): string {
+/** Clean session-based admin URL (token stays in sessionStorage). */
+export function buildAdminUrl(origin?: string): string {
   const base = origin ?? window.location.origin;
-  return `${base}/admin/${adminToken}`;
+  return `${base}/admin`;
+}
+
+/**
+ * One-time deep link with base64url-encoded token. Cosmetic obfuscation only.
+ * Opening it validates the token, stores sessionStorage, and redirects to /admin.
+ */
+export function buildAdminDeepLink(
+  adminToken: string,
+  origin?: string,
+): string {
+  const base = origin ?? window.location.origin;
+  return `${base}/admin/${encodeAdminTokenForUrl(adminToken)}`;
 }
 
 export function formatCredentialsText({
@@ -22,7 +37,8 @@ export function formatCredentialsText({
   origin,
 }: ExamCredentialsInput): string {
   const publicUrl = buildPublicUrl(publicCode, origin);
-  const adminUrl = buildAdminUrl(adminToken, origin);
+  const adminPanelUrl = buildAdminUrl(origin);
+  const adminDeepLink = buildAdminDeepLink(adminToken, origin);
 
   return [
     "GABARITOWEB — Credenciais da Prova",
@@ -36,10 +52,11 @@ export function formatCredentialsText({
     "",
     "--- ACESSO DO PROFESSOR (PRIVADO) ---",
     `Token administrativo: ${adminToken}`,
-    `Link do painel admin: ${adminUrl}`,
+    `Painel (após informar o token na Home): ${adminPanelUrl}`,
+    `Link direto do painel: ${adminDeepLink}`,
     "",
     "ATENÇÃO: Guarde este arquivo em local seguro.",
-    "Por motivos de segurança, o link administrativo não poderá ser consultado novamente.",
+    "O token administrativo não é exibido novamente após sair desta tela.",
   ].join("\n");
 }
 

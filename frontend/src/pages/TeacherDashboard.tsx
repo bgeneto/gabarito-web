@@ -16,6 +16,8 @@ import {
 import { useEffect, useState } from "react";
 import { navigateTo } from "../App";
 import { useModal } from "../components/ModalProvider";
+import { getAdminToken } from "../utils/adminSession";
+import { ShieldAlert } from "lucide-react";
 
 interface Submission {
   id: string;
@@ -54,12 +56,9 @@ interface ItemEditDraft {
   tempVariant: string;
 }
 
-export default function TeacherDashboard({
-  adminToken,
-}: {
-  adminToken: string;
-}) {
+export default function TeacherDashboard() {
   const { alert, confirm } = useModal();
+  const [adminToken, setAdminToken] = useState<string | null>(getAdminToken);
   const [data, setData] = useState<ExamData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -69,7 +68,13 @@ export default function TeacherDashboard({
   const [editDraft, setEditDraft] = useState<ItemEditDraft | null>(null);
   const [saveLoading, setSaveLoading] = useState(false);
 
+  useEffect(() => {
+    setAdminToken(getAdminToken());
+  }, []);
+
   const fetchDashboardData = async (silent = false) => {
+    if (!adminToken) return;
+
     try {
       const response = await fetch(`/api/admin/exams/${adminToken}`);
       const resData = await response.json();
@@ -91,11 +96,12 @@ export default function TeacherDashboard({
   };
 
   useEffect(() => {
+    if (!adminToken) return;
     fetchDashboardData();
   }, [adminToken]);
 
   useEffect(() => {
-    if (!data || data.status !== "open") return;
+    if (!adminToken || !data || data.status !== "open") return;
 
     const interval = setInterval(() => {
       fetchDashboardData(true);
@@ -322,6 +328,26 @@ export default function TeacherDashboard({
         <p className="text-slate-400 text-sm">
           Carregando painel administrativo...
         </p>
+      </div>
+    );
+  }
+
+  if (!adminToken) {
+    return (
+      <div className="max-w-md mx-auto text-center py-12 space-y-4">
+        <div className="w-14 h-14 bg-rose-950/80 border border-rose-900/30 rounded-2xl flex items-center justify-center mx-auto">
+          <ShieldAlert className="w-8 h-8 text-rose-400" />
+        </div>
+        <h2 className="text-xl font-bold">Sessão administrativa ausente</h2>
+        <p className="text-sm text-slate-400">
+          Informe o token administrativo na Home para acessar o painel da prova.
+        </p>
+        <button
+          onClick={() => navigateTo("/")}
+          className="px-5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm font-semibold hover:bg-slate-850 cursor-pointer"
+        >
+          Voltar para Home
+        </button>
       </div>
     );
   }

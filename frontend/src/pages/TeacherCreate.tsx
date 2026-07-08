@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { useModal } from "../components/ModalProvider";
 import {
-  buildAdminUrl,
+  buildAdminDeepLink,
   buildPublicUrl,
   downloadCredentialsTxt,
   downloadQrCodePng,
@@ -30,6 +30,7 @@ import {
   formatWhatsAppStudentMessage,
   openWhatsAppShare,
 } from "../utils/examCredentials";
+import { setAdminToken } from "../utils/adminSession";
 
 interface ItemInput {
   id: string;
@@ -518,7 +519,7 @@ export default function TeacherCreate() {
   // Exibição do Painel de Sucesso após a criação
   if (result) {
     const publicUrl = buildPublicUrl(result.public_code);
-    const adminUrl = buildAdminUrl(result.admin_token);
+    const adminDeepLink = buildAdminDeepLink(result.admin_token);
     const examTitle = title.trim() || "Prova";
 
     return (
@@ -552,7 +553,7 @@ export default function TeacherCreate() {
               <strong>Token administrativo:</strong> {result.admin_token}
             </p>
             <p className="print-break-word">
-              <strong>Link do painel admin:</strong> {adminUrl}
+              <strong>Link do painel admin:</strong> {adminDeepLink}
             </p>
           </div>
         </div>
@@ -954,11 +955,11 @@ export default function TeacherCreate() {
                       Link do Painel Admin
                     </span>
                     <span className="font-mono text-xs text-rose-300 block truncate">
-                      {adminUrl}
+                      {adminDeepLink}
                     </span>
                   </div>
                   <button
-                    onClick={() => copyToClipboard(adminUrl, "admin")}
+                    onClick={() => copyToClipboard(adminDeepLink, "admin")}
                     className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
                     title="Copiar Link Admin"
                   >
@@ -976,7 +977,10 @@ export default function TeacherCreate() {
           {showAdminCredentials && (
             <div className="text-center pt-2">
               <button
-                onClick={() => navigateTo(`/admin/${result.admin_token}`)}
+                onClick={() => {
+                  setAdminToken(result.admin_token);
+                  navigateTo("/admin");
+                }}
                 className="px-6 py-3 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-xl text-sm font-bold text-slate-200 transition-colors cursor-pointer"
               >
                 Acessar Painel de Resultados →

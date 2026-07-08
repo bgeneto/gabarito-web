@@ -18,7 +18,12 @@ import {
   startAccessLogRetentionJob,
   writeAccessLog,
 } from "./middleware/accessLogger.js";
-import { rateLimiter, getClientIp } from "./middleware/rateLimiter.js";
+import {
+  getClientIp,
+  getSubmissionRequestBody,
+  submissionRateLimiter,
+} from "./middleware/rateLimiter.js";
+import { adminAuthRateLimiter } from "./middleware/authRateLimiter.js";
 import { telemetryRateLimiter } from "./middleware/telemetryRateLimiter.js";
 import superadmin from "./routes/superadmin.js";
 import { isSuperadminEnabled } from "./middleware/superadminAuth.js";
@@ -45,6 +50,7 @@ const corsOrigin =
     : "*");
 app.use("/api/*", cors({ origin: corsOrigin }));
 app.use("/api/*", accessLogger);
+app.use("/api/admin/*", adminAuthRateLimiter);
 
 // Limites de tamanho de payload
 app.use("/api/exams", bodyLimit({ maxSize: 1024 * 1024 })); // 1 MB para criação de prova
@@ -90,10 +96,7 @@ const MAX_STUDENT_NAME_LENGTH = 150;
 const MAX_STUDENT_IDENTIFIER_LENGTH = 50;
 const MAX_ITEMS_PER_EXAM = 500;
 
-// Função utilitária para gerar hash SHA-256 do token administrativo
-function hashToken(token: string): string {
-  return crypto.createHash("sha256").update(token).digest("hex");
-}
+import { findExamByAdminToken, hashAdminToken } from "./utils/adminAuth.js";
 
 // ROTA: Health check público (liveness + conectividade do banco)
 app.get("/health", (c) => {
@@ -244,7 +247,7 @@ app.post("/api/exams", async (c) => {
     attempts = 0;
     while (!isUniqueAdmin && attempts < 10) {
       adminToken = generateAdminToken();
-      adminCodeHash = hashToken(adminToken);
+      adminCodeHash = hashAdminToken(adminToken);
 
       const [existing] = await db
         .select()
@@ -363,189 +366,232 @@ app.get("/api/exams/:public_code", async (c) => {
 });
 
 // ROTA: Enviar Respostas (Aluno) com Rate Limiting e Prevenção de Duplicidade
-app.post("/api/exams/:public_code/submissions", rateLimiter, async (c) => {
-  try {
-    const publicCode = (c.req.param("public_code") || "").toUpperCase();
-    const body = await c.req.json();
-    const { student_name, student_identifier, answers } = body; // answers: { [itemId]: raw_answer }
+app.post(
+  "/api/exams/:public_code/submissions",
+  submissionRateLimiter,
+  async (c) => {
+    try {
+      const publicCode = (c.req.param("public_code") || "").toUpperCase();
+      const body = getSubmissionRequestBody(c) as {
+        student_name?: unknown;
+        student_identifier?: unknown;
+        answers?: unknown;
+      };
+      const { student_name, student_identifier, answers } = body;
 
-    if (
-      !student_name ||
-      !student_identifier ||
-      !answers ||
-      typeof answers !== "object"
-    ) {
-      return c.json(
-        {
-          error: "Parâmetros inválidos",
-          message: "Nome, matrícula e respostas são obrigatórios.",
-        },
-        400,
-      );
-    }
+      if (
+        !student_name ||
+        !student_identifier ||
+        !answers ||
+        typeof answers !== "object"
+      ) {
+        return c.json(
+          {
+            error: "Parâmetros inválidos",
+            message: "Nome, matrícula e respostas são obrigatórios.",
+          },
+          400,
+        );
+      }
 
-    if (
-      typeof student_name !== "string" ||
-      typeof student_identifier !== "string"
-    ) {
-      return c.json(
-        { error: "Validação", message: "Nome e matrícula devem ser textos." },
-        400,
-      );
-    }
+      if (
+        typeof student_name !== "string" ||
+        typeof student_identifier !== "string"
+      ) {
+        return c.json(
+          { error: "Validação", message: "Nome e matrícula devem ser textos." },
+          400,
+        );
+      }
 
-    if (student_name.length > MAX_STUDENT_NAME_LENGTH) {
-      return c.json(
-        {
-          error: "Validação",
-          message: `O nome do aluno deve ter no máximo ${MAX_STUDENT_NAME_LENGTH} caracteres.`,
-        },
-        400,
-      );
-    }
+      if (student_name.length > MAX_STUDENT_NAME_LENGTH) {
+        return c.json(
+          {
+            error: "Validação",
+            message: `O nome do aluno deve ter no máximo ${MAX_STUDENT_NAME_LENGTH} caracteres.`,
+          },
+          400,
+        );
+      }
 
-    if (student_identifier.length > MAX_STUDENT_IDENTIFIER_LENGTH) {
-      return c.json(
-        {
-          error: "Validação",
-          message: `A matrícula deve ter no máximo ${MAX_STUDENT_IDENTIFIER_LENGTH} caracteres.`,
-        },
-        400,
-      );
-    }
+      if (student_identifier.length > MAX_STUDENT_IDENTIFIER_LENGTH) {
+        return c.json(
+          {
+            error: "Validação",
+            message: `A matrícula deve ter no máximo ${MAX_STUDENT_IDENTIFIER_LENGTH} caracteres.`,
+          },
+          400,
+        );
+      }
 
-    const [exam] = await db
-      .select()
-      .from(exams)
-      .where(eq(exams.publicCode, publicCode));
-    if (!exam) {
-      return c.json(
-        { error: "Não encontrado", message: "Prova não encontrada." },
-        404,
-      );
-    }
+      const [exam] = await db
+        .select()
+        .from(exams)
+        .where(eq(exams.publicCode, publicCode));
+      if (!exam) {
+        return c.json(
+          { error: "Não encontrado", message: "Prova não encontrada." },
+          404,
+        );
+      }
 
-    if (exam.status !== "open") {
-      return c.json(
-        {
-          error: "Bloqueado",
-          message: "Esta prova já foi encerrada e não aceita mais envios.",
-        },
-        403,
-      );
-    }
+      if (exam.status !== "open") {
+        return c.json(
+          {
+            error: "Bloqueado",
+            message: "Esta prova já foi encerrada e não aceita mais envios.",
+          },
+          403,
+        );
+      }
 
-    // Verificar duplicidade: mesma matrícula na mesma prova
-    const cleanIdentifier = student_identifier.trim().toUpperCase();
-    const [existingSub] = await db
-      .select()
-      .from(submissions)
-      .where(
-        and(
-          eq(submissions.examId, exam.id),
-          eq(submissions.studentIdentifier, cleanIdentifier),
-        ),
-      );
-
-    if (existingSub) {
-      return c.json(
-        {
-          error: "Conflito",
-          message:
-            "Você já enviou as respostas para esta prova. O reenvio está bloqueado.",
-        },
-        409,
-      );
-    }
-
-    // Buscar questões para validar
-    const itemsList = await db
-      .select()
-      .from(examItems)
-      .where(eq(examItems.examId, exam.id));
-
-    let totalScore = 0;
-    let submissionId = "";
-    let isUniqueSubmission = false;
-    let attempts = 0;
-    while (!isUniqueSubmission && attempts < 10) {
-      submissionId = generateSubmissionId();
-
-      const [existing] = await db
+      // Verificar duplicidade: mesma matrícula na mesma prova
+      const cleanIdentifier = student_identifier.trim().toUpperCase();
+      const [existingSub] = await db
         .select()
         .from(submissions)
-        .where(eq(submissions.id, submissionId));
-      if (!existing) {
-        isUniqueSubmission = true;
+        .where(
+          and(
+            eq(submissions.examId, exam.id),
+            eq(submissions.studentIdentifier, cleanIdentifier),
+          ),
+        );
+
+      if (existingSub) {
+        return c.json(
+          {
+            error: "Conflito",
+            message:
+              "Você já enviou as respostas para esta prova. O reenvio está bloqueado.",
+            submission_id: existingSub.id,
+            already_submitted: true,
+          },
+          409,
+        );
       }
-      attempts++;
-    }
-    if (!isUniqueSubmission) {
+
+      // Buscar questões para validar
+      const itemsList = await db
+        .select()
+        .from(examItems)
+        .where(eq(examItems.examId, exam.id));
+
+      let totalScore = 0;
+      let submissionId = "";
+      let isUniqueSubmission = false;
+      let attempts = 0;
+      while (!isUniqueSubmission && attempts < 10) {
+        submissionId = generateSubmissionId();
+
+        const [existing] = await db
+          .select()
+          .from(submissions)
+          .where(eq(submissions.id, submissionId));
+        if (!existing) {
+          isUniqueSubmission = true;
+        }
+        attempts++;
+      }
+      if (!isUniqueSubmission) {
+        return c.json(
+          {
+            error: "Erro de geração",
+            message:
+              "Não foi possível gerar um comprovante de submissão único.",
+          },
+          500,
+        );
+      }
+      const now = Date.now();
+
+      // Preparar registros de respostas
+      const answerRecords = [];
+
+      for (const item of itemsList) {
+        const rawAnswer =
+          answers[item.id] !== undefined ? String(answers[item.id]) : "";
+
+        const { isCorrect, normalizedAnswer, scoreAwarded } = gradeItemAnswer(
+          item,
+          rawAnswer,
+        );
+        totalScore += scoreAwarded;
+
+        answerRecords.push({
+          id: crypto.randomUUID(),
+          submissionId,
+          itemId: item.id,
+          rawAnswer,
+          normalizedAnswer,
+          isCorrect: isCorrect ? 1 : 0,
+          scoreAwarded,
+        });
+      }
+
+      try {
+        db.transaction((tx) => {
+          tx.insert(submissions)
+            .values({
+              id: submissionId,
+              examId: exam.id,
+              studentName: student_name.trim(),
+              studentIdentifier: cleanIdentifier,
+              submittedAt: now,
+              totalScore,
+            })
+            .run();
+
+          for (const record of answerRecords) {
+            tx.insert(submissionAnswers).values(record).run();
+          }
+        });
+      } catch (insertError: any) {
+        const message = String(insertError?.message ?? "");
+        if (message.includes("UNIQUE constraint failed")) {
+          const [conflictSub] = await db
+            .select()
+            .from(submissions)
+            .where(
+              and(
+                eq(submissions.examId, exam.id),
+                eq(submissions.studentIdentifier, cleanIdentifier),
+              ),
+            );
+
+          if (conflictSub) {
+            return c.json(
+              {
+                error: "Conflito",
+                message:
+                  "Você já enviou as respostas para esta prova. O reenvio está bloqueado.",
+                submission_id: conflictSub.id,
+                already_submitted: true,
+              },
+              409,
+            );
+          }
+        }
+
+        throw insertError;
+      }
+
       return c.json(
         {
-          error: "Erro de geração",
-          message: "Não foi possível gerar um comprovante de submissão único.",
+          submission_id: submissionId,
+          message:
+            "Respostas registradas com sucesso. A nota será disponibilizada quando o professor encerrar a prova.",
         },
+        201,
+      );
+    } catch (error: any) {
+      console.error("Erro ao salvar submissão:", error);
+      return c.json(
+        { error: "Erro interno do servidor", message: error.message },
         500,
       );
     }
-    const now = Date.now();
-
-    // Preparar registros de respostas
-    const answerRecords = [];
-
-    for (const item of itemsList) {
-      const rawAnswer =
-        answers[item.id] !== undefined ? String(answers[item.id]) : "";
-
-      const { isCorrect, normalizedAnswer, scoreAwarded } = gradeItemAnswer(
-        item,
-        rawAnswer,
-      );
-      totalScore += scoreAwarded;
-
-      answerRecords.push({
-        id: crypto.randomUUID(),
-        submissionId,
-        itemId: item.id,
-        rawAnswer,
-        normalizedAnswer,
-        isCorrect: isCorrect ? 1 : 0,
-        scoreAwarded,
-      });
-    }
-
-    // Inserir submissão principal
-    await db.insert(submissions).values({
-      id: submissionId,
-      examId: exam.id,
-      studentName: student_name.trim(),
-      studentIdentifier: cleanIdentifier,
-      submittedAt: now,
-      totalScore,
-    });
-
-    // Inserir todas as respostas
-    for (const record of answerRecords) {
-      await db.insert(submissionAnswers).values(record);
-    }
-
-    return c.json(
-      {
-        submission_id: submissionId,
-        message:
-          "Respostas registradas com sucesso. A nota será disponibilizada quando o professor encerrar a prova.",
-      },
-      201,
-    );
-  } catch (error: any) {
-    console.error("Erro ao salvar submissão:", error);
-    return c.json(
-      { error: "Erro interno do servidor", message: error.message },
-      500,
-    );
-  }
-});
+  },
+);
 
 // ROTA: Consultar Submissão Individual (Aluno) - Protege nota se aberta
 app.get("/api/submissions/:submission_id", async (c) => {
@@ -645,12 +691,7 @@ app.get("/api/submissions/:submission_id", async (c) => {
 app.get("/api/admin/exams/:admin_token", async (c) => {
   try {
     const adminToken = c.req.param("admin_token");
-    const adminCodeHash = hashToken(adminToken);
-
-    const [exam] = await db
-      .select()
-      .from(exams)
-      .where(eq(exams.adminCodeHash, adminCodeHash));
+    const exam = await findExamByAdminToken(adminToken);
     if (!exam) {
       return c.json(
         { error: "Não autorizado", message: "Token administrativo inválido." },
@@ -713,12 +754,7 @@ app.patch("/api/admin/exams/:admin_token/items/:item_id", async (c) => {
   try {
     const adminToken = c.req.param("admin_token");
     const itemId = c.req.param("item_id");
-    const adminCodeHash = hashToken(adminToken);
-
-    const [exam] = await db
-      .select()
-      .from(exams)
-      .where(eq(exams.adminCodeHash, adminCodeHash));
+    const exam = await findExamByAdminToken(adminToken);
     if (!exam) {
       return c.json(
         { error: "Não autorizado", message: "Token administrativo inválido." },
@@ -830,12 +866,7 @@ app.patch("/api/admin/exams/:admin_token/items/:item_id", async (c) => {
 app.post("/api/admin/exams/:admin_token/close", async (c) => {
   try {
     const adminToken = c.req.param("admin_token");
-    const adminCodeHash = hashToken(adminToken);
-
-    const [exam] = await db
-      .select()
-      .from(exams)
-      .where(eq(exams.adminCodeHash, adminCodeHash));
+    const exam = await findExamByAdminToken(adminToken);
     if (!exam) {
       return c.json(
         { error: "Não autorizado", message: "Token administrativo inválido." },

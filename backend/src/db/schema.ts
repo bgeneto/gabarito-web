@@ -4,6 +4,7 @@ import {
   real,
   sqliteTable,
   text,
+  uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
 export const exams = sqliteTable(
@@ -64,7 +65,7 @@ export const submissions = sqliteTable(
     studentIdentifierIdx: index("submissions_student_identifier_idx").on(
       table.studentIdentifier,
     ),
-    examStudentIdx: index("submissions_exam_student_idx").on(
+    examStudentUnique: uniqueIndex("submissions_exam_student_unique").on(
       table.examId,
       table.studentIdentifier,
     ),

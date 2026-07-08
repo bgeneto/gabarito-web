@@ -15,6 +15,13 @@
       "when": 1783452000000,
       "tag": "0001_access_logs",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1783538400000,
+      "tag": "0002_submissions_exam_student_unique",
+      "breakpoints": true
     }
   ]
 }

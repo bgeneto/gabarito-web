@@ -75,7 +75,7 @@ gabarito-web/
 │   │   │   ├── index.ts            # Conexão SQLite (modo WAL)
 │   │   │   └── schema.ts           # Schemas Drizzle ORM
 │   │   ├── middleware/
-│   │   │   └── rateLimiter.ts      # Rate limiting por IP (5 req/min)
+│   │   │   └── rateLimiter.ts      # Rate limit por aluno (5/min) e por prova+IP (60/min)
 │   │   ├── utils/
 │   │   │   └── normalizer.ts       # Pipeline de normalização de respostas
 │   │   └── index.ts                # Definição de rotas e servidor Hono
@@ -321,17 +321,20 @@ O script detecta automaticamente se a API está no ar e, caso não esteja, sobe 
 
 ## 🔐 Segurança
 
-| Mecanismo                | Detalhes                                                                           |
-| ------------------------ | ---------------------------------------------------------------------------------- |
-| **Token administrativo** | Formato `adm_XXXXXX` (6 chars base36). Apenas o hash SHA-256 é armazenado no banco |
-| **Código público**       | Formato `GYY-XXXXXX` (ano + 6 chars base36). Não expõe o gabarito                  |
-| **Gabarito oculto**      | A rota pública `/api/exams/:public_code` nunca retorna `answer_config_json`        |
-| **Notas ocultas**        | Enquanto a prova estiver aberta, `total_score` retorna `null` para o aluno         |
-| **Rate limiting**        | Máximo de 5 submissões por IP por minuto na rota de envio de respostas             |
-| **Anti-duplicidade**     | Matrícula duplicada na mesma prova retorna `409 Conflict`                          |
-| **Comprovante compacto** | ID de submissão com 6 chars base36 com detecção de colisão e retry                 |
-| **Superadmin**           | Token estático em `SUPERADMIN_TOKEN`; área somente leitura em `/superadmin`        |
-| **Logs de acesso**       | IPs hasheados (SHA-256); retenção configurável via `ACCESS_LOG_RETENTION_DAYS`     |
+| Mecanismo                      | Detalhes                                                                                                                       |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Token administrativo**       | Formato `adm_XXXXXX` (6 chars base36). Apenas o hash SHA-256 é armazenado no banco; comparação com `timingSafeEqual` em falhas |
+| **Sessão admin (SPA)**         | Token fica em `sessionStorage`; URL do painel é `/admin` (links diretos usam base64url cosmético em `/admin/:segment`)         |
+| **Código público**             | Formato `GYY-XXXXXX` (ano + 6 chars base36). Não expõe o gabarito                                                              |
+| **Gabarito oculto**            | A rota pública `/api/exams/:public_code` nunca retorna `answer_config_json`                                                    |
+| **Notas ocultas**              | Enquanto a prova estiver aberta, `total_score` retorna `null` para o aluno                                                     |
+| **Rate limiting (envio)**      | 5 tentativas/min por matrícula e 60/min por prova+IP na rota de envio (409 não conta)                                          |
+| **Rate limiting (admin)**      | 20 tentativas inválidas/min por IP em `/api/admin/*` (401 conta; sucesso não conta)                                            |
+| **Rate limiting (superadmin)** | 10 falhas de auth/min e 60 req/min autenticadas por IP em `/api/superadmin/*`                                                  |
+| **Anti-duplicidade**           | Matrícula duplicada na mesma prova retorna `409 Conflict`                                                                      |
+| **Comprovante compacto**       | ID de submissão com 6 chars base36 com detecção de colisão e retry                                                             |
+| **Superadmin**                 | Token estático em `SUPERADMIN_TOKEN`; área somente leitura em `/superadmin`                                                    |
+| **Logs de acesso**             | IPs hasheados (SHA-256); retenção configurável via `ACCESS_LOG_RETENTION_DAYS`                                                 |
 
 ### Painel Superadmin
 

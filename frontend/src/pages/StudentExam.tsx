@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { navigateTo } from "../App";
+import { navigateReplace, navigateTo } from "../App";
 import {
   ClipboardCheck,
   ShieldAlert,
@@ -20,6 +20,11 @@ import {
   buildDraftFromForm,
   formatDraftSavedAt,
 } from "../utils/examDraft";
+import { fetchJson, formatFetchErrorMessage } from "../utils/fetchJson";
+import {
+  loadSubmissionReceipt,
+  saveSubmissionReceipt,
+} from "../utils/submissionReceipt";
 
 interface ExamItem {
   id: string;
@@ -37,11 +42,18 @@ interface ExamPublicData {
   items: ExamItem[];
 }
 
+interface SubmissionResponse {
+  submission_id?: string;
+  message?: string;
+  already_submitted?: boolean;
+}
+
 export default function StudentExam({ publicCode }: { publicCode: string }) {
   const { confirm } = useModal();
   const [exam, setExam] = useState<ExamPublicData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   // Form Fields
@@ -58,6 +70,39 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
   const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null);
   const formHydratedRef = useRef(false);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const submitInFlightRef = useRef(false);
+
+  const completeSubmission = useCallback(
+    (submissionId: string, name: string, identifier: string) => {
+      clearDraft(publicCode);
+      saveSubmissionReceipt({
+        version: 1,
+        publicCode,
+        studentIdentifier: identifier.trim(),
+        submissionId,
+        savedAt: Date.now(),
+      });
+      setReceiptId(submissionId);
+      setSubmitError("");
+      navigateReplace(`/submissao/${submissionId}`);
+    },
+    [publicCode],
+  );
+
+  const tryRestoreStoredReceipt = useCallback(
+    (identifier: string) => {
+      const stored = loadSubmissionReceipt(publicCode, identifier);
+      if (!stored) return false;
+
+      completeSubmission(
+        stored.submissionId,
+        studentName || "Estudante",
+        identifier,
+      );
+      return true;
+    },
+    [completeSubmission, publicCode, studentName],
+  );
 
   const persistDraft = useCallback(
     (
@@ -83,9 +128,10 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
 
   const fetchExamData = async () => {
     try {
-      const response = await fetch(`/api/exams/${publicCode}`);
-      const data = await response.json();
-      if (!response.ok) {
+      const { ok, data } = await fetchJson<
+        ExamPublicData & { message?: string }
+      >(`/api/exams/${publicCode}`);
+      if (!ok) {
         throw new Error(data.message || "Erro ao buscar dados da prova.");
       }
       setExam(data);
@@ -98,6 +144,13 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
         setAnswers(merged.answers);
         setDraftRestored(merged.hasRestorableContent);
         setDraftSavedAt(draft.savedAt);
+
+        if (
+          merged.studentIdentifier.trim() &&
+          tryRestoreStoredReceipt(merged.studentIdentifier)
+        ) {
+          return;
+        }
       } else {
         const initialAnswers: { [key: string]: string } = {};
         data.items.forEach((item: ExamItem) => {
@@ -109,8 +162,10 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
       }
 
       formHydratedRef.current = true;
-    } catch (err: any) {
-      setError(err.message || "Erro de conexão com o servidor.");
+    } catch (err: unknown) {
+      setLoadError(
+        formatFetchErrorMessage(err, "Erro de conexão com o servidor."),
+      );
     } finally {
       setLoading(false);
     }
@@ -120,6 +175,8 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
     formHydratedRef.current = false;
     setDraftRestored(false);
     setDraftSavedAt(null);
+    setLoadError("");
+    setSubmitError("");
     fetchExamData();
   }, [publicCode]);
 
@@ -162,6 +219,11 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
     return () => window.removeEventListener("pagehide", flushDraft);
   }, [studentName, studentIdentifier, answers, exam, receiptId, persistDraft]);
 
+  useEffect(() => {
+    if (!studentIdentifier.trim() || receiptId || submitting) return;
+    tryRestoreStoredReceipt(studentIdentifier);
+  }, [studentIdentifier, receiptId, submitting, tryRestoreStoredReceipt]);
+
   const handleUpdateAnswer = (itemId: string, val: string) => {
     setAnswers({
       ...answers,
@@ -171,71 +233,96 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    if (submitInFlightRef.current || submitting) return;
+
+    setSubmitError("");
 
     if (!studentName.trim() || !studentIdentifier.trim()) {
-      setError("Nome e Matrícula são obrigatórios para a submissão.");
+      setSubmitError("Nome e Matrícula são obrigatórios para a submissão.");
       return;
     }
 
-    // Verificar se todas as questões foram respondidas
-    const unansweredCount = exam?.items.filter(
-      (item) => !answers[item.id] || !answers[item.id].trim(),
-    ).length;
-    if (unansweredCount && unansweredCount > 0) {
-      const hasConfirmed = await confirm(
-        `Você deixou ${unansweredCount} questão(ões) em branco. Deseja enviar assim mesmo?`,
-        {
-          title: "Questões em Branco",
-          severity: "warning",
-          confirmText: "Enviar assim mesmo",
-          cancelText: "Voltar e responder",
-        },
-      );
-      if (!hasConfirmed) {
-        return;
-      }
-    } else {
-      const hasConfirmed = await confirm(
-        "Tem certeza que deseja enviar suas respostas? O reenvio está bloqueado e você não poderá fazer edições.",
-        {
-          title: "Enviar Respostas",
-          severity: "info",
-          confirmText: "Sim, enviar",
-          cancelText: "Cancelar",
-        },
-      );
-      if (!hasConfirmed) {
-        return;
-      }
-    }
-
+    submitInFlightRef.current = true;
     setSubmitting(true);
-    const payload = {
-      student_name: studentName.trim(),
-      student_identifier: studentIdentifier.trim(),
-      answers,
-    };
 
     try {
-      const response = await fetch(`/api/exams/${publicCode}/submissions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+      const unansweredCount = exam?.items.filter(
+        (item) => !answers[item.id] || !answers[item.id].trim(),
+      ).length;
 
-      const data = await response.json();
-      if (!response.ok) {
+      if (unansweredCount && unansweredCount > 0) {
+        const hasConfirmed = await confirm(
+          `Você deixou ${unansweredCount} questão(ões) em branco. Deseja enviar assim mesmo?`,
+          {
+            title: "Questões em Branco",
+            severity: "warning",
+            confirmText: "Enviar assim mesmo",
+            cancelText: "Voltar e responder",
+          },
+        );
+        if (!hasConfirmed) return;
+      } else {
+        const hasConfirmed = await confirm(
+          "Tem certeza que deseja enviar suas respostas? O reenvio está bloqueado e você não poderá fazer edições.",
+          {
+            title: "Enviar Respostas",
+            severity: "info",
+            confirmText: "Sim, enviar",
+            cancelText: "Cancelar",
+          },
+        );
+        if (!hasConfirmed) return;
+      }
+
+      const payload = {
+        student_name: studentName.trim(),
+        student_identifier: studentIdentifier.trim(),
+        answers,
+      };
+
+      const { ok, status, data } = await fetchJson<SubmissionResponse>(
+        `/api/exams/${publicCode}/submissions`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      if (
+        status === 409 &&
+        data.submission_id &&
+        typeof data.submission_id === "string"
+      ) {
+        completeSubmission(
+          data.submission_id,
+          studentName.trim(),
+          studentIdentifier.trim(),
+        );
+        return;
+      }
+
+      if (!ok) {
         throw new Error(data.message || "Erro ao submeter respostas.");
       }
 
-      clearDraft(publicCode);
-      setReceiptId(data.submission_id);
-    } catch (err: any) {
-      setError(err.message || "Houve um erro de rede ao enviar.");
+      if (!data.submission_id) {
+        throw new Error("Resposta inválida do servidor ao registrar envio.");
+      }
+
+      completeSubmission(
+        data.submission_id,
+        studentName.trim(),
+        studentIdentifier.trim(),
+      );
+    } catch (err: unknown) {
+      setSubmitError(
+        formatFetchErrorMessage(err, "Houve um erro de rede ao enviar."),
+      );
     } finally {
+      submitInFlightRef.current = false;
       setSubmitting(false);
     }
   };
@@ -257,14 +344,14 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
     );
   }
 
-  if (error && !receiptId) {
+  if (loadError && !exam) {
     return (
       <div className="max-w-md mx-auto text-center py-12 space-y-4">
         <div className="w-14 h-14 bg-rose-950/80 border border-rose-900/30 rounded-2xl flex items-center justify-center mx-auto">
           <ShieldAlert className="w-8 h-8 text-rose-400" />
         </div>
         <h2 className="text-xl font-bold">Não foi possível acessar a prova</h2>
-        <p className="text-sm text-slate-400">{error}</p>
+        <p className="text-sm text-slate-400">{loadError}</p>
         <button
           onClick={() => navigateTo("/")}
           className="px-5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm font-semibold hover:bg-slate-850 cursor-pointer"
@@ -296,7 +383,7 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
     );
   }
 
-  // Tela de Sucesso
+  // Tela de Sucesso (fallback caso a navegação ainda não tenha ocorrido)
   if (receiptId && exam) {
     return (
       <div className="max-w-md mx-auto w-full space-y-6 animate-fade-in py-6">
@@ -312,7 +399,6 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
           </p>
         </div>
 
-        {/* Comprovante */}
         <div className="glass-panel border border-slate-800 rounded-2xl p-5 space-y-4 text-center">
           <span className="text-[10px] uppercase font-bold text-slate-500 block tracking-wider">
             Comprovante de Submissão
@@ -377,7 +463,6 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
 
   return (
     <div className="max-w-xl mx-auto w-full space-y-6">
-      {/* Header da Prova */}
       <div className="flex items-center gap-3">
         <button
           onClick={() => navigateTo("/")}
@@ -406,7 +491,6 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Identificação do Aluno */}
         <div className="glass-panel border border-slate-800 rounded-2xl p-5 space-y-4">
           <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-400">
             Identificação
@@ -428,6 +512,7 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
                 onChange={(e) => setStudentName(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-850 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-cyan-500"
                 required
+                disabled={submitting}
               />
             </div>
 
@@ -446,6 +531,7 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
                 onChange={(e) => setStudentIdentifier(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-850 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-cyan-500 font-mono"
                 required
+                disabled={submitting}
               />
             </div>
           </div>
@@ -456,7 +542,6 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
           </p>
         </div>
 
-        {/* Questões */}
         <div className="space-y-4">
           <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-400">
             Registrar Respostas
@@ -482,17 +567,16 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
                 </span>
               </div>
 
-              {/* Input de Resposta baseado no tipo */}
               <div className="pt-1.5">
-                {/* Múltipla Escolha */}
                 {item.answerType === "choice" && (
                   <div className="flex gap-2 justify-between">
                     {["A", "B", "C", "D", "E"].map((option) => (
                       <button
                         key={option}
                         type="button"
+                        disabled={submitting}
                         onClick={() => handleUpdateAnswer(item.id, option)}
-                        className={`flex-1 py-2.5 rounded-xl border text-sm font-bold transition-all cursor-pointer ${
+                        className={`flex-1 py-2.5 rounded-xl border text-sm font-bold transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
                           answers[item.id] === option
                             ? "bg-cyan-500 text-slate-950 border-cyan-450 scale-102 shadow-md shadow-cyan-500/10"
                             : "bg-slate-900 border-slate-850 text-slate-400 hover:border-slate-800"
@@ -504,20 +588,20 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
                   </div>
                 )}
 
-                {/* Verdadeiro ou Falso */}
                 {item.answerType === "true_false" && (
                   <div className="flex gap-3">
                     {["V", "F"].map((option) => (
                       <button
                         key={option}
                         type="button"
+                        disabled={submitting}
                         onClick={() =>
                           handleUpdateAnswer(
                             item.id,
                             option === "V" ? "verdadeiro" : "falso",
                           )
                         }
-                        className={`flex-1 py-2.5 rounded-xl border text-sm font-bold transition-all cursor-pointer ${
+                        className={`flex-1 py-2.5 rounded-xl border text-sm font-bold transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
                           (option === "V" &&
                             answers[item.id] === "verdadeiro") ||
                           (option === "F" && answers[item.id] === "falso")
@@ -531,16 +615,16 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
                   </div>
                 )}
 
-                {/* Texto Exato */}
                 {item.answerType === "text_exact" && (
                   <input
                     type="text"
                     placeholder="Digite sua resposta..."
                     value={answers[item.id] || ""}
+                    disabled={submitting}
                     onChange={(e) =>
                       handleUpdateAnswer(item.id, e.target.value)
                     }
-                    className="w-full bg-slate-900 border border-slate-850 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:border-cyan-500 font-semibold"
+                    className="w-full bg-slate-900 border border-slate-850 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:border-cyan-500 font-semibold disabled:opacity-60"
                   />
                 )}
               </div>
@@ -548,7 +632,6 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
           ))}
         </div>
 
-        {/* Painel de Confirmação */}
         <div className="bg-slate-900/40 border border-slate-850 rounded-2xl p-4 flex gap-3 text-xs text-slate-400">
           <Award className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
           <div>
@@ -560,10 +643,10 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
           </div>
         </div>
 
-        {error && (
+        {submitError && (
           <div className="flex items-center gap-2 text-xs text-rose-400 bg-rose-950/20 border border-rose-900/30 p-3 rounded-lg">
             <ShieldAlert className="w-4 h-4 shrink-0" />
-            <span>{error}</span>
+            <span>{submitError}</span>
           </div>
         )}
 
@@ -576,11 +659,10 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
           </div>
         )}
 
-        {/* Submit button */}
         <button
           type="submit"
           disabled={submitting}
-          className="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 disabled:from-slate-800 disabled:to-slate-800 disabled:text-slate-650 text-slate-950 font-bold rounded-2xl text-sm transition-all shadow-lg shadow-cyan-500/10 flex items-center justify-center gap-2 cursor-pointer"
+          className="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 disabled:from-slate-800 disabled:to-slate-800 disabled:text-slate-650 text-slate-950 font-bold rounded-2xl text-sm transition-all shadow-lg shadow-cyan-500/10 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
         >
           {submitting ? "Enviando Gabarito..." : "Finalizar e Enviar Respostas"}
         </button>

@@ -1,5 +1,5 @@
 import { Eye, EyeOff, Lock, ShieldAlert } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { navigateTo } from "../App";
 import {
   hasSuperadminToken,
@@ -22,6 +22,7 @@ export default function SuperadminLogin() {
   const [showToken, setShowToken] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const submitInFlightRef = useRef(false);
 
   useEffect(() => {
     if (hasSuperadminToken()) {
@@ -31,12 +32,15 @@ export default function SuperadminLogin() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitInFlightRef.current || loading) return;
+
     const cleanToken = normalizeTokenInput(token);
     if (!cleanToken) {
       setError("Informe o token de superadmin.");
       return;
     }
 
+    submitInFlightRef.current = true;
     setLoading(true);
     setError("");
 
@@ -58,6 +62,13 @@ export default function SuperadminLogin() {
       if (response.status === 404) {
         setError(
           "Área superadmin não está habilitada no servidor (SUPERADMIN_TOKEN ausente). Recrie o container da API após configurar o .env.",
+        );
+        return;
+      }
+      if (response.status === 429) {
+        setError(
+          data.message ||
+            "Muitas tentativas de acesso. Aguarde um minuto e tente novamente.",
         );
         return;
       }
@@ -86,6 +97,7 @@ export default function SuperadminLogin() {
     } catch {
       setError("Não foi possível conectar ao servidor.");
     } finally {
+      submitInFlightRef.current = false;
       setLoading(false);
     }
   };

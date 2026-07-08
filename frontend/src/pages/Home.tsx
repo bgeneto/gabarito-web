@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { navigateTo } from "../App";
 import {
   GraduationCap,
@@ -8,6 +8,8 @@ import {
   Receipt,
   ArrowLeft,
 } from "lucide-react";
+import { setAdminToken as persistAdminToken } from "../utils/adminSession";
+import { normalizeAdminToken } from "../utils/adminTokenUrl";
 
 function parseReceiptCode(raw: string): string {
   const trimmed = raw.trim().toUpperCase();
@@ -20,10 +22,11 @@ export default function Home() {
   const [role, setRole] = useState<"student" | "teacher" | null>(null);
   const [publicCode, setPublicCode] = useState("");
   const [receiptCode, setReceiptCode] = useState("");
-  const [adminToken, setAdminToken] = useState("");
+  const [adminTokenInput, setAdminTokenInput] = useState("");
   const [examError, setExamError] = useState("");
   const [receiptError, setReceiptError] = useState("");
   const [teacherError, setTeacherError] = useState("");
+  const [teacherLoading, setTeacherLoading] = useState(false);
 
   const handleStudentAccess = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,15 +54,48 @@ export default function Home() {
     navigateTo(`/submissao/${code}`);
   };
 
-  const handleTeacherAccess = (e: React.FormEvent) => {
+  const handleTeacherAccess = async (e: React.FormEvent) => {
     e.preventDefault();
     setTeacherError("");
-    const token = adminToken.trim();
+
+    const token = normalizeAdminToken(adminTokenInput);
     if (!token) {
-      setTeacherError("Por favor, insira o token administrativo.");
+      setTeacherError(
+        "Informe um token administrativo válido (ex: adm_A7K9QF).",
+      );
       return;
     }
-    navigateTo(`/admin/${token}`);
+
+    setTeacherLoading(true);
+    try {
+      const response = await fetch(
+        `/api/admin/exams/${encodeURIComponent(token)}`,
+      );
+      const data = await response.json().catch(() => ({}));
+
+      if (response.status === 429) {
+        setTeacherError(
+          data.message ||
+            "Muitas tentativas de acesso. Aguarde um minuto e tente novamente.",
+        );
+        return;
+      }
+
+      if (!response.ok) {
+        setTeacherError(
+          data.message ||
+            "Token administrativo inválido ou prova não encontrada.",
+        );
+        return;
+      }
+
+      persistAdminToken(token);
+      navigateTo("/admin");
+    } catch {
+      setTeacherError("Não foi possível validar o acesso administrativo.");
+    } finally {
+      setTeacherLoading(false);
+    }
   };
 
   return (
@@ -258,8 +294,8 @@ export default function Home() {
                   id="adminToken"
                   type="text"
                   placeholder="Ex: adm_A7K9QF"
-                  value={adminToken}
-                  onChange={(e) => setAdminToken(e.target.value)}
+                  value={adminTokenInput}
+                  onChange={(e) => setAdminTokenInput(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-slate-100 placeholder:text-slate-600 font-mono text-center text-xs"
                   required
                 />
@@ -274,9 +310,10 @@ export default function Home() {
 
               <button
                 type="submit"
-                className="w-full py-2.5 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 font-bold rounded-xl text-sm transition-all cursor-pointer"
+                disabled={teacherLoading}
+                className="w-full py-2.5 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 font-bold rounded-xl text-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Acessar Painel
+                {teacherLoading ? "Validando..." : "Acessar Painel"}
               </button>
             </form>
           </div>

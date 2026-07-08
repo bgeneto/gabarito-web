@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import Home from "./pages/Home";
 import TeacherCreate from "./pages/TeacherCreate";
 import TeacherDashboard from "./pages/TeacherDashboard";
+import TeacherAdminEntry from "./pages/TeacherAdminEntry";
 import StudentExam from "./pages/StudentExam";
 import StudentResult from "./pages/StudentResult";
 import SuperadminLogin from "./pages/SuperadminLogin";
@@ -14,13 +15,19 @@ export type RoutePath =
   | { type: "student-exam"; publicCode: string }
   | { type: "student-result"; submissionId: string }
   | { type: "teacher-create" }
-  | { type: "teacher-dashboard"; adminToken: string }
+  | { type: "teacher-dashboard" }
+  | { type: "teacher-admin-entry"; segment: string }
   | { type: "superadmin-login" }
   | { type: "superadmin-dashboard" }
   | { type: "superadmin-exam"; examId: string };
 
 export function navigateTo(pathStr: string) {
   window.history.pushState(null, "", pathStr);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
+
+export function navigateReplace(pathStr: string) {
+  window.history.replaceState(null, "", pathStr);
   window.dispatchEvent(new PopStateEvent("popstate"));
 }
 
@@ -35,9 +42,12 @@ export function parseCurrentRoute(): RoutePath {
     const submissionId = path.replace("/submissao/", "").trim();
     return { type: "student-result", submissionId };
   }
+  if (path === "/admin" || path === "/admin/") {
+    return { type: "teacher-dashboard" };
+  }
   if (path.startsWith("/admin/")) {
-    const adminToken = path.replace("/admin/", "").trim();
-    return { type: "teacher-dashboard", adminToken };
+    const segment = path.replace("/admin/", "").trim();
+    return { type: "teacher-admin-entry", segment };
   }
   if (path.startsWith("/superadmin/prova/")) {
     const examId = path.replace("/superadmin/prova/", "").trim();
@@ -94,7 +104,9 @@ function App() {
       case "teacher-create":
         return <TeacherCreate />;
       case "teacher-dashboard":
-        return <TeacherDashboard adminToken={route.adminToken} />;
+        return <TeacherDashboard />;
+      case "teacher-admin-entry":
+        return <TeacherAdminEntry segment={route.segment} />;
       case "student-exam":
         return <StudentExam publicCode={route.publicCode} />;
       case "student-result":
