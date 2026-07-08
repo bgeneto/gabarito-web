@@ -1,4 +1,11 @@
-const VALID_ANSWER_TYPES = ["choice", "true_false", "short_text"] as const;
+// "text_exact" is the legacy alias of "short_text"; accepted so rows not yet
+// migrated still validate on read/normalize paths.
+const VALID_ANSWER_TYPES = [
+  "choice",
+  "true_false",
+  "short_text",
+  "text_exact",
+] as const;
 
 export function validateItemFields(item: {
   points: number;

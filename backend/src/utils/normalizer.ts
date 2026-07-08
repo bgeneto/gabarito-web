@@ -57,7 +57,8 @@ export function normalizeChoice(text: string): string {
  */
 export function checkAnswer(
   rawAnswer: string,
-  answerType: "choice" | "true_false" | "short_text",
+  // "text_exact" is the legacy alias of "short_text" (kept for rows not yet migrated).
+  answerType: "choice" | "true_false" | "short_text" | "text_exact",
   answerConfigJson: string,
 ): { isCorrect: boolean; normalizedAnswer: string } {
   let config: { accepted: string[] };
@@ -67,9 +68,11 @@ export function checkAnswer(
     config = { accepted: [] };
   }
 
+  const normalizedType =
+    answerType === "text_exact" ? "short_text" : answerType;
   const acceptedList = config.accepted || [];
 
-  if (answerType === "choice") {
+  if (normalizedType === "choice") {
     const studentNorm = normalizeChoice(rawAnswer);
     const normalizedAccepted = acceptedList.map((v) => normalizeChoice(v));
     const isCorrect =
@@ -77,7 +80,7 @@ export function checkAnswer(
     return { isCorrect, normalizedAnswer: studentNorm };
   }
 
-  if (answerType === "true_false") {
+  if (normalizedType === "true_false") {
     const studentTF = normalizeTrueFalse(rawAnswer);
     if (!studentTF) {
       return { isCorrect: false, normalizedAnswer: normalizeText(rawAnswer) };
@@ -89,7 +92,7 @@ export function checkAnswer(
     return { isCorrect, normalizedAnswer: studentTF };
   }
 
-  if (answerType === "short_text") {
+  if (normalizedType === "short_text") {
     const studentNorm = normalizeText(rawAnswer);
     const normalizedAccepted = acceptedList.map((v) => normalizeText(v));
     const isCorrect =

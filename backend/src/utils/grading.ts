@@ -2,7 +2,7 @@ import { checkAnswer } from "./normalizer.js";
 
 export function gradeItemAnswer(
   item: {
-    answerType: "choice" | "true_false" | "short_text";
+    answerType: "choice" | "true_false" | "short_text" | "text_exact";
     points: number;
     answerConfigJson: string;
   },
