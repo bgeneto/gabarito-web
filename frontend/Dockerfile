@@ -2,7 +2,11 @@
 FROM node:24-slim AS build
 WORKDIR /app
 
+ARG VITE_SITE_URL=https://gabarito.sistema.pro.br
+ENV VITE_SITE_URL=$VITE_SITE_URL
+
 COPY package.json tsconfig.json vite.config.ts ./
+COPY .env.production ./
 RUN npm install
 
 COPY public ./public

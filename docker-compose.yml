@@ -4,6 +4,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_SITE_URL: ${VITE_SITE_URL:-https://gabarito.sistema.pro.br}
     volumes:
       - ./frontend/dist:/app/dist-out
     entrypoint: sh -c "rm -rf /app/dist-out/* && cp -rf /usr/share/nginx/html/. /app/dist-out/"
