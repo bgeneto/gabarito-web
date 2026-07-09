@@ -336,7 +336,7 @@ O script detecta automaticamente se a API está no ar e, caso não esteja, sobe 
 | **Rate limiting (envio)**      | 5 tentativas/min por matrícula e 60/min por prova+IP na rota de envio (409 não conta)                                          |
 | **Rate limiting (admin)**      | 20 tentativas inválidas/min por IP em `/api/admin/*` (401 conta; sucesso não conta)                                            |
 | **Rate limiting (superadmin)** | 10 falhas de auth/min e 60 req/min autenticadas por IP em `/api/superadmin/*`                                                  |
-| **Anti-duplicidade**           | Matrícula duplicada na mesma prova retorna `409 Conflict`                                                                      |
+| **Anti-duplicidade**           | Matrícula duplicada na mesma prova retorna `409 Conflict` sem `submission_id` (PII); recuperação via código na Home            |
 | **Comprovante compacto**       | ID de submissão com 6 chars base36 com detecção de colisão e retry                                                             |
 | **Superadmin**                 | Token estático em `SUPERADMIN_TOKEN`; área somente leitura em `/superadmin`                                                    |
 | **Logs de acesso**             | IPs hasheados (SHA-256); retenção configurável via `ACCESS_LOG_RETENTION_DAYS`                                                 |

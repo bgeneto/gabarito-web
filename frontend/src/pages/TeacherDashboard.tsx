@@ -39,6 +39,10 @@ import {
   parseNumericalConfigToForm,
   type NumericalAnswerConfig,
 } from "../types/numericalConfig";
+import {
+  downloadExamGabaritoJson,
+  stripDisplayFieldsFromAnswerConfig,
+} from "../utils/exportExamGabarito";
 
 type TeacherTab = "resumo" | "submissoes" | "gabarito";
 
@@ -390,6 +394,42 @@ export default function TeacherDashboard() {
     URL.revokeObjectURL(url);
   };
 
+  const handleExportGabarito = () => {
+    if (!data) return;
+    try {
+      downloadExamGabaritoJson({
+        title: data.title,
+        items: data.items.map((item) => {
+          const base = {
+            questionNumber: item.question_number,
+            subLabel: item.sub_label?.trim() || "",
+            points: item.points,
+            answerType: item.answer_type,
+          };
+          if (item.answer_type === "numerical") {
+            const raw = item.answer_config as unknown as Record<
+              string,
+              unknown
+            >;
+            return {
+              ...base,
+              answer_config: stripDisplayFieldsFromAnswerConfig(raw),
+            };
+          }
+          return {
+            ...base,
+            accepted: item.answer_config.accepted ?? [],
+          };
+        }),
+      });
+    } catch {
+      void alert("Erro ao exportar gabarito.", {
+        title: "Erro",
+        severity: "danger",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -614,9 +654,20 @@ export default function TeacherDashboard() {
 
       {activeTab === "gabarito" && (
         <div className="glass-panel border border-slate-800 rounded-2xl p-5 space-y-4">
-          <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-400">
-            Questões e Gabarito Configurado
-          </h3>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-400">
+              Questões e Gabarito Configurado
+            </h3>
+            <button
+              type="button"
+              onClick={handleExportGabarito}
+              className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 hover:border-emerald-500/50 rounded-xl text-xs font-bold text-emerald-400 transition-all cursor-pointer"
+              title="Baixar arquivo JSON do gabarito"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Exportar Gabarito
+            </button>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {data.items.map((item) => (
               <div

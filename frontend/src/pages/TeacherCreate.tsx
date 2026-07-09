@@ -38,6 +38,7 @@ import {
   buildNumericalAnswerConfig,
   parseNumericalConfigToForm,
 } from "../types/numericalConfig";
+import { downloadExamGabaritoJson } from "../utils/exportExamGabarito";
 
 interface ItemInput extends NumericalFormState {
   id: string;
@@ -271,7 +272,7 @@ export default function TeacherCreate() {
 
   const handleExportFile = () => {
     try {
-      const exportData = {
+      downloadExamGabaritoJson({
         title: title.trim(),
         items: items.map((item) => {
           const base = {
@@ -283,33 +284,15 @@ export default function TeacherCreate() {
           if (item.answerType === "numerical") {
             return {
               ...base,
-              answer_config: buildNumericalAnswerConfig(item),
+              answer_config: buildNumericalAnswerConfig(
+                item,
+              ) as unknown as Record<string, unknown>,
             };
           }
           return { ...base, accepted: item.accepted };
         }),
-      };
-
-      const jsonString = JSON.stringify(exportData, null, 2);
-      const blob = new Blob([jsonString], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-
-      const cleanTitle = title
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9]/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^-|-$/g, "");
-
-      link.href = url;
-      link.download = `gabarito-${cleanTitle || "prova"}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (err) {
+      });
+    } catch {
       alert("Erro ao exportar gabarito.");
     }
   };
@@ -607,15 +590,14 @@ export default function TeacherCreate() {
                 </div>
                 <div className="space-y-1">
                   <h3 className="text-lg font-bold text-slate-100">
-                    Salve suas credenciais agora
+                    Salve suas Credenciais
                   </h3>
                   <p className="text-sm text-slate-400 leading-relaxed">
                     O link administrativo{" "}
                     <strong className="text-amber-300">
-                      não poderá ser recuperado depois
+                      não poderá ser obtido depois
                     </strong>
-                    . Guarde o arquivo em local seguro antes de exibir a prova
-                    para a turma.
+                    . Guarde o arquivo em local seguro antes de continuar.
                   </p>
                 </div>
               </div>
@@ -769,7 +751,7 @@ export default function TeacherCreate() {
                 title="Baixar arquivo JSON do gabarito"
               >
                 <Download className="w-3.5 h-3.5" />
-                Exportar Gabarito (JSON)
+                Exportar Gabarito
               </button>
               <button
                 onClick={() => handleCopyAllCredentials(result)}
@@ -815,6 +797,7 @@ export default function TeacherCreate() {
               title: examTitle,
               publicCode: result.public_code,
             })}
+            actions={["whatsapp"]}
             extraActions={
               <button
                 onClick={handleOpenPresentation}
@@ -859,7 +842,7 @@ export default function TeacherCreate() {
                     className="inline-flex items-center gap-2 px-4 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 disabled:bg-slate-900 disabled:border-slate-800 border border-rose-500/30 hover:border-rose-500/50 disabled:hover:border-slate-800 rounded-xl text-xs font-bold text-rose-400 disabled:text-slate-500 transition-all cursor-pointer disabled:cursor-not-allowed"
                   >
                     <Eye className="w-4 h-4" />
-                    Revelar link administrativo
+                    Revelar Link Administrativo
                   </button>
                 </div>
               </div>

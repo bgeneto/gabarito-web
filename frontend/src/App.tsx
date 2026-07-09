@@ -9,6 +9,7 @@ import SuperadminLogin from "./pages/SuperadminLogin";
 import SuperadminDashboard from "./pages/SuperadminDashboard";
 import SuperadminExamDetail from "./pages/SuperadminExamDetail";
 import { ModalProvider } from "./components/ModalProvider";
+import { purgeLegacySubmissionReceiptsOnce } from "./utils/submissionReceipt";
 
 export type RoutePath =
   | { type: "home" }
@@ -76,6 +77,11 @@ function App() {
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  // One-shot: wipe legacy localStorage receipts that stored matrícula + comprovante.
+  useEffect(() => {
+    purgeLegacySubmissionReceiptsOnce();
   }, []);
 
   useEffect(() => {

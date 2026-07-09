@@ -497,8 +497,7 @@ app.post(
           {
             error: "Conflito",
             message:
-              "Você já enviou as respostas para esta prova. O reenvio está bloqueado.",
-            submission_id: existingSub.id,
+              "Você já enviou as respostas para esta prova. O reenvio está bloqueado. Use o código do comprovante na Home para consultar o resultado.",
             already_submitted: true,
           },
           409,
@@ -608,8 +607,7 @@ app.post(
               {
                 error: "Conflito",
                 message:
-                  "Você já enviou as respostas para esta prova. O reenvio está bloqueado.",
-                submission_id: conflictSub.id,
+                  "Você já enviou as respostas para esta prova. O reenvio está bloqueado. Use o código do comprovante na Home para consultar o resultado.",
                 already_submitted: true,
               },
               409,

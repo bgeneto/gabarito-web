@@ -12,17 +12,14 @@ import {
 import { useModal } from "../components/ModalProvider";
 import {
   loadDraft,
-  saveDraft,
+  saveDraftIfChanged,
   clearDraft,
   mergeDraftWithExamItems,
   buildDraftFromForm,
   formatDraftSavedAt,
 } from "../utils/examDraft";
 import { fetchJson, formatFetchErrorMessage } from "../utils/fetchJson";
-import {
-  loadSubmissionReceipt,
-  saveSubmissionReceipt,
-} from "../utils/submissionReceipt";
+import { clearSubmissionReceiptsForExam } from "../utils/submissionReceipt";
 import QrSharePanel from "../components/QrSharePanel";
 import {
   buildSubmissionUrl,
@@ -52,7 +49,7 @@ interface SubmissionResponse {
 }
 
 export default function StudentExam({ publicCode }: { publicCode: string }) {
-  const { confirm } = useModal();
+  const { alert, confirm } = useModal();
   const [exam, setExam] = useState<ExamPublicData | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -64,42 +61,38 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
   const [studentIdentifier, setStudentIdentifier] = useState("");
   const [answers, setAnswers] = useState<{ [itemId: string]: string }>({});
 
-  // Receipt State
+  // In-memory only for this session's successful submit (never persisted).
   const [receiptId, setReceiptId] = useState("");
 
   // Draft persistence
   const [draftRestored, setDraftRestored] = useState(false);
   const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null);
   const formHydratedRef = useRef(false);
+  const draftWritesEnabledRef = useRef(false);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const submitInFlightRef = useRef(false);
 
+  const cancelPendingDraftSave = useCallback(() => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+  }, []);
+
   const completeSubmission = useCallback(
-    (submissionId: string, identifier: string) => {
+    (submissionId: string) => {
+      // Stop any in-flight draft debounce from resurrecting the form after submit.
+      draftWritesEnabledRef.current = false;
+      formHydratedRef.current = false;
+      cancelPendingDraftSave();
+      // PII: never persist matrícula/comprovante — wipe draft + any legacy receipts.
       clearDraft(publicCode);
-      saveSubmissionReceipt({
-        version: 1,
-        publicCode,
-        studentIdentifier: identifier.trim(),
-        submissionId,
-        savedAt: Date.now(),
-      });
+      clearSubmissionReceiptsForExam(publicCode);
       setReceiptId(submissionId);
       setSubmitError("");
       navigateReplace(`/submissao/${submissionId}`);
     },
-    [publicCode],
-  );
-
-  const tryRestoreStoredReceipt = useCallback(
-    (identifier: string) => {
-      const stored = loadSubmissionReceipt(publicCode, identifier);
-      if (!stored) return false;
-
-      completeSubmission(stored.submissionId, identifier);
-      return true;
-    },
-    [completeSubmission, publicCode, studentName],
+    [cancelPendingDraftSave, publicCode],
   );
 
   const persistDraft = useCallback(
@@ -108,8 +101,9 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
       identifier: string,
       currentAnswers: Record<string, string>,
     ) => {
-      if (!exam) return;
+      if (!exam || !draftWritesEnabledRef.current) return;
 
+      // Local-only (localStorage). Never touches the network — safe on poor 4G.
       const itemIds = exam.items.map((item) => item.id);
       const draft = buildDraftFromForm(
         publicCode,
@@ -118,13 +112,41 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
         currentAnswers,
         itemIds,
       );
-      saveDraft(draft);
-      setDraftSavedAt(draft.savedAt);
+      const saved = saveDraftIfChanged(draft);
+      if (saved) setDraftSavedAt(saved.savedAt);
+      else if (
+        !name.trim() &&
+        !identifier.trim() &&
+        !Object.values(currentAnswers).some((v) => v.trim())
+      ) {
+        setDraftSavedAt(null);
+      }
     },
     [exam, publicCode],
   );
 
+  const startFreshAsAnotherStudent = useCallback(() => {
+    if (!exam) return;
+
+    cancelPendingDraftSave();
+    clearDraft(publicCode);
+    setDraftRestored(false);
+    setDraftSavedAt(null);
+    setStudentName("");
+    setStudentIdentifier("");
+    const emptyAnswers: { [key: string]: string } = {};
+    exam.items.forEach((item) => {
+      emptyAnswers[item.id] = "";
+    });
+    setAnswers(emptyAnswers);
+    draftWritesEnabledRef.current = true;
+    formHydratedRef.current = true;
+  }, [cancelPendingDraftSave, exam, publicCode]);
+
   const fetchExamData = async () => {
+    draftWritesEnabledRef.current = false;
+    formHydratedRef.current = false;
+
     try {
       const { ok, data } = await fetchJson<
         ExamPublicData & { message?: string }
@@ -142,13 +164,6 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
         setAnswers(merged.answers);
         setDraftRestored(merged.hasRestorableContent);
         setDraftSavedAt(draft.savedAt);
-
-        if (
-          merged.studentIdentifier.trim() &&
-          tryRestoreStoredReceipt(merged.studentIdentifier)
-        ) {
-          return;
-        }
       } else {
         const initialAnswers: { [key: string]: string } = {};
         data.items.forEach((item: ExamItem) => {
@@ -160,6 +175,7 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
       }
 
       formHydratedRef.current = true;
+      draftWritesEnabledRef.current = true;
     } catch (err: unknown) {
       setLoadError(
         formatFetchErrorMessage(err, "Erro de conexão com o servidor."),
@@ -171,6 +187,7 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
 
   useEffect(() => {
     formHydratedRef.current = false;
+    draftWritesEnabledRef.current = false;
     setDraftRestored(false);
     setDraftSavedAt(null);
     setLoadError("");
@@ -180,19 +197,18 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
 
   useEffect(() => {
     if (!formHydratedRef.current || !exam || receiptId) return;
+    if (!draftWritesEnabledRef.current) return;
 
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
+    cancelPendingDraftSave();
 
+    // Debounce local writes (~1.2s) so rapid typing on weak phones does not
+    // thrash localStorage. Network is never used here.
     saveTimeoutRef.current = setTimeout(() => {
       persistDraft(studentName, studentIdentifier, answers);
-    }, 400);
+    }, 1200);
 
     return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
+      cancelPendingDraftSave();
     };
   }, [
     publicCode,
@@ -202,25 +218,38 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
     exam,
     receiptId,
     persistDraft,
+    cancelPendingDraftSave,
   ]);
 
   useEffect(() => {
     const flushDraft = () => {
       if (!formHydratedRef.current || !exam || receiptId) return;
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
+      if (!draftWritesEnabledRef.current) return;
+      cancelPendingDraftSave();
       persistDraft(studentName, studentIdentifier, answers);
     };
 
-    window.addEventListener("pagehide", flushDraft);
-    return () => window.removeEventListener("pagehide", flushDraft);
-  }, [studentName, studentIdentifier, answers, exam, receiptId, persistDraft]);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") flushDraft();
+    };
 
-  useEffect(() => {
-    if (!studentIdentifier.trim() || receiptId || submitting) return;
-    tryRestoreStoredReceipt(studentIdentifier);
-  }, [studentIdentifier, receiptId, submitting, tryRestoreStoredReceipt]);
+    // Flush immediately when the tab backgrounds / app is suspended — critical
+    // on mobile when the OS kills the page mid-exam.
+    window.addEventListener("pagehide", flushDraft);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("pagehide", flushDraft);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [
+    studentName,
+    studentIdentifier,
+    answers,
+    exam,
+    receiptId,
+    persistDraft,
+    cancelPendingDraftSave,
+  ]);
 
   const handleUpdateAnswer = (itemId: string, val: string) => {
     setAnswers({
@@ -289,12 +318,16 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
         },
       );
 
-      if (
-        status === 409 &&
-        data.submission_id &&
-        typeof data.submission_id === "string"
-      ) {
-        completeSubmission(data.submission_id, studentIdentifier.trim());
+      if (status === 409 || data.already_submitted) {
+        await alert(
+          data.message ||
+            "Você já enviou as respostas para esta prova. O reenvio está bloqueado. Use o código do comprovante na Home para consultar o resultado.",
+          {
+            title: "Envio já registrado",
+            severity: "warning",
+            confirmText: "Entendi",
+          },
+        );
         return;
       }
 
@@ -306,7 +339,7 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
         throw new Error("Resposta inválida do servidor ao registrar envio.");
       }
 
-      completeSubmission(data.submission_id, studentIdentifier.trim());
+      completeSubmission(data.submission_id);
     } catch (err: unknown) {
       setSubmitError(
         formatFetchErrorMessage(err, "Houve um erro de rede ao enviar."),
@@ -401,8 +434,9 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
           </div>
 
           <p className="text-[10px] text-slate-500 italic">
-            Guarde o código do comprovante. Quando o professor encerrar a prova,
-            você poderá pesquisar sua nota final por ele.
+            Guarde o código do comprovante — ele não fica salvo neste aparelho
+            (privacidade em dispositivos compartilhados). Quando o professor
+            encerrar a prova, consulte sua nota na Home com esse código.
           </p>
         </div>
 
@@ -465,10 +499,19 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
       {draftRestored && draftSavedAt && (
         <div className="flex items-start gap-3 bg-cyan-950/30 border border-cyan-800/40 rounded-2xl p-4 text-xs text-cyan-200/90">
           <RotateCcw className="w-4 h-4 shrink-0 mt-0.5 text-cyan-400" />
-          <p>
-            Continuamos de onde você parou. Rascunho restaurado{" "}
-            {formatDraftSavedAt(draftSavedAt)}.
-          </p>
+          <div className="flex-1 space-y-2">
+            <p>
+              Continuamos de onde você parou. Rascunho restaurado{" "}
+              {formatDraftSavedAt(draftSavedAt)}.
+            </p>
+            <button
+              type="button"
+              onClick={startFreshAsAnotherStudent}
+              className="text-[11px] font-semibold text-cyan-300/90 underline underline-offset-2 hover:text-cyan-200 cursor-pointer"
+            >
+              Limpar rascunho e começar do zero
+            </button>
+          </div>
         </div>
       )}
 
@@ -510,6 +553,8 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
                 type="text"
                 placeholder="Ex: 202300412"
                 value={studentIdentifier}
+                autoComplete="off"
+                spellCheck={false}
                 onChange={(e) => setStudentIdentifier(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-850 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-cyan-500 font-mono"
                 required
@@ -519,8 +564,8 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
           </div>
 
           <p className="text-[10px] text-slate-500 leading-relaxed">
-            Suas respostas são salvas automaticamente neste aparelho enquanto
-            você preenche.
+            Rascunho salvo só neste aparelho (sem usar sua internet). O envio ao
+            servidor acontece apenas quando você tocar em Finalizar.
           </p>
         </div>
 
@@ -650,7 +695,7 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
           <div className="flex items-center justify-center gap-1.5 text-[10px] text-slate-500">
             <Save className="w-3 h-3 text-emerald-500/80" />
             <span>
-              Rascunho salvo no dispositivo • {formatDraftSavedAt(draftSavedAt)}
+              Dados salvos neste aparelho • {formatDraftSavedAt(draftSavedAt)}
             </span>
           </div>
         )}

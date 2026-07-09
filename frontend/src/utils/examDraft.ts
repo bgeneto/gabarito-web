@@ -51,12 +51,65 @@ export function saveDraft(draft: ExamDraft): void {
   }
 }
 
+/**
+ * Persist only when there is real content and it differs from what is already
+ * stored. Avoids hammering localStorage on every keystroke burst (important on
+ * low-end phones) and keeps the "saved" timestamp meaningful.
+ * Returns the saved draft, or null when nothing was written.
+ */
+export function saveDraftIfChanged(draft: ExamDraft): ExamDraft | null {
+  if (!hasDraftContent(draft)) {
+    // Empty form: drop any previous draft instead of writing noise.
+    clearDraft(draft.publicCode);
+    return null;
+  }
+
+  const existing = loadDraft(draft.publicCode);
+  if (existing && isDraftContentEqual(existing, draft)) {
+    return null;
+  }
+
+  const toSave: ExamDraft = { ...draft, savedAt: Date.now() };
+  saveDraft(toSave);
+  return toSave;
+}
+
 export function clearDraft(publicCode: string): void {
   try {
     localStorage.removeItem(getDraftStorageKey(publicCode));
   } catch {
     // ignore
   }
+}
+
+export function hasDraftContent(
+  draft: Pick<ExamDraft, "studentName" | "studentIdentifier" | "answers">,
+): boolean {
+  if (draft.studentName.trim() || draft.studentIdentifier.trim()) return true;
+  return Object.values(draft.answers).some((v) => v.trim().length > 0);
+}
+
+export function isDraftContentEqual(a: ExamDraft, b: ExamDraft): boolean {
+  if (
+    a.publicCode !== b.publicCode ||
+    a.studentName !== b.studentName ||
+    a.studentIdentifier !== b.studentIdentifier
+  ) {
+    return false;
+  }
+
+  const aIds = a.itemIds;
+  const bIds = b.itemIds;
+  if (aIds.length !== bIds.length) return false;
+  for (let i = 0; i < aIds.length; i++) {
+    if (aIds[i] !== bIds[i]) return false;
+  }
+
+  const keys = new Set([...Object.keys(a.answers), ...Object.keys(b.answers)]);
+  for (const key of keys) {
+    if ((a.answers[key] ?? "") !== (b.answers[key] ?? "")) return false;
+  }
+  return true;
 }
 
 export function mergeDraftWithExamItems(

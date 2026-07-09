@@ -187,15 +187,20 @@ echo "$DUP_RESP"
 
 DUP_STATUS=$(echo "$DUP_RESP" | jq -r '.error // empty')
 DUP_RECEIPT=$(echo "$DUP_RESP" | jq -r '.submission_id // empty')
-if [ "$DUP_RECEIPT" != "$SUB_1_ID" ]; then
-  echo "FALHOU: submissão duplicada deve retornar submission_id existente (esperado $SUB_1_ID, recebido $DUP_RECEIPT)"
+DUP_ALREADY=$(echo "$DUP_RESP" | jq -r '.already_submitted // empty')
+if [ -n "$DUP_RECEIPT" ] && [ "$DUP_RECEIPT" != "null" ]; then
+  echo "FALHOU: submissão duplicada NÃO deve retornar submission_id (PII); recebido $DUP_RECEIPT"
   exit 1
 fi
 if [ "$DUP_STATUS" != "Conflito" ]; then
   echo "FALHOU: submissão duplicada deve retornar erro Conflito"
   exit 1
 fi
-echo "OK: submissão duplicada retornou submission_id para recuperação"
+if [ "$DUP_ALREADY" != "true" ]; then
+  echo "FALHOU: submissão duplicada deve retornar already_submitted=true"
+  exit 1
+fi
+echo "OK: submissão duplicada retornou 409 sem submission_id (PII-safe)"
 
 # 6. Consultar Nota com Prova Aberta (deve ocultar nota)
 echo -e "\n6. Consultando nota do Aluno 1 com prova ABERTA..."

@@ -4,10 +4,13 @@ import {
   getDraftStorageKey,
   loadDraft,
   saveDraft,
+  saveDraftIfChanged,
   clearDraft,
   mergeDraftWithExamItems,
   buildDraftFromForm,
   formatDraftSavedAt,
+  hasDraftContent,
+  isDraftContentEqual,
   type ExamDraft,
 } from "./examDraft.ts";
 
@@ -227,6 +230,69 @@ test("examDraft localStorage persistence", async (t) => {
       JSON.stringify({ version: 1, publicCode: "G26-INVALID" }),
     );
     assert.strictEqual(loadDraft("G26-INVALID"), null);
+  });
+
+  await t.test("saveDraftIfChanged skips identical content", () => {
+    const draft = sampleDraft({ studentName: "Ana", answers: { item1: "A" } });
+    const first = saveDraftIfChanged(draft);
+    assert.ok(first);
+
+    const before = loadDraft("G26-ABC123")!.savedAt;
+    const second = saveDraftIfChanged({
+      ...draft,
+      savedAt: Date.now() + 999,
+    });
+    assert.strictEqual(second, null);
+    assert.strictEqual(loadDraft("G26-ABC123")!.savedAt, before);
+  });
+
+  await t.test("saveDraftIfChanged writes when answers change", () => {
+    saveDraftIfChanged(
+      sampleDraft({ studentName: "Ana", answers: { item1: "A" } }),
+    );
+    const updated = saveDraftIfChanged(
+      sampleDraft({ studentName: "Ana", answers: { item1: "B" } }),
+    );
+    assert.ok(updated);
+    assert.strictEqual(loadDraft("G26-ABC123")!.answers.item1, "B");
+  });
+
+  await t.test("saveDraftIfChanged clears empty drafts", () => {
+    saveDraft(sampleDraft({ studentName: "Ana", answers: { item1: "A" } }));
+    const result = saveDraftIfChanged(
+      sampleDraft({
+        studentName: "",
+        studentIdentifier: "",
+        answers: { item1: "" },
+      }),
+    );
+    assert.strictEqual(result, null);
+    assert.strictEqual(loadDraft("G26-ABC123"), null);
+  });
+
+  await t.test("hasDraftContent and isDraftContentEqual", () => {
+    assert.strictEqual(
+      hasDraftContent({
+        studentName: "",
+        studentIdentifier: "",
+        answers: { a: "" },
+      }),
+      false,
+    );
+    assert.strictEqual(
+      hasDraftContent({
+        studentName: "X",
+        studentIdentifier: "",
+        answers: { a: "" },
+      }),
+      true,
+    );
+
+    const a = sampleDraft({ answers: { item1: "A" } });
+    const b = sampleDraft({ answers: { item1: "A" } });
+    const c = sampleDraft({ answers: { item1: "B" } });
+    assert.strictEqual(isDraftContentEqual(a, b), true);
+    assert.strictEqual(isDraftContentEqual(a, c), false);
   });
 });
 

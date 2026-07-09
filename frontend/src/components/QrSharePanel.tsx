@@ -69,6 +69,10 @@ function WhatsAppIcon({ className }: { className?: string }) {
   );
 }
 
+export type QrShareAction = "download" | "pdf" | "whatsapp";
+
+const DEFAULT_ACTIONS: QrShareAction[] = ["download", "pdf", "whatsapp"];
+
 export interface QrSharePanelProps {
   title: string;
   description?: string;
@@ -79,6 +83,8 @@ export interface QrSharePanelProps {
   linkValue: string;
   downloadFilename: string;
   whatsappMessage: string;
+  /** Built-in footer buttons. Defaults to download + PDF + WhatsApp. */
+  actions?: QrShareAction[];
   extraActions?: ReactNode;
 }
 
@@ -92,12 +98,16 @@ export default function QrSharePanel({
   linkValue,
   downloadFilename,
   whatsappMessage,
+  actions = DEFAULT_ACTIONS,
   extraActions,
 }: QrSharePanelProps) {
   const { alert } = useModal();
   const qrContainerRef = useRef<HTMLDivElement>(null);
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const showDownload = actions.includes("download");
+  const showPdf = actions.includes("pdf");
+  const showWhatsApp = actions.includes("whatsapp");
 
   const copyToClipboard = async (text: string, type: "code" | "link") => {
     await navigator.clipboard.writeText(text);
@@ -133,19 +143,21 @@ export default function QrSharePanel({
 
   return (
     <>
-      <div id="qr-share-print" className="hidden">
-        <h1>GabaritoWEB — {title}</h1>
-        {description && <p className="print-subtitle">{description}</p>}
-        <div className="print-qr">
-          <QRCodeSVG value={qrValue} size={200} />
+      {showPdf && (
+        <div id="qr-share-print" className="hidden">
+          <h1>GabaritoWEB — {title}</h1>
+          {description && <p className="print-subtitle">{description}</p>}
+          <div className="print-qr">
+            <QRCodeSVG value={qrValue} size={200} />
+          </div>
+          <p>
+            <strong>{codeLabel}:</strong> {codeValue}
+          </p>
+          <p className="print-break-word">
+            <strong>{linkLabel}:</strong> {linkValue}
+          </p>
         </div>
-        <p>
-          <strong>{codeLabel}:</strong> {codeValue}
-        </p>
-        <p className="print-break-word">
-          <strong>{linkLabel}:</strong> {linkValue}
-        </p>
-      </div>
+      )}
 
       <div className="glass-panel border border-slate-800 rounded-2xl p-5 flex flex-col gap-4 no-print">
         <div>
@@ -213,31 +225,39 @@ export default function QrSharePanel({
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 pt-1">
-          {extraActions}
-          <button
-            onClick={handleDownloadQrPng}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/40 hover:border-cyan-400/70 rounded-xl text-xs font-bold text-cyan-300 transition-all cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5" />
-            Baixar QR
-          </button>
-          <button
-            onClick={handleSavePdf}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/40 hover:border-red-400/70 rounded-xl text-xs font-bold text-red-300 transition-all cursor-pointer"
-            title="Salvar ou imprimir em PDF"
-          >
-            <Printer className="w-3.5 h-3.5" />
-            Salvar PDF
-          </button>
-          <button
-            onClick={handleShareWhatsApp}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/50 hover:border-emerald-400/80 rounded-xl text-xs font-bold text-emerald-300 transition-all cursor-pointer"
-          >
-            <WhatsAppIcon className="w-5 h-5 shrink-0" />
-            WhatsApp
-          </button>
-        </div>
+        {(extraActions || showDownload || showPdf || showWhatsApp) && (
+          <div className="flex flex-wrap gap-2 pt-1">
+            {extraActions}
+            {showDownload && (
+              <button
+                onClick={handleDownloadQrPng}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/40 hover:border-cyan-400/70 rounded-xl text-xs font-bold text-cyan-300 transition-all cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Baixar QR
+              </button>
+            )}
+            {showPdf && (
+              <button
+                onClick={handleSavePdf}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/40 hover:border-red-400/70 rounded-xl text-xs font-bold text-red-300 transition-all cursor-pointer"
+                title="Salvar ou imprimir em PDF"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                Salvar PDF
+              </button>
+            )}
+            {showWhatsApp && (
+              <button
+                onClick={handleShareWhatsApp}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/50 hover:border-emerald-400/80 rounded-xl text-xs font-bold text-emerald-300 transition-all cursor-pointer"
+              >
+                <WhatsAppIcon className="w-5 h-5 shrink-0" />
+                WhatsApp
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </>
   );

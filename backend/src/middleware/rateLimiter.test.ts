@@ -110,7 +110,6 @@ test("submission rate limiter", async (t) => {
             return c.json(
               {
                 error: "Conflito",
-                submission_id: "ABC123",
                 already_submitted: true,
               },
               409,
