@@ -37,7 +37,9 @@ gabarito-web/
 │   │   ├── services/
 │   │   │   └── superadminStats.ts   # Agregações e estatísticas globais
 │   │   ├── utils/
-│   │   │   └── normalizer.ts # Pipeline de limpeza e correção de textos
+│   │   │   ├── normalizer.ts        # Pipeline de limpeza e correção textual
+│   │   │   ├── numericalParser.ts   # Parser de respostas numéricas (valor + unidade)
+│   │   │   └── numericalGrader.ts   # Correção numérica (unitToCanonical + tolerância)
 │   │   └── index.ts          # Endpoints do Hono & servidor
 │   ├── tsconfig.json
 │   └── drizzle.config.ts     # Configuração do Drizzle Kit
@@ -74,8 +76,8 @@ As relações do banco de dados estão estruturadas da seguinte forma em `backen
    - `questionNumber` (integer): Número principal da questão (ex: `1`, `2`).
    - `subLabel` (string, nullable): Identificador de subitem (ex: `"a"`, `"b"`).
    - `points` (real): Pontuação do item.
-   - `answerType` (string): `'choice'`, `'true_false'`, ou `'short_text'`.
-   - `answerConfigJson` (string): Contém o JSON `{ accepted: string[] }` com as respostas aceitas.
+   - `answerType` (string): `'choice'`, `'true_false'`, `'short_text'` ou `'numerical'`.
+   - `answerConfigJson` (string): JSON com a configuração de correção específica do tipo (ver seção 4).
 
 3. **`submissions`**:
    - Registro de envio de respostas de um aluno.
@@ -122,6 +124,85 @@ export function normalizeText(text: string): string {
 - **Múltipla Escolha (`choice`)**: Remove todos os caracteres que não sejam letras (`A-Z`) e compara em maiúsculo.
 - **Verd. ou Falso (`true_false`)**: Mapeia termos comuns como `"VERDADEIRO"`, `"SIM"`, `"TRUE"`, `"T"`, `"S"`, `"V"` para `"V"`. E `"FALSO"`, `"FALSE"`, `"NAO"`, `"N"`, `"F"` para `"F"`.
 - **Texto Curto (`short_text`)**: Aplica a normalização padrão no input do aluno e compara contra as variações normalizadas do gabarito oficial.
+- **Numérica (`numerical`)**: Extrai valor numérico e unidade opcional da resposta bruta, converte para a unidade canônica via `unitToCanonical` e compara com tolerância relativa ou absoluta. Implementação em `backend/src/utils/numericalParser.ts` e `numericalGrader.ts`.
+
+### Configuração `answer_config_json` por tipo
+
+O campo `answer_type` na coluna `exam_items.answer_type` é a fonte de verdade do tipo; **não** inclua `"type"` dentro do JSON.
+
+#### `choice`, `true_false`, `short_text`
+
+```json
+{ "accepted": ["A"] }
+```
+
+#### `numerical` — sem unidade obrigatória
+
+Quando o enunciado já fixa a unidade (ex.: “em segundos”), basta aceitar só o número:
+
+```json
+{
+  "value": 25.75,
+  "unitRequired": false,
+  "tolerance": { "absolute": 0.01 }
+}
+```
+
+#### `numerical` — com unidades e conversão canônica
+
+Cada unidade aceita traz um fator `unitToCanonical` que multiplica o valor informado pelo aluno para obtê-lo na unidade canônica (`canonicalUnit`). Exemplo: `108 km/h × 0.2777777778 = 30 m/s`.
+
+```json
+{
+  "value": 30,
+  "canonicalUnit": "m/s",
+  "unitRequired": true,
+  "acceptedUnits": [
+    {
+      "unit": "m/s",
+      "unitToCanonical": 1,
+      "aliases": ["m/s", "metro por segundo", "metros por segundo"]
+    },
+    {
+      "unit": "km/h",
+      "unitToCanonical": 0.2777777778,
+      "aliases": ["km/h", "quilometro por hora", "quilometros por hora"]
+    },
+    {
+      "unit": "mph",
+      "unitToCanonical": 0.44704,
+      "aliases": ["mph", "mi/h", "milha por hora", "milhas por hora"]
+    }
+  ],
+  "tolerance": { "relative": 0.005 }
+}
+```
+
+**Algoritmo de correção:**
+
+```typescript
+const expected = config.value;
+const received = parsed.value * matchedUnit.unitToCanonical;
+const relativeError = Math.abs(received - expected) / Math.abs(expected);
+return relativeError <= config.tolerance.relative; // ou comparação absoluta
+```
+
+**Regras de validação (`validateItem.ts`):**
+
+- `value` deve ser número finito.
+- `tolerance` deve ter **exatamente um** de `relative` ou `absolute` (não ambos).
+- Se `unitRequired: true`: exige `canonicalUnit`, `acceptedUnits` não vazio; cada unidade precisa de `unit`, `unitToCanonical` > 0 e `aliases` não vazio; deve existir entrada da unidade canônica com fator `1`.
+- Se `value === 0` e só houver tolerância relativa, a configuração é rejeitada (use tolerância absoluta).
+- Se `unitRequired: false`, `acceptedUnits` não deve ser informado.
+
+**Parsing da resposta do aluno (`numericalParser.ts`):**
+
+1. Extrai número inicial (suporta `,` e `.` como separador decimal; se ambos aparecem, o último é o decimal).
+2. Restante da string = texto da unidade (normalizado com `normalizeText` para casar aliases).
+3. Se `unitRequired: true` e não houver unidade reconhecida → incorreto.
+4. Se `unitRequired: false` e houver texto de unidade não reconhecido → incorreto (evita aceitar unidade errada silenciosamente).
+
+**Campo `normalized_answer` em submissões numéricas:** valor convertido para a unidade canônica, ex.: `"30 m/s"` ou `"25.75"`.
 
 ---
 

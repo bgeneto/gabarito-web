@@ -28,19 +28,19 @@ Professor encerra prova →  Aluno consulta nota detalhada
 
 ## 🚀 Funcionalidades
 
-| Funcionalidade                   | Descrição                                                                                 |
-| -------------------------------- | ----------------------------------------------------------------------------------------- |
-| 📋 **Criação de provas**         | Múltiplas questões com subitens, pontuações individuais e tipos variados                  |
-| 🔢 **Tipos de questão**          | Múltipla escolha, Verdadeiro/Falso e Texto curto                                          |
-| 📱 **QR Code automático**        | Gerado na criação da prova para compartilhamento rápido                                   |
-| ✅ **Autocorreção**              | Correção instantânea no servidor com normalização de texto (acentos, maiúsculas, espaços) |
-| 🔒 **Sem gabarito exposto**      | O gabarito nunca trafega para o cliente; a correção ocorre 100% no servidor               |
-| 📊 **Dashboard em tempo real**   | Painel do professor atualizado automaticamente com novas submissões via polling           |
-| 🚫 **Anti-duplicidade**          | Impede que um mesmo aluno (por matrícula) submeta mais de uma vez                         |
-| 📤 **Import/Export de gabarito** | Exporta e importa configurações de prova em formato JSON                                  |
-| 🌙 **Tema escuro**               | Interface moderna com glassmorphism, tema slate/ciano e suporte _mobile-first_            |
-| 🐳 **Docker pronto**             | Ambientes de desenvolvimento e produção via Docker Compose                                |
-| 🛡️ **Painel Superadmin**         | Visão global somente leitura de provas, estatísticas e tráfego (token via `.env`)         |
+| Funcionalidade                   | Descrição                                                                                                   |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| 📋 **Criação de provas**         | Múltiplas questões com subitens, pontuações individuais e tipos variados                                    |
+| 🔢 **Tipos de questão**          | Múltipla escolha, Verdadeiro/Falso, Texto curto e **Numérica** (valor + tolerância, com suporte a unidades) |
+| 📱 **QR Code automático**        | Gerado na criação da prova para compartilhamento rápido                                                     |
+| ✅ **Autocorreção**              | Correção no servidor: normalização textual (acentos, maiúsculas, espaços) e grading numérico com unidades   |
+| 🔒 **Sem gabarito exposto**      | O gabarito nunca trafega para o cliente; a correção ocorre 100% no servidor                                 |
+| 📊 **Dashboard em tempo real**   | Painel do professor atualizado automaticamente com novas submissões via polling                             |
+| 🚫 **Anti-duplicidade**          | Impede que um mesmo aluno (por matrícula) submeta mais de uma vez                                           |
+| 📤 **Import/Export de gabarito** | Exporta e importa configurações de prova em formato JSON                                                    |
+| 🌙 **Tema escuro**               | Interface moderna com glassmorphism, tema slate/ciano e suporte _mobile-first_                              |
+| 🐳 **Docker pronto**             | Ambientes de desenvolvimento e produção via Docker Compose                                                  |
+| 🛡️ **Painel Superadmin**         | Visão global somente leitura de provas, estatísticas e tráfego (token via `.env`)                           |
 
 ---
 
@@ -77,7 +77,9 @@ gabarito-web/
 │   │   ├── middleware/
 │   │   │   └── rateLimiter.ts      # Rate limit por aluno (5/min) e por prova+IP (60/min)
 │   │   ├── utils/
-│   │   │   └── normalizer.ts       # Pipeline de normalização de respostas
+│   │   │   ├── normalizer.ts       # Pipeline de normalização textual
+│   │   │   ├── numericalParser.ts  # Parser de respostas numéricas
+│   │   │   └── numericalGrader.ts  # Correção numérica (unitToCanonical)
 │   │   └── index.ts                # Definição de rotas e servidor Hono
 │   ├── Dockerfile                  # Imagem de produção
 │   ├── Dockerfile.dev              # Imagem de desenvolvimento (hot-reload)
@@ -234,11 +236,14 @@ erDiagram
 
 ### Tipos de Questão (`answer_type`)
 
-| Tipo         | Descrição                   | Exemplo de gabarito                 |
-| ------------ | --------------------------- | ----------------------------------- |
-| `choice`     | Múltipla escolha (letra)    | `{ "accepted": ["A"] }`             |
-| `true_false` | Verdadeiro ou Falso         | `{ "accepted": ["V"] }`             |
-| `short_text` | Texto curto (com variações) | `{ "accepted": ["MASSA", "PESO"] }` |
+| Tipo         | Descrição                                          | Exemplo de gabarito                                                   |
+| ------------ | -------------------------------------------------- | --------------------------------------------------------------------- |
+| `choice`     | Múltipla escolha (letra)                           | `{ "accepted": ["A"] }`                                               |
+| `true_false` | Verdadeiro ou Falso                                | `{ "accepted": ["V"] }`                                               |
+| `short_text` | Texto curto (com variações)                        | `{ "accepted": ["MASSA", "PESO"] }`                                   |
+| `numerical`  | Valor numérico com tolerância (unidades opcionais) | Ver [AGENTS.md](AGENTS.md) para o formato completo de `answer_config` |
+
+Questões **numéricas** aceitam respostas como `108 km/h` ou `25,75`, convertem para uma unidade canônica definida pelo professor e comparam com tolerância relativa ou absoluta — ideal para exercícios de Física, Química e Matemática aplicada.
 
 ---
 
@@ -396,6 +401,10 @@ Gabarito:  ["o mesmo", "a mesma", "igual"]
 Resposta:  "  À mesma. "
 Após norm: "A MESMA"  ✅ Correto
 ```
+
+**Questões numéricas (`numerical`):**
+
+Respostas como `108 km/h` ou `6,24 N` são interpretadas no servidor: o valor é extraído, a unidade é reconhecida por aliases configurados pelo professor e convertida para a unidade canônica antes da comparação com tolerância. Não há normalização textual genérica — a lógica está em `numericalParser.ts` e `numericalGrader.ts`.
 
 ---
 

@@ -29,5 +29,6 @@ export function answerTypeLabel(answerType: string): string {
   if (answerType === "choice") return "Múltipla Escolha";
   if (answerType === "true_false") return "Verd. ou Falso";
   if (answerType === "short_text") return "Texto Curto";
+  if (answerType === "numerical") return "Numérica";
   return answerType;
 }

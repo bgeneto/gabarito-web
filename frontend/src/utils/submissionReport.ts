@@ -7,7 +7,7 @@ export interface AnswerDetail {
   rawAnswer: string;
   isCorrect: boolean;
   scoreAwarded: number;
-  answerType: "choice" | "true_false" | "short_text";
+  answerType: "choice" | "true_false" | "short_text" | "numerical";
   acceptedAnswers: string[];
 }
 
@@ -30,6 +30,9 @@ export function formatQuestionLabel(ans: AnswerDetail): string {
 export function formatAcceptedAnswer(ans: AnswerDetail): string {
   if (ans.answerType === "true_false") {
     return ans.acceptedAnswers?.[0] === "V" ? "verdadeiro" : "falso";
+  }
+  if (ans.answerType === "numerical") {
+    return ans.acceptedAnswers?.[0] || "—";
   }
   return ans.acceptedAnswers?.[0] || "—";
 }

@@ -481,4 +481,122 @@ else
   echo "AVISO: superadmin desabilitado no servidor (session HTTP $SA_SESSION_HTTP). Defina SUPERADMIN_TOKEN para testes completos."
 fi
 
+# 12. Questão numérica (unitToCanonical + tolerância relativa)
+echo -e "\n12. Testando questão numérica..."
+NUM_CREATE_RESP=$(curl -s -X POST "$BASE_URL/exams" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Física - Velocidade Numérica",
+    "items": [
+      {
+        "question_number": 1,
+        "sub_label": null,
+        "points": 4.0,
+        "answer_type": "numerical",
+        "answer_config": {
+          "value": 30,
+          "canonicalUnit": "m/s",
+          "unitRequired": true,
+          "acceptedUnits": [
+            {
+              "unit": "m/s",
+              "unitToCanonical": 1,
+              "aliases": ["m/s", "metro por segundo"]
+            },
+            {
+              "unit": "km/h",
+              "unitToCanonical": 0.2777777778,
+              "aliases": ["km/h", "quilometro por hora"]
+            }
+          ],
+          "tolerance": { "relative": 0.005 }
+        }
+      },
+      {
+        "question_number": 2,
+        "sub_label": null,
+        "points": 1.0,
+        "answer_type": "numerical",
+        "answer_config": {
+          "value": 25.75,
+          "unitRequired": false,
+          "tolerance": { "absolute": 0.01 }
+        }
+      }
+    ]
+  }')
+
+NUM_PUBLIC=$(echo "$NUM_CREATE_RESP" | jq -r '.public_code')
+NUM_ADMIN=$(echo "$NUM_CREATE_RESP" | jq -r '.admin_token')
+if [ -z "$NUM_PUBLIC" ] || [ "$NUM_PUBLIC" = "null" ]; then
+  echo "FALHOU: criação de prova numérica"
+  echo "$NUM_CREATE_RESP"
+  exit 1
+fi
+
+NUM_GET=$(curl -s "$BASE_URL/exams/$NUM_PUBLIC")
+NUM_ITEM_1=$(echo "$NUM_GET" | jq -r '.items[0].id')
+NUM_ITEM_2=$(echo "$NUM_GET" | jq -r '.items[1].id')
+
+NUM_SUB_OK=$(curl -s -X POST "$BASE_URL/exams/$NUM_PUBLIC/submissions" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"student_name\": \"Aluno Numérico\",
+    \"student_identifier\": \"NUM001\",
+    \"answers\": {
+      \"$NUM_ITEM_1\": \"108 km/h\",
+      \"$NUM_ITEM_2\": \"25,74\"
+    }
+  }")
+NUM_SUB_ID=$(echo "$NUM_SUB_OK" | jq -r '.submission_id')
+if [ -z "$NUM_SUB_ID" ] || [ "$NUM_SUB_ID" = "null" ]; then
+  echo "FALHOU: submissão numérica correta"
+  echo "$NUM_SUB_OK"
+  exit 1
+fi
+
+NUM_ADMIN_SESSION=$(curl -s -X POST "$BASE_URL/admin/session" \
+  -H "Content-Type: application/json" \
+  -d "{\"admin_token\": \"$NUM_ADMIN\"}" | jq -r '.session_token')
+NUM_ADMIN_PANEL=$(curl -s "$BASE_URL/admin/exams" \
+  -H "Authorization: Bearer $NUM_ADMIN_SESSION")
+NUM_SCORE=$(echo "$NUM_ADMIN_PANEL" | jq '[.submissions[] | select(.student_identifier=="NUM001") | .total_score][0]')
+echo "Submissão numérica correta score: $NUM_SCORE (esperado 5.0)"
+if [ "$NUM_SCORE" != "5" ] && [ "$NUM_SCORE" != "5.0" ]; then
+  echo "FALHOU: pontuação numérica incorreta para respostas corretas"
+  echo "$NUM_ADMIN_PANEL"
+  exit 1
+fi
+
+NUM_SUB_BAD=$(curl -s -X POST "$BASE_URL/exams/$NUM_PUBLIC/submissions" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"student_name\": \"Aluno Numérico Errado\",
+    \"student_identifier\": \"NUM002\",
+    \"answers\": {
+      \"$NUM_ITEM_1\": \"100 km/h\",
+      \"$NUM_ITEM_2\": \"25,77\"
+    }
+  }")
+NUM_ADMIN_PANEL_2=$(curl -s "$BASE_URL/admin/exams" \
+  -H "Authorization: Bearer $NUM_ADMIN_SESSION")
+NUM_BAD_SCORE=$(echo "$NUM_ADMIN_PANEL_2" | jq '[.submissions[] | select(.student_identifier=="NUM002") | .total_score][0]')
+echo "Submissão numérica errada score: $NUM_BAD_SCORE (esperado 0)"
+if [ "$NUM_BAD_SCORE" != "0" ] && [ "$NUM_BAD_SCORE" != "0.0" ]; then
+  echo "FALHOU: respostas erradas deveriam zerar a nota"
+  exit 1
+fi
+
+curl -s -X POST "$BASE_URL/admin/exams/close" \
+  -H "Authorization: Bearer $NUM_ADMIN_SESSION" > /dev/null
+
+NUM_CLOSED=$(curl -s "$BASE_URL/submissions/$NUM_SUB_ID")
+NUM_EXPECTED=$(echo "$NUM_CLOSED" | jq -r '.answers[0].acceptedAnswers[0] // empty')
+echo "Gabarito numérico na submissão fechada: $NUM_EXPECTED"
+if [ -z "$NUM_EXPECTED" ] || [ "$NUM_EXPECTED" = "null" ]; then
+  echo "FALHOU: submissão fechada sem gabarito numérico formatado"
+  exit 1
+fi
+echo "OK: questão numérica (km/h -> m/s, tolerância absoluta sem unidade)"
+
 echo -e "\n=== TESTES DE API CONCLUÍDOS ==="

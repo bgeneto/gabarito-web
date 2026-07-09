@@ -54,6 +54,10 @@ import {
 } from "./services/examStats.js";
 import { internalServerError } from "./utils/errorResponse.js";
 import { normalizeStudentIdentifier } from "./utils/normalizer.js";
+import {
+  formatAcceptedAnswersForResponse,
+  parseAnswerConfigForDisplay,
+} from "./utils/answerConfigDisplay.js";
 
 const app = new Hono();
 
@@ -687,11 +691,10 @@ app.get("/api/submissions/:submission_id", async (c) => {
       .orderBy(examItems.position);
 
     const formattedAnswers = answersList.map((a) => {
-      let accepted: string[] = [];
-      try {
-        const parsed = JSON.parse(a.answerConfigJson);
-        accepted = parsed.accepted || [];
-      } catch (e) {}
+      const accepted = formatAcceptedAnswersForResponse(
+        a.answerType,
+        a.answerConfigJson,
+      );
 
       return {
         questionNumber: a.questionNumber,
@@ -886,7 +889,8 @@ app.patch("/api/admin/exams/items/:item_id", requireAdminSession, async (c) => {
 
     const newAnswerConfigJson = JSON.stringify(answer_config);
     const newPoints = Number(points);
-    const newAnswerType = answer_type as "choice" | "true_false" | "short_text";
+    const newAnswerType = answer_type as
+      "choice" | "true_false" | "short_text" | "numerical";
 
     const hasChanges =
       existingItem.answerConfigJson !== newAnswerConfigJson ||

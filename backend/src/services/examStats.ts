@@ -1,6 +1,7 @@
 import { and, count, countDistinct, desc, eq, sql, sum } from "drizzle-orm";
 
 import { db } from "../db/index.js";
+import { parseAnswerConfigForDisplay } from "../utils/answerConfigDisplay.js";
 import {
   accessLogs,
   examItems,
@@ -121,9 +122,12 @@ export async function getItemDifficultyStats(
           ? Math.round((Number(stats.correct ?? 0) / total) * 1000) / 10
           : 0;
 
-      let accepted: string[] = [];
+      let answer_config: Record<string, unknown> = { accepted: [] };
       try {
-        accepted = JSON.parse(item.answerConfigJson).accepted || [];
+        answer_config = parseAnswerConfigForDisplay(
+          item.answerType,
+          item.answerConfigJson,
+        );
       } catch {
         /* ignore */
       }
@@ -169,7 +173,7 @@ export async function getItemDifficultyStats(
         sub_label: item.subLabel,
         points: item.points,
         answer_type: item.answerType,
-        answer_config: { accepted },
+        answer_config,
         stats: itemStats,
       };
     }),

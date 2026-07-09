@@ -38,7 +38,7 @@ export const examItems = sqliteTable(
     subLabel: text("sub_label"), // can be null, e.g. for questao 2 sem subitem
     points: real("points").notNull(),
     answerType: text("answer_type")
-      .$type<"choice" | "true_false" | "short_text">()
+      .$type<"choice" | "true_false" | "short_text" | "numerical">()
       .notNull(),
     answerConfigJson: text("answer_config_json").notNull(), // config contendo accepted answers
     position: integer("position").notNull(),

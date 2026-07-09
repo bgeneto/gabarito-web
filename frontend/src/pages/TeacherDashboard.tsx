@@ -28,6 +28,17 @@ import { answerTypeLabel } from "../utils/examFormat";
 import { getAdminSession } from "../utils/adminSession";
 import { adminApiFetch } from "../utils/adminApi";
 import { ShieldAlert } from "lucide-react";
+import NumericalAnswerEditor, {
+  defaultNumericalFormState,
+  type NumericalFormState,
+  validateNumericalFormState,
+} from "../components/exam/NumericalAnswerEditor";
+import {
+  buildNumericalAnswerConfig,
+  formatNumericalExpectedLabel,
+  parseNumericalConfigToForm,
+  type NumericalAnswerConfig,
+} from "../types/numericalConfig";
 
 type TeacherTab = "resumo" | "submissoes" | "gabarito";
 
@@ -46,7 +57,7 @@ interface Submission {
 }
 
 interface ExamItem extends ExamItemWithStats {
-  answer_type: "choice" | "true_false" | "short_text";
+  answer_type: "choice" | "true_false" | "short_text" | "numerical";
 }
 
 interface ExamData {
@@ -64,9 +75,9 @@ interface ExamData {
   submissions: Submission[];
 }
 
-interface ItemEditDraft {
+interface ItemEditDraft extends NumericalFormState {
   points: number;
-  answer_type: "choice" | "true_false" | "short_text";
+  answer_type: "choice" | "true_false" | "short_text" | "numerical";
   accepted: string[];
   tempVariant: string;
 }
@@ -189,11 +200,24 @@ export default function TeacherDashboard() {
 
   const openEditModal = (item: ExamItem) => {
     setEditingItem(item);
+    if (item.answer_type === "numerical") {
+      setEditDraft({
+        points: item.points,
+        answer_type: "numerical",
+        accepted: [],
+        tempVariant: "",
+        ...parseNumericalConfigToForm(
+          item.answer_config as unknown as NumericalAnswerConfig,
+        ),
+      });
+      return;
+    }
     setEditDraft({
       points: item.points,
       answer_type: item.answer_type,
-      accepted: [...item.answer_config.accepted],
+      accepted: [...(item.answer_config.accepted ?? [])],
       tempVariant: "",
+      ...defaultNumericalFormState(),
     });
   };
 
@@ -212,6 +236,9 @@ export default function TeacherDashboard() {
           updated.accepted = ["A"];
         } else if (fields.answer_type === "true_false") {
           updated.accepted = ["V"];
+        } else if (fields.answer_type === "numerical") {
+          updated.accepted = [];
+          Object.assign(updated, defaultNumericalFormState());
         } else {
           updated.accepted = [];
         }
@@ -240,7 +267,17 @@ export default function TeacherDashboard() {
   const handleSaveItem = async () => {
     if (!data || !editingItem || !editDraft) return;
 
-    if (editDraft.accepted.length === 0) {
+    if (editDraft.answer_type === "numerical") {
+      const label = `Questão ${editingItem.question_number}${editingItem.sub_label ? editingItem.sub_label : ""}`;
+      const numErr = validateNumericalFormState(editDraft, label);
+      if (numErr) {
+        await alert(numErr, {
+          title: "Gabarito incompleto",
+          severity: "warning",
+        });
+        return;
+      }
+    } else if (editDraft.accepted.length === 0) {
       await alert("Adicione pelo menos uma resposta correta.", {
         title: "Gabarito incompleto",
         severity: "warning",
@@ -272,7 +309,10 @@ export default function TeacherDashboard() {
           body: JSON.stringify({
             points: editDraft.points,
             answer_type: editDraft.answer_type,
-            answer_config: { accepted: editDraft.accepted },
+            answer_config:
+              editDraft.answer_type === "numerical"
+                ? buildNumericalAnswerConfig(editDraft)
+                : { accepted: editDraft.accepted },
           }),
         },
       );
@@ -597,20 +637,30 @@ export default function TeacherDashboard() {
                   </span>
 
                   <div className="flex flex-wrap gap-1 mt-2">
-                    {item.answer_config.accepted.map((val, idx) => (
-                      <span
-                        key={idx}
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${
-                          item.answer_type === "choice"
-                            ? "bg-cyan-950 text-cyan-400 border border-cyan-800/35"
-                            : item.answer_type === "true_false"
-                              ? "bg-blue-950 text-blue-400 border border-blue-800/35"
-                              : "bg-slate-800 text-slate-300 border border-slate-700/30"
-                        }`}
-                      >
-                        {val}
+                    {item.answer_type === "numerical" ? (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-emerald-950 text-emerald-400 border border-emerald-800/35">
+                        {(item.answer_config as { expected_label?: string })
+                          .expected_label ??
+                          formatNumericalExpectedLabel(
+                            item.answer_config as unknown as NumericalAnswerConfig,
+                          )}
                       </span>
-                    ))}
+                    ) : (
+                      (item.answer_config.accepted ?? []).map((val, idx) => (
+                        <span
+                          key={idx}
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono ${
+                            item.answer_type === "choice"
+                              ? "bg-cyan-950 text-cyan-400 border border-cyan-800/35"
+                              : item.answer_type === "true_false"
+                                ? "bg-blue-950 text-blue-400 border border-blue-800/35"
+                                : "bg-slate-800 text-slate-300 border border-slate-700/30"
+                          }`}
+                        >
+                          {val}
+                        </span>
+                      ))
+                    )}
                   </div>
                 </div>
 
@@ -697,6 +747,7 @@ export default function TeacherDashboard() {
                   <option value="choice">Múltipla Escolha</option>
                   <option value="true_false">Verdadeiro ou Falso (V/F)</option>
                   <option value="short_text">Texto Curto</option>
+                  <option value="numerical">Numérica</option>
                 </select>
               </div>
 
@@ -792,6 +843,14 @@ export default function TeacherDashboard() {
                       ))}
                     </div>
                   </div>
+                )}
+
+                {editDraft.answer_type === "numerical" && (
+                  <NumericalAnswerEditor
+                    value={editDraft}
+                    onChange={(patch) => updateEditDraft(patch)}
+                    disabled={saveLoading}
+                  />
                 )}
               </div>
             </div>

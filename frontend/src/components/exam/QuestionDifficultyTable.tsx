@@ -48,7 +48,9 @@ export function QuestionDifficultyTable({
                 <td
                   className={`p-3 text-slate-400 text-xs max-w-[150px] truncate ${hideGabaritoOnMobile ? "hidden sm:table-cell" : ""}`}
                 >
-                  {item.answer_config.accepted.join(", ")}
+                  {item.answer_type === "numerical"
+                    ? (item.answer_config.expected_label ?? "—")
+                    : (item.answer_config.accepted ?? []).join(", ")}
                 </td>
                 <td className="p-3 text-right text-slate-300">{item.points}</td>
                 <td className="p-3">

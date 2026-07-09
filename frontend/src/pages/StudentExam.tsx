@@ -34,7 +34,7 @@ interface ExamItem {
   questionNumber: number;
   subLabel: string | null;
   points: number;
-  answerType: "choice" | "true_false" | "short_text";
+  answerType: "choice" | "true_false" | "short_text" | "numerical";
   position: number;
 }
 
@@ -601,6 +601,20 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
                   <input
                     type="text"
                     placeholder="Digite sua resposta..."
+                    value={answers[item.id] || ""}
+                    disabled={submitting}
+                    onChange={(e) =>
+                      handleUpdateAnswer(item.id, e.target.value)
+                    }
+                    className="w-full bg-slate-900 border border-slate-850 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:border-cyan-500 font-semibold disabled:opacity-60"
+                  />
+                )}
+
+                {item.answerType === "numerical" && (
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="Ex: 25,75 ou 30 m/s"
                     value={answers[item.id] || ""}
                     disabled={submitting}
                     onChange={(e) =>

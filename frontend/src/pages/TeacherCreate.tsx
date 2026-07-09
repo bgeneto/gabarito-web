@@ -29,15 +29,24 @@ import {
 } from "../utils/examCredentials";
 import { setAdminSession } from "../utils/adminSession";
 import { exchangeAdminToken } from "../utils/adminApi";
+import NumericalAnswerEditor, {
+  defaultNumericalFormState,
+  type NumericalFormState,
+  validateNumericalFormState,
+} from "../components/exam/NumericalAnswerEditor";
+import {
+  buildNumericalAnswerConfig,
+  parseNumericalConfigToForm,
+} from "../types/numericalConfig";
 
-interface ItemInput {
+interface ItemInput extends NumericalFormState {
   id: string;
   questionNumber: number;
   subLabel: string;
   points: number;
-  answerType: "choice" | "true_false" | "short_text";
+  answerType: "choice" | "true_false" | "short_text" | "numerical";
   accepted: string[];
-  tempVariant: string; // utilitário para input de texto curto
+  tempVariant: string;
 }
 
 interface CreationResult {
@@ -57,6 +66,7 @@ export default function TeacherCreate() {
       answerType: "choice",
       accepted: ["A"],
       tempVariant: "",
+      ...defaultNumericalFormState(),
     },
   ]);
   const [loading, setLoading] = useState(false);
@@ -144,10 +154,29 @@ export default function TeacherCreate() {
       if (typeof item.points !== "number" || item.points <= 0) {
         return `A questão ${item.questionNumber} precisa ter uma pontuação ('points') maior que zero.`;
       }
-      if (!["choice", "true_false", "short_text"].includes(item.answerType)) {
-        return `A questão ${item.questionNumber} possui um tipo de resposta ('answerType') inválido. Deve ser 'choice', 'true_false' ou 'short_text'.`;
+      if (
+        !["choice", "true_false", "short_text", "numerical"].includes(
+          item.answerType,
+        )
+      ) {
+        return `A questão ${item.questionNumber} possui um tipo de resposta ('answerType') inválido. Deve ser 'choice', 'true_false', 'short_text' ou 'numerical'.`;
       }
-      if (!Array.isArray(item.accepted) || item.accepted.length === 0) {
+      if (item.answerType === "numerical") {
+        const config = item.answer_config ?? item;
+        if (
+          typeof config.value !== "number" ||
+          !Number.isFinite(config.value)
+        ) {
+          return `A questão ${item.questionNumber} numérica precisa de 'value' válido.`;
+        }
+        if (typeof config.unitRequired !== "boolean") {
+          return `A questão ${item.questionNumber} numérica precisa de 'unitRequired'.`;
+        }
+        const tol = config.tolerance;
+        if (!tol || (tol.relative == null && tol.absolute == null)) {
+          return `A questão ${item.questionNumber} numérica precisa de tolerância.`;
+        }
+      } else if (!Array.isArray(item.accepted) || item.accepted.length === 0) {
         return `A questão ${item.questionNumber} precisa de pelo menos uma resposta correta no array 'accepted'.`;
       }
     }
@@ -193,19 +222,39 @@ export default function TeacherCreate() {
         }
 
         setTitle(data.title);
-        const importedItems = data.items.map((item: any) => ({
-          id: Math.random().toString(36).substring(2, 9),
-          questionNumber: Number(item.questionNumber) || 1,
-          subLabel: String(item.subLabel || "")
-            .toLowerCase()
-            .replace(/[^a-z]/g, ""),
-          points: Number(item.points) || 1.0,
-          answerType: item.answerType,
-          accepted: Array.isArray(item.accepted)
-            ? item.accepted.map(String)
-            : ["A"],
-          tempVariant: "",
-        }));
+        const importedItems = data.items.map((item: any) => {
+          const base = {
+            id: Math.random().toString(36).substring(2, 9),
+            questionNumber: Number(item.questionNumber) || 1,
+            subLabel: String(item.subLabel || "")
+              .toLowerCase()
+              .replace(/[^a-z]/g, ""),
+            points: Number(item.points) || 1.0,
+            answerType: item.answerType,
+            accepted: Array.isArray(item.accepted)
+              ? item.accepted.map(String)
+              : ["A"],
+            tempVariant: "",
+            ...defaultNumericalFormState(),
+          };
+
+          if (item.answerType === "numerical") {
+            const config = item.answer_config ?? {
+              value: item.value,
+              unitRequired: item.unitRequired,
+              canonicalUnit: item.canonicalUnit,
+              acceptedUnits: item.acceptedUnits,
+              tolerance: item.tolerance,
+            };
+            return {
+              ...base,
+              ...parseNumericalConfigToForm(config),
+              accepted: [],
+            };
+          }
+
+          return base;
+        });
         setItems(importedItems);
         e.target.value = "";
       } catch (err) {
@@ -225,13 +274,21 @@ export default function TeacherCreate() {
     try {
       const exportData = {
         title: title.trim(),
-        items: items.map((item) => ({
-          questionNumber: item.questionNumber,
-          subLabel: item.subLabel.trim() || "",
-          points: item.points,
-          answerType: item.answerType,
-          accepted: item.accepted,
-        })),
+        items: items.map((item) => {
+          const base = {
+            questionNumber: item.questionNumber,
+            subLabel: item.subLabel.trim() || "",
+            points: item.points,
+            answerType: item.answerType,
+          };
+          if (item.answerType === "numerical") {
+            return {
+              ...base,
+              answer_config: buildNumericalAnswerConfig(item),
+            };
+          }
+          return { ...base, accepted: item.accepted };
+        }),
       };
 
       const jsonString = JSON.stringify(exportData, null, 2);
@@ -273,6 +330,7 @@ export default function TeacherCreate() {
         answerType: "choice",
         accepted: ["A"],
         tempVariant: "",
+        ...defaultNumericalFormState(),
       },
     ]);
   };
@@ -294,6 +352,9 @@ export default function TeacherCreate() {
             updated.accepted = ["A"];
           } else if (fields.answerType === "true_false") {
             updated.accepted = ["V"];
+          } else if (fields.answerType === "numerical") {
+            updated.accepted = [];
+            Object.assign(updated, defaultNumericalFormState());
           } else {
             updated.accepted = [];
           }
@@ -340,10 +401,16 @@ export default function TeacherCreate() {
 
     // Validações básicas dos itens
     for (const item of items) {
-      if (item.accepted.length === 0) {
-        setError(
-          `A questão ${item.questionNumber}${item.subLabel ? item.subLabel : ""} precisa de pelo menos uma resposta correta.`,
-        );
+      const label = `A questão ${item.questionNumber}${item.subLabel ? item.subLabel : ""}`;
+      if (item.answerType === "numerical") {
+        const numErr = validateNumericalFormState(item, label);
+        if (numErr) {
+          setError(numErr);
+          setLoading(false);
+          return;
+        }
+      } else if (item.accepted.length === 0) {
+        setError(`${label} precisa de pelo menos uma resposta correta.`);
         setLoading(false);
         return;
       }
@@ -396,9 +463,10 @@ export default function TeacherCreate() {
         sub_label: item.subLabel.trim() || null,
         points: item.points,
         answer_type: item.answerType,
-        answer_config: {
-          accepted: item.accepted,
-        },
+        answer_config:
+          item.answerType === "numerical"
+            ? buildNumericalAnswerConfig(item)
+            : { accepted: item.accepted },
       })),
     };
 
@@ -1087,6 +1155,7 @@ export default function TeacherCreate() {
                       Verdadeiro ou Falso (V/F)
                     </option>
                     <option value="short_text">Texto Curto</option>
+                    <option value="numerical">Numérica</option>
                   </select>
                 </div>
 
@@ -1196,6 +1265,13 @@ export default function TeacherCreate() {
                         )}
                       </div>
                     </div>
+                  )}
+
+                  {item.answerType === "numerical" && (
+                    <NumericalAnswerEditor
+                      value={item}
+                      onChange={(patch) => handleUpdateItem(item.id, patch)}
+                    />
                   )}
                 </div>
               </div>

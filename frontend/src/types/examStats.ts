@@ -27,7 +27,7 @@ export interface ExamItemWithStats {
   sub_label: string | null;
   points: number;
   answer_type: string;
-  answer_config: { accepted: string[] };
+  answer_config: { accepted?: string[]; expected_label?: string };
   stats: ItemStats;
 }
 
