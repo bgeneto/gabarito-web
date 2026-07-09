@@ -8,8 +8,17 @@ import {
   ArrowLeft,
   RefreshCw,
   Printer,
+  BarChart3,
 } from "lucide-react";
+import { NormalDistributionChart } from "../components/exam/NormalDistributionChart";
+import { PerformanceMetricsTable } from "../components/exam/PerformanceMetricsTable";
 import SubmissionReportPrint from "../components/SubmissionReportPrint";
+import type { StudentPerformanceContext } from "../types/examStats";
+import QrSharePanel from "../components/QrSharePanel";
+import {
+  buildSubmissionUrl,
+  formatWhatsAppSubmissionMessage,
+} from "../utils/examCredentials";
 import {
   type AnswerDetail,
   exportSubmissionReportPdf,
@@ -25,6 +34,8 @@ interface SubmissionData {
   exam_title: string;
   status: "open" | "closed";
   total_score: number | null;
+  max_score?: number;
+  performance_context?: StudentPerformanceContext | null;
   answers?: AnswerDetail[];
   message?: string;
 }
@@ -153,26 +164,43 @@ export default function StudentResult({
               {new Date(data.submitted_at).toLocaleString("pt-BR")}
             </p>
           </div>
-
-          <button
-            onClick={() => fetchResult(true)}
-            disabled={refreshing}
-            className="w-full py-2.5 bg-slate-900 border border-slate-800 hover:bg-slate-850 rounded-xl text-xs font-bold text-slate-200 transition-colors flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <RefreshCw
-              className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`}
-            />
-            {refreshing ? "Verificando..." : "Verificar se Prova Foi Encerrada"}
-          </button>
         </div>
+
+        <QrSharePanel
+          title="Guarde seu Comprovante"
+          description="Salve ou compartilhe o QR code abaixo para não perder o acesso ao seu resultado."
+          qrValue={buildSubmissionUrl(data.id)}
+          codeLabel="Comprovante"
+          codeValue={data.id}
+          linkLabel="Link de Consulta"
+          linkValue={buildSubmissionUrl(data.id)}
+          downloadFilename={`comprovante-${data.id.replace(/[^a-zA-Z0-9-]/g, "")}-qr.png`}
+          whatsappMessage={formatWhatsAppSubmissionMessage({
+            examTitle: data.exam_title,
+            submissionId: data.id,
+          })}
+        />
+
+        <button
+          onClick={() => fetchResult(true)}
+          disabled={refreshing}
+          className="w-full py-2.5 bg-slate-900 border border-slate-800 hover:bg-slate-850 rounded-xl text-xs font-bold text-slate-200 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+        >
+          <RefreshCw
+            className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`}
+          />
+          {refreshing ? "Verificando..." : "Verificar se Prova Foi Encerrada"}
+        </button>
       </div>
     );
   }
 
   // Se a prova estiver encerrada (Resultado detalhado disponível)
-  const maxPoints = data.answers
-    ? data.answers.reduce((acc, curr) => acc + curr.points, 0)
-    : 0;
+  const maxPoints = data.max_score
+    ? data.max_score
+    : data.answers
+      ? data.answers.reduce((acc, curr) => acc + curr.points, 0)
+      : 0;
   const score = data.total_score || 0;
   const percentScore = maxPoints > 0 ? (score / maxPoints) * 100 : 0;
   const reportData = {
@@ -183,6 +211,7 @@ export default function StudentResult({
     exam_title: data.exam_title,
     total_score: score,
     answers: data.answers!,
+    performance_context: data.performance_context ?? null,
   };
 
   return (
@@ -259,6 +288,34 @@ export default function StudentResult({
             </button>
           </div>
         </div>
+
+        {data.performance_context ? (
+          <div className="glass-panel border border-slate-800 rounded-2xl p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-cyan-400" />
+              <h3 className="font-extrabold text-sm uppercase tracking-wider text-slate-300">
+                Análise em relação à turma
+              </h3>
+            </div>
+
+            {data.performance_context.small_sample_warning && (
+              <p className="text-xs text-amber-400/90 bg-amber-950/20 border border-amber-900/30 rounded-xl px-3 py-2">
+                Comparação com turma baseada em poucos alunos (n=
+                {data.performance_context.sample_size}).
+              </p>
+            )}
+
+            <PerformanceMetricsTable context={data.performance_context} />
+            <NormalDistributionChart context={data.performance_context} />
+          </div>
+        ) : (
+          <div className="glass-panel border border-slate-800 rounded-2xl p-5 text-center">
+            <p className="text-sm text-slate-500 italic">
+              Comparação com a turma indisponível — é necessário pelo menos 2
+              alunos com submissão registrada.
+            </p>
+          </div>
+        )}
 
         {/* Lista de Correção de Itens */}
         <div className="space-y-4">

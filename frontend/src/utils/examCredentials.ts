@@ -12,6 +12,14 @@ export function buildPublicUrl(publicCode: string, origin?: string): string {
   return `${base}/prova/${publicCode}`;
 }
 
+export function buildSubmissionUrl(
+  submissionId: string,
+  origin?: string,
+): string {
+  const base = origin ?? window.location.origin;
+  return `${base}/submissao/${submissionId}`;
+}
+
 /** Clean session-based admin URL (token stays in sessionStorage). */
 export function buildAdminUrl(origin?: string): string {
   const base = origin ?? window.location.origin;
@@ -77,6 +85,39 @@ export function formatWhatsAppStudentMessage({
   ].join("\n");
 }
 
+export interface SubmissionShareInput {
+  examTitle: string;
+  submissionId: string;
+  origin?: string;
+}
+
+export function formatWhatsAppSubmissionMessage({
+  examTitle,
+  submissionId,
+  origin,
+}: SubmissionShareInput): string {
+  const submissionUrl = buildSubmissionUrl(submissionId, origin);
+
+  return [
+    `Prova: ${examTitle}`,
+    "",
+    `Comprovante de submissão: ${submissionId}`,
+    `Link para consultar resultado: ${submissionUrl}`,
+    "",
+    "Guarde este comprovante. Quando o professor encerrar a prova, use o link acima para ver sua nota.",
+  ].join("\n");
+}
+
+export function resolveQrSvgElement(
+  source: SVGSVGElement | HTMLElement | null,
+): SVGSVGElement | null {
+  if (!source) return null;
+  if (source.tagName?.toLowerCase() === "svg") {
+    return source as SVGSVGElement;
+  }
+  return source.querySelector("svg");
+}
+
 export function downloadTextFile(content: string, filename: string): void {
   const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
   const url = URL.createObjectURL(blob);
@@ -101,9 +142,14 @@ export function downloadCredentialsTxt(
 }
 
 export async function downloadQrCodePng(
-  svgElement: SVGSVGElement,
+  source: SVGSVGElement | HTMLElement,
   filename: string,
 ): Promise<void> {
+  const svgElement = resolveQrSvgElement(source);
+  if (!svgElement) {
+    throw new Error("QR code SVG não encontrado.");
+  }
+
   const serializer = new XMLSerializer();
   const svgString = serializer.serializeToString(svgElement);
   const svgBlob = new Blob([svgString], {

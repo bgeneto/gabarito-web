@@ -1,3 +1,5 @@
+import type { StudentPerformanceContext } from "../types/examStats";
+
 export interface AnswerDetail {
   questionNumber: number;
   subLabel: string | null;
@@ -17,6 +19,7 @@ export interface SubmissionReportData {
   exam_title: string;
   total_score: number;
   answers: AnswerDetail[];
+  performance_context?: StudentPerformanceContext | null;
 }
 
 export function formatQuestionLabel(ans: AnswerDetail): string {

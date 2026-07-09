@@ -253,6 +253,19 @@ if [ -z "$ADMIN_ITEM_STATS" ] || [ "$ADMIN_ITEM_STATS" = "null" ]; then
   exit 1
 fi
 
+ADMIN_PASS_RATE=$(echo "$ADMIN_RESP" | jq -r '.passing_stats.pass_rate_percent // empty')
+ADMIN_CUTOFF=$(echo "$ADMIN_RESP" | jq -r '.passing_stats.cutoff_percent // empty')
+echo "taxa de aprovação (corte 50%): $ADMIN_PASS_RATE%"
+echo "corte configurado: $ADMIN_CUTOFF%"
+if [ -z "$ADMIN_PASS_RATE" ] || [ "$ADMIN_PASS_RATE" = "null" ]; then
+  echo "FALHOU: painel admin sem passing_stats.pass_rate_percent"
+  exit 1
+fi
+if [ "$ADMIN_CUTOFF" != "50" ]; then
+  echo "FALHOU: passing_stats.cutoff_percent deveria ser 50"
+  exit 1
+fi
+
 # 7b. Editar gabarito do item 1 (choice A -> B) e recalcular notas
 echo -e "\n7b. Editando gabarito do item 1 (resposta correta: B)..."
 PATCH_1_RESP=$(curl -s -X PATCH "$BASE_URL/admin/exams/items/$ITEM_1_ID" \
@@ -351,6 +364,19 @@ echo -e "\n9. Consultando nota do Aluno 1 com prova FECHADA..."
 VAL_1_CLOSED=$(curl -s "$BASE_URL/submissions/$SUB_1_ID")
 echo "Resposta da nota (nota deve refletir recálculo, ex: 7.5):"
 echo "$VAL_1_CLOSED"
+
+STUDENT_PERCENT=$(echo "$VAL_1_CLOSED" | jq -r '.performance_context.student_percent // empty')
+STUDENT_PERCENTILE=$(echo "$VAL_1_CLOSED" | jq -r '.performance_context.percentile // empty')
+echo "percentual do aluno 1: $STUDENT_PERCENT%"
+echo "percentil do aluno 1: $STUDENT_PERCENTILE%"
+if [ -z "$STUDENT_PERCENT" ] || [ "$STUDENT_PERCENT" = "null" ]; then
+  echo "FALHOU: submissão fechada sem performance_context.student_percent"
+  exit 1
+fi
+if [ -z "$STUDENT_PERCENTILE" ] || [ "$STUDENT_PERCENTILE" = "null" ]; then
+  echo "FALHOU: submissão fechada sem performance_context.percentile"
+  exit 1
+fi
 
 echo -e "\n10. Consultando nota do Aluno 2 com prova FECHADA..."
 VAL_2_CLOSED=$(curl -s "$BASE_URL/submissions/$SUB_2_ID")

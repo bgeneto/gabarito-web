@@ -47,6 +47,8 @@ import { validateItemFields } from "./utils/validateItem.js";
 import { createAdminSession } from "./utils/adminSessions.js";
 import {
   buildScoreDistribution,
+  computePassingStats,
+  computeStudentPerformanceContext,
   getExamAggregates,
   getItemDifficultyStats,
 } from "./services/examStats.js";
@@ -656,6 +658,18 @@ app.get("/api/submissions/:submission_id", async (c) => {
     }
 
     // Se encerrada, retorna notas detalhadas e questões respondidas
+    const allSubs = await db
+      .select({ totalScore: submissions.totalScore })
+      .from(submissions)
+      .where(eq(submissions.examId, exam.id));
+
+    const agg = await getExamAggregates(exam.id, { includeAccess: false });
+    const performanceContext = computeStudentPerformanceContext(
+      allSubs,
+      sub.totalScore,
+      agg.max_score,
+    );
+
     const answersList = await db
       .select({
         questionNumber: examItems.questionNumber,
@@ -699,6 +713,8 @@ app.get("/api/submissions/:submission_id", async (c) => {
       exam_title: exam.title,
       status: "closed",
       total_score: sub.totalScore,
+      max_score: agg.max_score,
+      performance_context: performanceContext,
       answers: formattedAnswers,
     });
   } catch (error: unknown) {
@@ -761,6 +777,7 @@ async function buildAdminExamPayload(exam: typeof exams.$inferSelect) {
   const agg = await getExamAggregates(exam.id, { includeAccess: false });
   const itemStats = await getItemDifficultyStats(itemsList);
   const scoreDistribution = buildScoreDistribution(subsList, agg.max_score);
+  const passingStats = computePassingStats(subsList, agg.max_score);
 
   const formattedSubs = subsList.map((s) => ({
     id: s.id,
@@ -780,6 +797,7 @@ async function buildAdminExamPayload(exam: typeof exams.$inferSelect) {
     max_score: agg.max_score,
     score_stats: agg.score_stats,
     score_distribution: scoreDistribution,
+    passing_stats: passingStats,
     items: itemStats,
     submissions: formattedSubs,
   };

@@ -14,11 +14,13 @@ import { useEffect, useRef, useState } from "react";
 import { navigateTo } from "../App";
 import { DashboardTabBar } from "../components/exam/DashboardTabBar";
 import { ExamKpiGrid } from "../components/exam/ExamKpiGrid";
+import { PassingRateCard } from "../components/exam/PassingRateCard";
 import { QuestionDifficultyTable } from "../components/exam/QuestionDifficultyTable";
 import { ScoreDistributionChart } from "../components/exam/ScoreDistributionChart";
 import { useModal } from "../components/ModalProvider";
 import type {
   ExamItemWithStats,
+  PassingStats,
   ScoreDistribution,
   ScoreStats,
 } from "../types/examStats";
@@ -57,6 +59,7 @@ interface ExamData {
   max_score: number;
   score_stats: ScoreStats | null;
   score_distribution: ScoreDistribution;
+  passing_stats: PassingStats | null;
   items: ExamItem[];
   submissions: Submission[];
 }
@@ -476,6 +479,11 @@ export default function TeacherDashboard() {
               max_score: maxPoints,
               score_stats: data.score_stats,
             }}
+          />
+          <PassingRateCard
+            passingStats={data.passing_stats}
+            submissionCount={totalSubmissions}
+            maxScore={maxPoints}
           />
           <ScoreDistributionChart
             buckets={data.score_distribution.buckets}

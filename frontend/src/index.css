@@ -281,6 +281,38 @@
     color: #333;
   }
 
+  #submission-report-print .report-performance {
+    margin: 1rem 0 1.25rem;
+    page-break-inside: avoid;
+  }
+
+  #submission-report-print .report-performance-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+    margin-top: 0.5rem;
+  }
+
+  #submission-report-print .report-performance-table th,
+  #submission-report-print .report-performance-table td {
+    border: 1px solid #d1d5db;
+    padding: 0.35rem 0.5rem;
+    text-align: left;
+  }
+
+  #submission-report-print .report-performance-table th {
+    width: 42%;
+    font-weight: 700;
+    background: #f3f4f6;
+  }
+
+  #submission-report-print .report-performance-note {
+    margin-top: 0.5rem;
+    font-size: 8pt;
+    color: #666;
+    font-style: italic;
+  }
+
   #submission-report-print .report-answers {
     margin-bottom: 1rem;
   }

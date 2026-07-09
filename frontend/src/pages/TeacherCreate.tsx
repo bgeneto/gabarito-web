@@ -7,7 +7,6 @@ import {
   ShieldAlert,
   Copy,
   Check,
-  QrCode,
   ClipboardList,
   ArrowLeft,
   Upload,
@@ -17,18 +16,16 @@ import {
   EyeOff,
   Monitor,
   Printer,
-  MessageCircle,
   X,
 } from "lucide-react";
 import { useModal } from "../components/ModalProvider";
+import QrSharePanel from "../components/QrSharePanel";
 import {
   buildAdminDeepLink,
   buildPublicUrl,
   downloadCredentialsTxt,
-  downloadQrCodePng,
   formatCredentialsText,
   formatWhatsAppStudentMessage,
-  openWhatsAppShare,
 } from "../utils/examCredentials";
 import { setAdminSession } from "../utils/adminSession";
 import { exchangeAdminToken } from "../utils/adminApi";
@@ -65,7 +62,6 @@ export default function TeacherCreate() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<CreationResult | null>(null);
-  const [copiedPublic, setCopiedPublic] = useState(false);
   const [copiedAdmin, setCopiedAdmin] = useState(false);
   const [copiedAll, setCopiedAll] = useState(false);
   const [showAdminCredentials, setShowAdminCredentials] = useState(false);
@@ -80,7 +76,6 @@ export default function TeacherCreate() {
   const [autoCopyStatus, setAutoCopyStatus] = useState<
     "success" | "failed" | null
   >(null);
-  const qrCodeRef = useRef<SVGSVGElement>(null);
   const autoSaveRanForRef = useRef<string | null>(null);
 
   const { alert, confirm } = useModal();
@@ -429,12 +424,9 @@ export default function TeacherCreate() {
     }
   };
 
-  const copyToClipboard = (text: string, type: "public" | "admin" | "all") => {
+  const copyToClipboard = (text: string, type: "admin" | "all") => {
     navigator.clipboard.writeText(text);
-    if (type === "public") {
-      setCopiedPublic(true);
-      setTimeout(() => setCopiedPublic(false), 2000);
-    } else if (type === "admin") {
+    if (type === "admin") {
       setCopiedAdmin(true);
       setTimeout(() => setCopiedAdmin(false), 2000);
     } else {
@@ -458,29 +450,6 @@ export default function TeacherCreate() {
 
   const handleDownloadCredentialsTxt = (creationResult: CreationResult) => {
     downloadCredentialsTxt(getCredentialsInput(creationResult));
-  };
-
-  const handleDownloadQrPng = async (creationResult: CreationResult) => {
-    const svg = qrCodeRef.current;
-    if (!svg) {
-      await alert("Não foi possível gerar a imagem do QR code.");
-      return;
-    }
-    try {
-      const safeCode = creationResult.public_code.replace(/[^a-zA-Z0-9-]/g, "");
-      await downloadQrCodePng(svg, `gabarito-${safeCode}-qr.png`);
-    } catch {
-      await alert("Erro ao baixar o QR code.");
-    }
-  };
-
-  const handleShareWhatsApp = (creationResult: CreationResult) => {
-    openWhatsAppShare(
-      formatWhatsAppStudentMessage({
-        title: title.trim() || "Prova",
-        publicCode: creationResult.public_code,
-      }),
-    );
   };
 
   const handlePrint = () => {
@@ -766,71 +735,20 @@ export default function TeacherCreate() {
             </div>
           </div>
 
-          <div className="glass-panel border border-slate-800 rounded-2xl p-5 flex flex-col gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <QrCode className="w-5 h-5 text-cyan-400" />
-                <h3 className="font-bold text-sm uppercase tracking-wider text-cyan-400">
-                  Acesso dos Alunos
-                </h3>
-              </div>
-              <p className="text-xs text-slate-400 mb-4">
-                Compartilhe o código ou o QR code abaixo para que os estudantes
-                enviem suas respostas.
-              </p>
-
-              <div className="flex items-center justify-center bg-white p-4 rounded-xl max-w-[220px] mx-auto mb-4 border border-slate-200">
-                <QRCodeSVG ref={qrCodeRef} value={publicUrl} size={220} />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="bg-slate-900 border border-slate-850 rounded-xl px-3 py-2 flex items-center justify-between">
-                <div className="text-left">
-                  <span className="text-[9px] uppercase font-bold text-slate-500 block">
-                    Código da Prova
-                  </span>
-                  <span className="font-mono font-bold text-sm tracking-wider">
-                    {result.public_code}
-                  </span>
-                </div>
-                <button
-                  onClick={() => copyToClipboard(result.public_code, "public")}
-                  className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
-                  title="Copiar Código"
-                >
-                  {copiedPublic ? (
-                    <Check className="w-4 h-4 text-emerald-400" />
-                  ) : (
-                    <Copy className="w-4 h-4" />
-                  )}
-                </button>
-              </div>
-
-              <div className="bg-slate-900 border border-slate-850 rounded-xl px-3 py-2 flex items-center justify-between">
-                <div className="text-left truncate mr-2">
-                  <span className="text-[9px] uppercase font-bold text-slate-500 block">
-                    Link de Resposta
-                  </span>
-                  <span className="font-mono text-xs text-slate-300 block truncate">
-                    {publicUrl}
-                  </span>
-                </div>
-                <button
-                  onClick={() => copyToClipboard(publicUrl, "public")}
-                  className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
-                  title="Copiar Link"
-                >
-                  {copiedPublic ? (
-                    <Check className="w-4 h-4 text-emerald-400" />
-                  ) : (
-                    <Copy className="w-4 h-4" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2 pt-1">
+          <QrSharePanel
+            title="Acesso dos Alunos"
+            description="Compartilhe o código ou o QR code abaixo para que os estudantes enviem suas respostas."
+            qrValue={publicUrl}
+            codeLabel="Código da Prova"
+            codeValue={result.public_code}
+            linkLabel="Link de Resposta"
+            linkValue={publicUrl}
+            downloadFilename={`gabarito-${result.public_code.replace(/[^a-zA-Z0-9-]/g, "")}-qr.png`}
+            whatsappMessage={formatWhatsAppStudentMessage({
+              title: examTitle,
+              publicCode: result.public_code,
+            })}
+            extraActions={
               <button
                 onClick={handleOpenPresentation}
                 disabled={!credentialsSavedAcknowledged}
@@ -844,22 +762,8 @@ export default function TeacherCreate() {
                 <Monitor className="w-4 h-4" />
                 Mostrar para a turma
               </button>
-              <button
-                onClick={() => handleDownloadQrPng(result)}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-xl text-xs font-bold text-slate-300 transition-all cursor-pointer"
-              >
-                <Download className="w-3.5 h-3.5" />
-                Baixar QR (PNG)
-              </button>
-              <button
-                onClick={() => handleShareWhatsApp(result)}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-all cursor-pointer"
-              >
-                <MessageCircle className="w-3.5 h-3.5" />
-                WhatsApp
-              </button>
-            </div>
-          </div>
+            }
+          />
 
           {!credentialsSavedAcknowledged && (
             <div className="flex items-start gap-2 text-xs text-amber-300/90 bg-amber-950/20 border border-amber-900/30 rounded-xl p-3">
@@ -895,7 +799,7 @@ export default function TeacherCreate() {
             </div>
           ) : (
             <div className="glass-panel border border-slate-800 rounded-2xl p-5 flex flex-col gap-4 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-full blur-2xl"></div>
+              <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-full blur-2xl pointer-events-none"></div>
               <div>
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <div className="flex items-center gap-2">

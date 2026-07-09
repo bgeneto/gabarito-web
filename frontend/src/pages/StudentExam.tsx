@@ -6,8 +6,6 @@ import {
   Award,
   FileQuestion,
   ArrowLeft,
-  Copy,
-  Check,
   Save,
   RotateCcw,
 } from "lucide-react";
@@ -25,6 +23,11 @@ import {
   loadSubmissionReceipt,
   saveSubmissionReceipt,
 } from "../utils/submissionReceipt";
+import QrSharePanel from "../components/QrSharePanel";
+import {
+  buildSubmissionUrl,
+  formatWhatsAppSubmissionMessage,
+} from "../utils/examCredentials";
 
 interface ExamItem {
   id: string;
@@ -63,7 +66,6 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
 
   // Receipt State
   const [receiptId, setReceiptId] = useState("");
-  const [copiedReceipt, setCopiedReceipt] = useState(false);
 
   // Draft persistence
   const [draftRestored, setDraftRestored] = useState(false);
@@ -315,12 +317,6 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
     }
   };
 
-  const handleCopyReceipt = () => {
-    navigator.clipboard.writeText(receiptId);
-    setCopiedReceipt(true);
-    setTimeout(() => setCopiedReceipt(false), 2000);
-  };
-
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -392,23 +388,6 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
             Comprovante de Submissão
           </span>
 
-          <div className="bg-slate-900 border border-slate-850 rounded-xl p-3.5 flex items-center justify-between">
-            <span className="font-mono text-xs text-cyan-400 block truncate font-bold mr-2">
-              {receiptId}
-            </span>
-            <button
-              onClick={handleCopyReceipt}
-              className="p-2 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-slate-200 transition-colors"
-              title="Copiar Comprovante"
-            >
-              {copiedReceipt ? (
-                <Check className="w-4 h-4 text-emerald-400" />
-              ) : (
-                <Copy className="w-4 h-4" />
-              )}
-            </button>
-          </div>
-
           <div className="bg-slate-950 p-3 rounded-xl border border-slate-900 text-left text-xs text-slate-400 space-y-1.5">
             <p>
               <strong>Estudante:</strong> {studentName}
@@ -426,6 +405,21 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
             você poderá pesquisar sua nota final por ele.
           </p>
         </div>
+
+        <QrSharePanel
+          title="Guarde seu Comprovante"
+          description="Salve ou compartilhe o QR code abaixo para não perder o acesso ao seu resultado."
+          qrValue={buildSubmissionUrl(receiptId)}
+          codeLabel="Comprovante"
+          codeValue={receiptId}
+          linkLabel="Link de Consulta"
+          linkValue={buildSubmissionUrl(receiptId)}
+          downloadFilename={`comprovante-${receiptId.replace(/[^a-zA-Z0-9-]/g, "")}-qr.png`}
+          whatsappMessage={formatWhatsAppSubmissionMessage({
+            examTitle: exam.title,
+            submissionId: receiptId,
+          })}
+        />
 
         <div className="flex gap-3">
           <button

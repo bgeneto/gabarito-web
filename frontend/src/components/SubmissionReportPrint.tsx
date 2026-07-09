@@ -4,6 +4,10 @@ import {
   formatQuestionLabel,
   formatStudentAnswer,
 } from "../utils/submissionReport";
+import {
+  formatMetricNumber,
+  formatMetricPercent,
+} from "../utils/normalDistribution";
 
 export default function SubmissionReportPrint({
   data,
@@ -48,6 +52,56 @@ export default function SubmissionReportPrint({
           Aproveitamento de <strong>{percentScore.toFixed(0)}%</strong>
         </p>
       </section>
+
+      {data.performance_context && (
+        <section className="report-performance">
+          <h2 className="report-section-label">Análise em relação à turma</h2>
+          <table className="report-performance-table">
+            <tbody>
+              <tr>
+                <th>Sua nota</th>
+                <td>
+                  {formatMetricPercent(
+                    data.performance_context.student_percent,
+                  )}
+                </td>
+              </tr>
+              <tr>
+                <th>Média da turma</th>
+                <td>
+                  {formatMetricPercent(
+                    data.performance_context.class_mean_percent,
+                  )}
+                </td>
+              </tr>
+              <tr>
+                <th>Desvio padrão</th>
+                <td>
+                  {formatMetricPercent(
+                    data.performance_context.class_std_dev_percent,
+                  )}
+                </td>
+              </tr>
+              <tr>
+                <th>Z-score</th>
+                <td>{formatMetricNumber(data.performance_context.z_score)}</td>
+              </tr>
+              <tr>
+                <th>Percentil</th>
+                <td>
+                  {formatMetricPercent(data.performance_context.percentile)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          {data.performance_context.small_sample_warning && (
+            <p className="report-performance-note">
+              Comparação baseada em poucos alunos (n=
+              {data.performance_context.sample_size}).
+            </p>
+          )}
+        </section>
+      )}
 
       <section className="report-answers">
         <h2 className="report-section-label">Correção Questão por Questão</h2>

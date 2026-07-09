@@ -178,6 +178,95 @@ export async function getItemDifficultyStats(
 
 type SubmissionRow = typeof submissions.$inferSelect;
 
+export const PASSING_CUTOFF_PERCENT = 50;
+
+export function toPercentScore(score: number, maxScore: number): number {
+  if (maxScore <= 0) return 0;
+  return Math.round((score / maxScore) * 1000) / 10;
+}
+
+function round1(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+export interface PassingStats {
+  cutoff_percent: typeof PASSING_CUTOFF_PERCENT;
+  cutoff_score: number;
+  passed_count: number;
+  failed_count: number;
+  pass_rate_percent: number;
+}
+
+export function computePassingStats(
+  subsList: Pick<SubmissionRow, "totalScore">[],
+  maxScore: number,
+): PassingStats | null {
+  if (subsList.length === 0) return null;
+
+  const cutoffScore = maxScore * (PASSING_CUTOFF_PERCENT / 100);
+  const passedCount = subsList.filter(
+    (sub) => sub.totalScore >= cutoffScore,
+  ).length;
+
+  return {
+    cutoff_percent: PASSING_CUTOFF_PERCENT,
+    cutoff_score: round2(cutoffScore),
+    passed_count: passedCount,
+    failed_count: subsList.length - passedCount,
+    pass_rate_percent: round1((passedCount / subsList.length) * 100),
+  };
+}
+
+export interface StudentPerformanceContext {
+  sample_size: number;
+  student_percent: number;
+  class_mean_percent: number;
+  class_std_dev_percent: number;
+  z_score: number;
+  percentile: number;
+  cutoff_percent: typeof PASSING_CUTOFF_PERCENT;
+  above_cutoff: boolean;
+  small_sample_warning: boolean;
+}
+
+export function computeStudentPerformanceContext(
+  subsList: Pick<SubmissionRow, "totalScore">[],
+  studentScore: number,
+  maxScore: number,
+): StudentPerformanceContext | null {
+  if (subsList.length < 2 || maxScore <= 0) return null;
+
+  const percents = subsList.map((sub) =>
+    toPercentScore(sub.totalScore, maxScore),
+  );
+  const studentPercent = toPercentScore(studentScore, maxScore);
+  const sampleSize = percents.length;
+  const mean = percents.reduce((sum, value) => sum + value, 0) / sampleSize;
+
+  const variance =
+    percents.reduce((sum, value) => sum + (value - mean) ** 2, 0) /
+    (sampleSize - 1);
+  const stdDev = Math.sqrt(variance);
+  const zScore = stdDev === 0 ? 0 : round2((studentPercent - mean) / stdDev);
+  const atOrBelow = percents.filter((value) => value <= studentPercent).length;
+
+  return {
+    sample_size: sampleSize,
+    student_percent: studentPercent,
+    class_mean_percent: round1(mean),
+    class_std_dev_percent: round1(stdDev),
+    z_score: zScore,
+    percentile: round1((atOrBelow / sampleSize) * 100),
+    cutoff_percent: PASSING_CUTOFF_PERCENT,
+    above_cutoff: studentPercent >= PASSING_CUTOFF_PERCENT,
+    small_sample_warning: sampleSize < 5,
+  };
+}
+
 export function buildScoreDistribution(
   subsList: Pick<SubmissionRow, "totalScore">[],
   maxScore: number,
