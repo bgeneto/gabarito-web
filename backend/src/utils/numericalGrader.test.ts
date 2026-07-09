@@ -52,6 +52,13 @@ test("numericalGrader", async (t) => {
     assert.strictEqual(result.isCorrect, false);
   });
 
+  await t.test("derives canonical label when canonicalUnit omitted", () => {
+    const { canonicalUnit: _omit, ...withoutCanonical } = velocityConfig;
+    const result = gradeNumericalAnswer("108 km/h", withoutCanonical);
+    assert.strictEqual(result.isCorrect, true);
+    assert.strictEqual(result.normalizedAnswer, "30 m/s");
+  });
+
   await t.test("grades absolute tolerance without units", () => {
     const config: NumericalAnswerConfig = {
       value: 25.75,
@@ -150,6 +157,71 @@ test("validateItemFields numerical", async (t) => {
         tolerance: { relative: 0.005 },
       },
     });
-    assert.ok(err?.includes("canônica"));
+    assert.ok(err?.includes("unitToCanonical = 1"));
+  });
+
+  await t.test(
+    "accepts config without explicit canonicalUnit when factor-1 exists",
+    () => {
+      assert.strictEqual(
+        validateItemFields({
+          points: 1,
+          answer_type: "numerical",
+          answer_config: {
+            value: 30,
+            unitRequired: true,
+            acceptedUnits: [
+              {
+                unit: "m/s",
+                unitToCanonical: 1,
+                aliases: ["m/s"],
+              },
+              {
+                unit: "km/h",
+                unitToCanonical: 0.2777777778,
+                aliases: ["km/h"],
+              },
+            ],
+            tolerance: { relative: 0.005 },
+          },
+        }),
+        null,
+      );
+    },
+  );
+
+  await t.test("rejects multiple factor-1 units", () => {
+    const err = validateItemFields({
+      points: 1,
+      answer_type: "numerical",
+      answer_config: {
+        value: 30,
+        unitRequired: true,
+        acceptedUnits: [
+          { unit: "m/s", unitToCanonical: 1, aliases: [] },
+          { unit: "metros por segundo", unitToCanonical: 1, aliases: [] },
+        ],
+        tolerance: { relative: 0.005 },
+      },
+    });
+    assert.ok(err?.includes("Apenas uma"));
+  });
+
+  await t.test("rejects mismatched canonicalUnit vs factor-1 unit", () => {
+    const err = validateItemFields({
+      points: 1,
+      answer_type: "numerical",
+      answer_config: {
+        value: 30,
+        unitRequired: true,
+        canonicalUnit: "km/h",
+        acceptedUnits: [
+          { unit: "m/s", unitToCanonical: 1, aliases: [] },
+          { unit: "km/h", unitToCanonical: 0.2777777778, aliases: [] },
+        ],
+        tolerance: { relative: 0.005 },
+      },
+    });
+    assert.ok(err?.includes("canonicalUnit"));
   });
 });

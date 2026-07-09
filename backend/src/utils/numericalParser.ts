@@ -3,6 +3,7 @@ import type {
   NumericalAnswerConfig,
   ParsedNumericalAnswer,
 } from "../types/numericalConfig.js";
+import { resolveCanonicalUnit } from "../types/numericalConfig.js";
 import { normalizeText } from "./normalizer.js";
 
 /**
@@ -64,7 +65,11 @@ function matchUnit(
   if (!normalizedRemainder) return null;
 
   for (const unit of acceptedUnits) {
-    for (const alias of unit.aliases) {
+    // The unit id itself is always accepted; aliases are optional extras.
+    if (normalizeUnitAlias(unit.unit) === normalizedRemainder) {
+      return unit;
+    }
+    for (const alias of unit.aliases ?? []) {
       if (normalizeUnitAlias(alias) === normalizedRemainder) {
         return unit;
       }
@@ -111,8 +116,9 @@ export function formatCanonicalAnswer(
   config: NumericalAnswerConfig,
 ): string {
   const formatted = formatNumber(canonicalValue);
-  if (config.unitRequired && config.canonicalUnit) {
-    return `${formatted} ${config.canonicalUnit}`;
+  const unit = resolveCanonicalUnit(config);
+  if (config.unitRequired && unit) {
+    return `${formatted} ${unit}`;
   }
   return formatted;
 }

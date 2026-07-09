@@ -107,8 +107,18 @@
   #exam-credentials-print,
   #exam-credentials-print *,
   #submission-report-print,
-  #submission-report-print * {
+  #submission-report-print *,
+  body.printing-qr-share #qr-share-print,
+  body.printing-qr-share #qr-share-print * {
     visibility: visible;
+  }
+
+  body.printing-qr-share #exam-credentials-print,
+  body.printing-qr-share #exam-credentials-print *,
+  body.printing-qr-share #submission-report-print,
+  body.printing-qr-share #submission-report-print * {
+    visibility: hidden !important;
+    display: none !important;
   }
 
   .no-print {
@@ -127,19 +137,34 @@
     background: #fff;
   }
 
-  #exam-credentials-print h1 {
+  body.printing-qr-share #qr-share-print {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 2rem;
+    font-family: system-ui, sans-serif;
+    color: #000;
+    background: #fff;
+  }
+
+  #exam-credentials-print h1,
+  body.printing-qr-share #qr-share-print h1 {
     font-size: 1.25rem;
     font-weight: 700;
     margin-bottom: 0.5rem;
   }
 
-  #exam-credentials-print .print-subtitle {
+  #exam-credentials-print .print-subtitle,
+  body.printing-qr-share #qr-share-print .print-subtitle {
     font-size: 1rem;
     color: #444;
     margin-bottom: 1.5rem;
   }
 
-  #exam-credentials-print .print-qr {
+  #exam-credentials-print .print-qr,
+  body.printing-qr-share #qr-share-print .print-qr {
     display: flex;
     justify-content: center;
     margin: 1.5rem 0;
@@ -149,13 +174,15 @@
     max-width: 240px;
   }
 
-  #exam-credentials-print p {
+  #exam-credentials-print p,
+  body.printing-qr-share #qr-share-print p {
     margin: 0.75rem 0;
     font-size: 0.9rem;
     line-height: 1.5;
   }
 
-  #exam-credentials-print .print-break-word {
+  #exam-credentials-print .print-break-word,
+  body.printing-qr-share #qr-share-print .print-break-word {
     word-break: break-all;
   }
 

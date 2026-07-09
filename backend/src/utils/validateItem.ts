@@ -58,21 +58,18 @@ function validateNumericalConfig(config: unknown): string | null {
   }
 
   if (c.unitRequired) {
-    if (!c.canonicalUnit || typeof c.canonicalUnit !== "string") {
-      return "Questões numéricas com unidade obrigatória precisam de canonicalUnit.";
-    }
-
     if (!Array.isArray(c.acceptedUnits) || c.acceptedUnits.length === 0) {
       return "Informe pelo menos uma unidade aceita.";
     }
 
-    let hasCanonicalEntry = false;
+    let factorOneUnit: string | null = null;
+    let factorOneCount = 0;
 
     for (const unit of c.acceptedUnits) {
       if (!unit || typeof unit !== "object") {
         return "Entrada de unidade aceita inválida.";
       }
-      if (!unit.unit || typeof unit.unit !== "string") {
+      if (!unit.unit || typeof unit.unit !== "string" || !unit.unit.trim()) {
         return "Cada unidade aceita precisa de um identificador (unit).";
       }
       if (
@@ -82,21 +79,35 @@ function validateNumericalConfig(config: unknown): string | null {
       ) {
         return `O fator unitToCanonical de "${unit.unit}" deve ser um número finito positivo.`;
       }
-      if (!Array.isArray(unit.aliases) || unit.aliases.length === 0) {
-        return `A unidade "${unit.unit}" precisa de pelo menos um alias.`;
+      if (unit.aliases != null && !Array.isArray(unit.aliases)) {
+        return `Aliases da unidade "${unit.unit}" devem ser uma lista.`;
       }
-      for (const alias of unit.aliases) {
+      for (const alias of unit.aliases ?? []) {
         if (typeof alias !== "string" || !alias.trim()) {
-          return `Alias inválido na unidade "${unit.unit}".`;
+          return `Unidade alt. inválida em "${unit.unit}".`;
         }
       }
-      if (unit.unit === c.canonicalUnit && unit.unitToCanonical === 1) {
-        hasCanonicalEntry = true;
+      if (unit.unitToCanonical === 1) {
+        factorOneCount += 1;
+        factorOneUnit = unit.unit;
       }
     }
 
-    if (!hasCanonicalEntry) {
-      return "Inclua a unidade canônica com unitToCanonical = 1.";
+    if (factorOneCount === 0) {
+      return "Defina exatamente uma unidade com unitToCanonical = 1 (unidade canônica).";
+    }
+    if (factorOneCount > 1) {
+      return "Apenas uma unidade aceita pode ter unitToCanonical = 1.";
+    }
+
+    // Legacy clients may still send canonicalUnit; if present it must match.
+    if (
+      c.canonicalUnit != null &&
+      typeof c.canonicalUnit === "string" &&
+      c.canonicalUnit.trim() !== "" &&
+      c.canonicalUnit !== factorOneUnit
+    ) {
+      return "canonicalUnit deve coincidir com a unidade que tem unitToCanonical = 1.";
     }
   } else if (c.acceptedUnits != null && c.acceptedUnits.length > 0) {
     return "acceptedUnits só deve ser informado quando unitRequired é true.";

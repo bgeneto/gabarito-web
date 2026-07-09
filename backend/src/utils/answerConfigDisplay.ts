@@ -1,20 +1,22 @@
 import type { NumericalAnswerConfig } from "../types/numericalConfig.js";
+import { resolveCanonicalUnit } from "../types/numericalConfig.js";
 import { parseNumericalConfigJson } from "./numericalGrader.js";
 
 export function formatNumericalExpectedLabel(
   config: NumericalAnswerConfig,
 ): string {
   const valueStr = String(config.value);
-  if (config.unitRequired && config.canonicalUnit) {
+  const unit = resolveCanonicalUnit(config);
+  if (config.unitRequired && unit) {
     const tol = config.tolerance;
     if (tol.relative != null) {
       const pct = (tol.relative * 100).toFixed(1).replace(/\.0$/, "");
-      return `${valueStr} ${config.canonicalUnit} (±${pct}%)`;
+      return `${valueStr} ${unit} (±${pct}%)`;
     }
     if (tol.absolute != null) {
-      return `${valueStr} ${config.canonicalUnit} (±${tol.absolute})`;
+      return `${valueStr} ${unit} (±${tol.absolute})`;
     }
-    return `${valueStr} ${config.canonicalUnit}`;
+    return `${valueStr} ${unit}`;
   }
   if (config.tolerance?.absolute != null) {
     return `${valueStr} (±${config.tolerance.absolute})`;

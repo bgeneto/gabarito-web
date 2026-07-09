@@ -1,12 +1,23 @@
-import { Plus, Trash2, X } from "lucide-react";
-import type { AcceptedUnitInput } from "../../types/numericalConfig";
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
+import { Info, Plus, Trash2, X } from "lucide-react";
+import type {
+  AcceptedUnitInput,
+  NumberDraft,
+} from "../../types/numericalConfig";
 
 export interface NumericalFormState {
-  numericalValue: number;
+  numericalValue: NumberDraft;
   unitRequired: boolean;
-  canonicalUnit: string;
   toleranceKind: "relative" | "absolute";
-  toleranceValue: number;
+  toleranceValue: NumberDraft;
   acceptedUnits: AcceptedUnitInput[];
 }
 
@@ -16,11 +27,17 @@ interface NumericalAnswerEditorProps {
   disabled?: boolean;
 }
 
+/** Parse number input without forcing empty → 0 (breaks mobile editing). */
+function parseNumberDraft(raw: string): NumberDraft {
+  if (raw.trim() === "") return "";
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : "";
+}
+
 export function defaultNumericalFormState(): NumericalFormState {
   return {
-    numericalValue: 0,
+    numericalValue: "",
     unitRequired: false,
-    canonicalUnit: "",
     toleranceKind: "absolute",
     toleranceValue: 0.01,
     acceptedUnits: [],
@@ -31,45 +48,193 @@ export function validateNumericalFormState(
   state: NumericalFormState,
   questionLabel: string,
 ): string | null {
-  if (!Number.isFinite(state.numericalValue)) {
+  if (state.numericalValue === "" || !Number.isFinite(state.numericalValue)) {
     return `${questionLabel}: informe um valor esperado válido.`;
   }
-  if (!Number.isFinite(state.toleranceValue) || state.toleranceValue < 0) {
+  if (
+    state.toleranceValue === "" ||
+    !Number.isFinite(state.toleranceValue) ||
+    state.toleranceValue < 0
+  ) {
     return `${questionLabel}: tolerância inválida.`;
   }
   if (state.toleranceKind === "relative" && state.numericalValue === 0) {
     return `${questionLabel}: valor zero exige tolerância absoluta.`;
   }
   if (state.unitRequired) {
-    if (!state.canonicalUnit.trim()) {
-      return `${questionLabel}: informe a unidade canônica.`;
-    }
     if (state.acceptedUnits.length === 0) {
       return `${questionLabel}: adicione pelo menos uma unidade aceita.`;
     }
-    let hasCanonical = false;
+    let factorOneCount = 0;
     for (const unit of state.acceptedUnits) {
       if (!unit.unit.trim()) {
         return `${questionLabel}: cada unidade precisa de um identificador.`;
       }
-      if (!Number.isFinite(unit.unitToCanonical) || unit.unitToCanonical <= 0) {
+      if (
+        unit.unitToCanonical === "" ||
+        !Number.isFinite(unit.unitToCanonical) ||
+        unit.unitToCanonical <= 0
+      ) {
         return `${questionLabel}: fator de conversão inválido em "${unit.unit}".`;
       }
-      if (unit.aliases.length === 0) {
-        return `${questionLabel}: a unidade "${unit.unit}" precisa de pelo menos um alias.`;
-      }
-      if (
-        unit.unit.trim() === state.canonicalUnit.trim() &&
-        unit.unitToCanonical === 1
-      ) {
-        hasCanonical = true;
+      if (unit.unitToCanonical === 1) {
+        factorOneCount += 1;
       }
     }
-    if (!hasCanonical) {
-      return `${questionLabel}: inclua a unidade canônica com fator 1.`;
+    if (factorOneCount === 0) {
+      return `${questionLabel}: defina exatamente uma unidade com fator 1 (unidade de referência).`;
+    }
+    if (factorOneCount > 1) {
+      return `${questionLabel}: apenas uma unidade pode ter fator 1.`;
     }
   }
   return null;
+}
+
+const labelClass =
+  "text-[10px] font-bold text-slate-500 uppercase tracking-wide";
+
+/** Shared look — no width utilities (callers set width). Same height everywhere. */
+const controlClass =
+  "h-9 box-border bg-slate-900 border border-slate-850 rounded-xl px-3 text-xs text-slate-100 placeholder:text-slate-600 disabled:opacity-60 focus:outline-none focus:border-slate-700";
+
+const btnClass =
+  "inline-flex items-center justify-center gap-1 h-9 px-3 text-xs font-bold bg-slate-900 border border-slate-850 rounded-xl text-slate-300 hover:bg-slate-800 disabled:opacity-40 cursor-pointer shrink-0";
+
+const HELP_PANEL_WIDTH = 280;
+const HELP_VIEWPORT_PAD = 12;
+
+function FieldHelp({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(
+    null,
+  );
+  const panelId = useId();
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const updatePosition = () => {
+    const btn = buttonRef.current;
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    const width = Math.min(
+      HELP_PANEL_WIDTH,
+      window.innerWidth - HELP_VIEWPORT_PAD * 2,
+    );
+    // Prefer anchoring under the icon; flip left if near the right edge.
+    let left = rect.left;
+    if (left + width > window.innerWidth - HELP_VIEWPORT_PAD) {
+      left = rect.right - width;
+    }
+    left = Math.max(
+      HELP_VIEWPORT_PAD,
+      Math.min(left, window.innerWidth - HELP_VIEWPORT_PAD - width),
+    );
+
+    const panelHeight = panelRef.current?.offsetHeight ?? 0;
+    let top = rect.bottom + 8;
+    if (
+      panelHeight > 0 &&
+      top + panelHeight > window.innerHeight - HELP_VIEWPORT_PAD
+    ) {
+      top = Math.max(HELP_VIEWPORT_PAD, rect.top - panelHeight - 8);
+    }
+    setCoords({ top, left });
+  };
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setCoords(null);
+      return;
+    }
+    updatePosition();
+    // Second pass after paint so we know panel height and can flip above if needed.
+    const id = requestAnimationFrame(() => updatePosition());
+    return () => cancelAnimationFrame(id);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node;
+      if (
+        buttonRef.current?.contains(target) ||
+        panelRef.current?.contains(target)
+      ) {
+        return;
+      }
+      setOpen(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    const onReposition = () => updatePosition();
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    window.addEventListener("resize", onReposition);
+    window.addEventListener("scroll", onReposition, true);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("resize", onReposition);
+      window.removeEventListener("scroll", onReposition, true);
+    };
+  }, [open]);
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        aria-label="Ajuda"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center justify-center text-slate-500 hover:text-cyan-400 transition-colors cursor-pointer p-0.5 rounded-md"
+      >
+        <Info className="w-3.5 h-3.5" strokeWidth={2.25} />
+      </button>
+      {open &&
+        createPortal(
+          <div
+            ref={panelRef}
+            id={panelId}
+            role="tooltip"
+            style={{
+              position: "fixed",
+              top: coords?.top ?? -9999,
+              left: coords?.left ?? -9999,
+              width: Math.min(
+                HELP_PANEL_WIDTH,
+                typeof window !== "undefined"
+                  ? window.innerWidth - HELP_VIEWPORT_PAD * 2
+                  : HELP_PANEL_WIDTH,
+              ),
+              visibility: coords ? "visible" : "hidden",
+            }}
+            className="z-[100] rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-[11px] leading-relaxed text-slate-300 shadow-xl shadow-black/50"
+          >
+            {text}
+          </div>,
+          document.body,
+        )}
+    </>
+  );
+}
+
+function FieldLabel({
+  children,
+  help,
+}: {
+  children: ReactNode;
+  help?: string;
+}) {
+  return (
+    <div className="mb-1 flex items-center gap-1 min-h-[1rem]">
+      <span className={labelClass}>{children}</span>
+      {help ? <FieldHelp text={help} /> : null}
+    </div>
+  );
 }
 
 export default function NumericalAnswerEditor({
@@ -85,10 +250,18 @@ export default function NumericalAnswerEditor({
   };
 
   const addUnit = () => {
+    const hasFactorOne = value.acceptedUnits.some(
+      (u) => u.unitToCanonical === 1,
+    );
     onChange({
       acceptedUnits: [
         ...value.acceptedUnits,
-        { unit: "", unitToCanonical: 1, aliases: [], tempAlias: "" },
+        {
+          unit: "",
+          unitToCanonical: hasFactorOne ? "" : 1,
+          aliases: [],
+          tempAlias: "",
+        },
       ],
     });
   };
@@ -123,14 +296,13 @@ export default function NumericalAnswerEditor({
 
   const handleUnitRequiredChange = (checked: boolean) => {
     if (checked && value.acceptedUnits.length === 0) {
-      const canonical = value.canonicalUnit.trim();
       onChange({
         unitRequired: true,
         acceptedUnits: [
           {
-            unit: canonical,
+            unit: "",
             unitToCanonical: 1,
-            aliases: canonical ? [canonical] : [],
+            aliases: [],
             tempAlias: "",
           },
         ],
@@ -140,31 +312,26 @@ export default function NumericalAnswerEditor({
     onChange({ unitRequired: checked });
   };
 
-  const fieldClass =
-    "w-full min-w-0 bg-slate-900 border border-slate-850 rounded-xl px-3 py-1.5 text-xs disabled:opacity-60";
-
   return (
-    <div className="space-y-3 min-w-0">
+    <div className="space-y-4 min-w-0 overflow-hidden">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="min-w-0">
-          <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
-            Valor esperado
-          </label>
+          <FieldLabel>Valor esperado</FieldLabel>
           <input
             type="number"
             step="any"
+            inputMode="decimal"
             value={value.numericalValue}
             disabled={disabled}
             onChange={(e) =>
-              onChange({ numericalValue: Number(e.target.value) })
+              onChange({ numericalValue: parseNumberDraft(e.target.value) })
             }
-            className={fieldClass}
+            placeholder="Ex: 5"
+            className={`w-full min-w-0 ${controlClass}`}
           />
         </div>
         <div className="min-w-0">
-          <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
-            Tipo de tolerância
-          </label>
+          <FieldLabel>Tipo de tolerância</FieldLabel>
           <select
             value={value.toleranceKind}
             disabled={disabled}
@@ -173,42 +340,49 @@ export default function NumericalAnswerEditor({
                 toleranceKind: e.target.value as "relative" | "absolute",
               })
             }
-            className={fieldClass}
+            className={`w-full min-w-0 ${controlClass}`}
           >
             <option value="absolute">Absoluta</option>
             <option value="relative">Relativa (%)</option>
           </select>
         </div>
         <div className="min-w-0">
-          <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
+          <FieldLabel>
             {value.toleranceKind === "relative"
               ? "Tolerância (%)"
               : "Tolerância"}
-          </label>
+          </FieldLabel>
           <input
             type="number"
             step="any"
             min={0}
+            inputMode="decimal"
             value={
-              value.toleranceKind === "relative"
-                ? value.toleranceValue * 100
-                : value.toleranceValue
+              value.toleranceValue === ""
+                ? ""
+                : value.toleranceKind === "relative"
+                  ? value.toleranceValue * 100
+                  : value.toleranceValue
             }
             disabled={disabled}
             onChange={(e) => {
-              const n = Number(e.target.value);
+              const draft = parseNumberDraft(e.target.value);
               onChange({
                 toleranceValue:
-                  value.toleranceKind === "relative" ? n / 100 : n,
+                  draft === ""
+                    ? ""
+                    : value.toleranceKind === "relative"
+                      ? draft / 100
+                      : draft,
               });
             }}
-            className={fieldClass}
+            className={`w-full min-w-0 ${controlClass}`}
             placeholder={value.toleranceKind === "relative" ? "0.5" : "0.01"}
           />
         </div>
       </div>
 
-      <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer">
+      <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
         <input
           type="checkbox"
           checked={value.unitRequired}
@@ -221,125 +395,137 @@ export default function NumericalAnswerEditor({
 
       {value.unitRequired && (
         <div className="space-y-3 pt-3 border-t border-slate-900">
-          <div className="max-w-xs">
-            <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
-              Unidade canônica
-            </label>
-            <input
-              type="text"
-              value={value.canonicalUnit}
-              disabled={disabled}
-              onChange={(e) => onChange({ canonicalUnit: e.target.value })}
-              placeholder="Ex: m/s"
-              className={fieldClass}
-            />
-          </div>
-
-          <div className="space-y-2">
+          <div className="space-y-2 min-w-0">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[10px] font-bold text-slate-500 uppercase">
+              <FieldLabel help="Liste as unidades que o aluno pode usar. Exatamente uma deve ter fator 1 — essa é a unidade de referência (canônica) do gabarito. As demais são convertidas para ela antes da correção.">
                 Unidades aceitas
-              </span>
+              </FieldLabel>
               <button
                 type="button"
                 disabled={disabled}
                 onClick={addUnit}
-                className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-bold text-cyan-400 border border-slate-850 rounded-lg hover:bg-slate-900 disabled:opacity-40 cursor-pointer"
+                className={`${btnClass} text-cyan-400 hover:text-cyan-300`}
               >
-                <Plus className="w-3 h-3" />
+                <Plus className="w-3.5 h-3.5" />
                 Unidade
               </button>
             </div>
 
-            {value.acceptedUnits.map((unit, unitIdx) => (
-              <div
-                key={unitIdx}
-                className="p-3 rounded-xl bg-slate-950/60 border border-slate-900 space-y-2 min-w-0"
-              >
-                <div className="grid grid-cols-[1fr_auto_auto] gap-2 items-center">
-                  <input
-                    type="text"
-                    value={unit.unit}
-                    disabled={disabled}
-                    onChange={(e) =>
-                      updateUnit(unitIdx, { unit: e.target.value })
-                    }
-                    placeholder="Unidade"
-                    className="min-w-0 bg-slate-900 border border-slate-850 rounded-lg px-2 py-1.5 text-xs disabled:opacity-60"
-                  />
-                  <input
-                    type="number"
-                    step="any"
-                    value={unit.unitToCanonical}
-                    disabled={disabled}
-                    onChange={(e) =>
-                      updateUnit(unitIdx, {
-                        unitToCanonical: Number(e.target.value),
-                      })
-                    }
-                    placeholder="× fator"
-                    title="Fator unitToCanonical"
-                    className="w-20 sm:w-24 bg-slate-900 border border-slate-850 rounded-lg px-2 py-1.5 text-xs disabled:opacity-60"
-                  />
-                  <button
-                    type="button"
-                    disabled={disabled || value.acceptedUnits.length <= 1}
-                    onClick={() => removeUnit(unitIdx)}
-                    className="p-1.5 text-slate-500 hover:text-rose-400 disabled:opacity-30 cursor-pointer"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <div className="flex gap-2 min-w-0">
-                  <input
-                    type="text"
-                    value={unit.tempAlias}
-                    disabled={disabled}
-                    onChange={(e) =>
-                      updateUnit(unitIdx, { tempAlias: e.target.value })
-                    }
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        addAlias(unitIdx);
-                      }
-                    }}
-                    placeholder="Novo alias..."
-                    className="flex-1 min-w-0 bg-slate-900 border border-slate-850 rounded-lg px-2 py-1 text-[10px] disabled:opacity-60"
-                  />
-                  <button
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => addAlias(unitIdx)}
-                    className="shrink-0 px-2 py-1 text-[10px] font-bold border border-slate-850 rounded-lg hover:bg-slate-900 cursor-pointer disabled:opacity-40"
-                  >
-                    Alias
-                  </button>
-                </div>
-
-                {unit.aliases.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {unit.aliases.map((alias: string, aliasIdx: number) => (
-                      <span
-                        key={aliasIdx}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-850 border border-slate-800 text-[10px] text-slate-300 font-mono"
-                      >
-                        {alias}
-                        <button
-                          type="button"
-                          disabled={disabled}
-                          onClick={() => removeAlias(unitIdx, aliasIdx)}
-                          className="text-slate-500 hover:text-rose-400 cursor-pointer"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    ))}
+            {value.acceptedUnits.map((unit, unitIdx) => {
+              const isCanonical = unit.unitToCanonical === 1;
+              return (
+                <div
+                  key={unitIdx}
+                  className={`rounded-xl bg-slate-950/60 border p-3 space-y-3 min-w-0 overflow-hidden ${
+                    isCanonical ? "border-cyan-900/60" : "border-slate-900"
+                  }`}
+                >
+                  <div className="grid grid-cols-[minmax(0,1fr)_6.5rem_2.25rem] gap-2 items-end">
+                    <div className="min-w-0">
+                      <div className="mb-1 flex items-center gap-1.5 min-h-[1rem]">
+                        <span className={labelClass}>Unidade</span>
+                        {isCanonical && (
+                          <span className="text-[9px] font-bold uppercase tracking-wide text-cyan-400/90 bg-cyan-950/50 border border-cyan-900/40 rounded-md px-1.5 py-0.5">
+                            Canônica
+                          </span>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        value={unit.unit}
+                        disabled={disabled}
+                        onChange={(e) =>
+                          updateUnit(unitIdx, { unit: e.target.value })
+                        }
+                        placeholder={isCanonical ? "Ex: m/s" : "Ex: km/h"}
+                        className={`min-w-0 w-full ${controlClass}`}
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <FieldLabel help="Multiplicador que converte o valor nesta unidade para a unidade de referência (fator 1). Ex.: se a referência é m/s e a unidade é km/h, use 0,2778 (porque 1 km/h = 0,2778 m/s). Exatamente uma unidade deve ter fator 1.">
+                        Fator (×)
+                      </FieldLabel>
+                      <input
+                        type="number"
+                        step="any"
+                        inputMode="decimal"
+                        value={unit.unitToCanonical}
+                        disabled={disabled}
+                        onChange={(e) =>
+                          updateUnit(unitIdx, {
+                            unitToCanonical: parseNumberDraft(e.target.value),
+                          })
+                        }
+                        placeholder="1"
+                        className={`min-w-0 w-full text-center ${controlClass}`}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      disabled={disabled || value.acceptedUnits.length <= 1}
+                      onClick={() => removeUnit(unitIdx)}
+                      className="flex items-center justify-center h-9 w-9 rounded-xl border border-slate-850 text-slate-500 hover:text-rose-400 hover:border-rose-900/50 disabled:opacity-30 cursor-pointer"
+                      title="Remover unidade"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
-                )}
-              </div>
-            ))}
+
+                  <div>
+                    <FieldLabel help="Opcionais. Formas alternativas que o aluno pode digitar além do identificador da unidade (ex.: “metros por segundo”, “mps”). Se vazio, só o texto exato da unidade é aceito.">
+                      Aliases / alternativas
+                    </FieldLabel>
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-center">
+                      <input
+                        type="text"
+                        value={unit.tempAlias}
+                        disabled={disabled}
+                        onChange={(e) =>
+                          updateUnit(unitIdx, { tempAlias: e.target.value })
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addAlias(unitIdx);
+                          }
+                        }}
+                        placeholder="Ex: quilômetros por hora"
+                        className={`min-w-0 w-full ${controlClass}`}
+                      />
+                      <button
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => addAlias(unitIdx)}
+                        className={btnClass}
+                      >
+                        + Alias
+                      </button>
+                    </div>
+                  </div>
+
+                  {unit.aliases.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {unit.aliases.map((alias: string, aliasIdx: number) => (
+                        <span
+                          key={aliasIdx}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-850 text-xs text-slate-300 font-mono"
+                        >
+                          {alias}
+                          <button
+                            type="button"
+                            disabled={disabled}
+                            onClick={() => removeAlias(unitIdx, aliasIdx)}
+                            className="text-slate-500 hover:text-rose-400 cursor-pointer"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

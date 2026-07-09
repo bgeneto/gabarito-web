@@ -189,7 +189,9 @@ export default function StudentResult({
           <RefreshCw
             className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`}
           />
-          {refreshing ? "Verificando..." : "Verificar se Prova Foi Encerrada"}
+          {refreshing
+            ? "Verificando..."
+            : "Verificar se a prova já foi encerrada..."}
         </button>
       </div>
     );

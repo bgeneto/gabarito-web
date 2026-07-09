@@ -44,6 +44,10 @@ import {
 import { gradeItemAnswer } from "./utils/grading.js";
 import { recalculateExamScores } from "./utils/recalculate.js";
 import { validateItemFields } from "./utils/validateItem.js";
+import {
+  normalizeNumericalAnswerConfig,
+  type NumericalAnswerConfig,
+} from "./types/numericalConfig.js";
 import { createAdminSession } from "./utils/adminSessions.js";
 import {
   buildScoreDistribution,
@@ -318,6 +322,13 @@ app.post("/api/exams", async (c) => {
       const { question_number, sub_label, points, answer_type, answer_config } =
         item;
 
+      let configToStore = answer_config || { accepted: [] };
+      if (answer_type === "numerical") {
+        configToStore = normalizeNumericalAnswerConfig(
+          configToStore as NumericalAnswerConfig,
+        );
+      }
+
       await db.insert(examItems).values({
         id: crypto.randomUUID(),
         examId,
@@ -325,7 +336,7 @@ app.post("/api/exams", async (c) => {
         subLabel: sub_label || null,
         points: Number(points),
         answerType: answer_type,
-        answerConfigJson: JSON.stringify(answer_config || { accepted: [] }),
+        answerConfigJson: JSON.stringify(configToStore),
         position: position++,
       });
     }
@@ -888,7 +899,12 @@ app.patch("/api/admin/exams/items/:item_id", requireAdminSession, async (c) => {
       return c.json({ error: "Validação", message: validationError }, 400);
     }
 
-    const newAnswerConfigJson = JSON.stringify(answer_config);
+    const configToStore =
+      answer_type === "numerical"
+        ? normalizeNumericalAnswerConfig(answer_config as NumericalAnswerConfig)
+        : answer_config;
+
+    const newAnswerConfigJson = JSON.stringify(configToStore);
     const newPoints = Number(points);
     const newAnswerType = answer_type as
       "choice" | "true_false" | "short_text" | "numerical";

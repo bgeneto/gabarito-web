@@ -242,7 +242,6 @@ export default function TeacherCreate() {
             const config = item.answer_config ?? {
               value: item.value,
               unitRequired: item.unitRequired,
-              canonicalUnit: item.canonicalUnit,
               acceptedUnits: item.acceptedUnits,
               tolerance: item.tolerance,
             };

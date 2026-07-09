@@ -110,14 +110,34 @@ test("numericalParser", async (t) => {
   );
 
   await t.test(
-    "parseNumericalAnswer without unit required rejects stray unit text",
+    "parseNumericalAnswer matches unit id when aliases are empty",
     () => {
       const config: NumericalAnswerConfig = {
-        value: 25.75,
-        unitRequired: false,
-        tolerance: { absolute: 0.01 },
+        value: 30,
+        canonicalUnit: "m/s",
+        unitRequired: true,
+        acceptedUnits: [
+          { unit: "m/s", unitToCanonical: 1, aliases: [] },
+          {
+            unit: "km/h",
+            unitToCanonical: 0.2777777778,
+            aliases: [],
+          },
+        ],
+        tolerance: { relative: 0.005 },
       };
-      assert.strictEqual(parseNumericalAnswer("25 s", config), null);
+      const byId = parseNumericalAnswer("30 m/s", config);
+      assert.ok(byId);
+      assert.strictEqual(byId!.matchedUnit?.unit, "m/s");
+
+      const converted = parseNumericalAnswer("108 km/h", config);
+      assert.ok(converted);
+      assert.strictEqual(converted!.matchedUnit?.unit, "km/h");
+
+      assert.strictEqual(
+        parseNumericalAnswer("30 metros por segundo", config),
+        null,
+      );
     },
   );
 });

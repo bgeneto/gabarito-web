@@ -17,70 +17,83 @@ export interface NumericalAnswerConfig {
   tolerance: NumericalTolerance;
 }
 
+/** Empty string = user cleared the field (mobile-friendly number inputs). */
+export type NumberDraft = number | "";
+
 export interface AcceptedUnitInput {
   unit: string;
-  unitToCanonical: number;
+  unitToCanonical: NumberDraft;
   aliases: string[];
   tempAlias: string;
 }
 
 export const DEFAULT_NUMERICAL_CONFIG = {
-  numericalValue: 0,
+  numericalValue: "" as NumberDraft,
   unitRequired: false,
-  canonicalUnit: "",
   toleranceKind: "absolute" as const,
-  toleranceValue: 0.01,
+  toleranceValue: 0.01 as NumberDraft,
   acceptedUnits: [] as AcceptedUnitInput[],
 };
 
+/** Unit with factor 1 is the reference (canonical) frame. */
+export function resolveCanonicalUnit(
+  config: Pick<NumericalAnswerConfig, "canonicalUnit" | "acceptedUnits">,
+): string | undefined {
+  if (config.canonicalUnit?.trim()) {
+    return config.canonicalUnit.trim();
+  }
+  const factorOne = config.acceptedUnits?.find((u) => u.unitToCanonical === 1);
+  return factorOne?.unit?.trim() || undefined;
+}
+
 export function buildNumericalAnswerConfig(item: {
-  numericalValue: number;
+  numericalValue: NumberDraft;
   unitRequired: boolean;
-  canonicalUnit: string;
   toleranceKind: "relative" | "absolute";
-  toleranceValue: number;
+  toleranceValue: NumberDraft;
   acceptedUnits: AcceptedUnitInput[];
 }): NumericalAnswerConfig {
   const config: NumericalAnswerConfig = {
-    value: item.numericalValue,
+    value: Number(item.numericalValue),
     unitRequired: item.unitRequired,
     tolerance:
       item.toleranceKind === "relative"
-        ? { relative: item.toleranceValue }
-        : { absolute: item.toleranceValue },
+        ? { relative: Number(item.toleranceValue) }
+        : { absolute: Number(item.toleranceValue) },
   };
 
   if (item.unitRequired) {
-    config.canonicalUnit = item.canonicalUnit.trim();
     config.acceptedUnits = item.acceptedUnits.map((u) => ({
       unit: u.unit.trim(),
-      unitToCanonical: u.unitToCanonical,
+      unitToCanonical: Number(u.unitToCanonical),
       aliases: u.aliases,
     }));
+    const factorOne = config.acceptedUnits.find((u) => u.unitToCanonical === 1);
+    if (factorOne) {
+      config.canonicalUnit = factorOne.unit;
+    }
   }
 
   return config;
 }
 
 export function parseNumericalConfigToForm(config: NumericalAnswerConfig): {
-  numericalValue: number;
+  numericalValue: NumberDraft;
   unitRequired: boolean;
-  canonicalUnit: string;
   toleranceKind: "relative" | "absolute";
-  toleranceValue: number;
+  toleranceValue: NumberDraft;
   acceptedUnits: AcceptedUnitInput[];
 } {
   const toleranceKind =
     config.tolerance?.relative != null ? "relative" : "absolute";
-  const toleranceValue =
+  const toleranceValue: NumberDraft =
     toleranceKind === "relative"
       ? (config.tolerance.relative ?? 0.005)
       : (config.tolerance.absolute ?? 0.01);
 
   return {
-    numericalValue: config.value ?? 0,
+    numericalValue: config.value ?? "",
     unitRequired: config.unitRequired ?? false,
-    canonicalUnit: config.canonicalUnit ?? "",
     toleranceKind,
     toleranceValue,
     acceptedUnits: (config.acceptedUnits ?? []).map((u) => ({
@@ -96,16 +109,17 @@ export function formatNumericalExpectedLabel(
   config: NumericalAnswerConfig,
 ): string {
   const valueStr = String(config.value);
-  if (config.unitRequired && config.canonicalUnit) {
+  const unit = resolveCanonicalUnit(config);
+  if (config.unitRequired && unit) {
     const tol = config.tolerance;
     if (tol.relative != null) {
       const pct = (tol.relative * 100).toFixed(1).replace(/\.0$/, "");
-      return `${valueStr} ${config.canonicalUnit} (±${pct}%)`;
+      return `${valueStr} ${unit} (±${pct}%)`;
     }
     if (tol.absolute != null) {
-      return `${valueStr} ${config.canonicalUnit} (±${tol.absolute})`;
+      return `${valueStr} ${unit} (±${tol.absolute})`;
     }
-    return `${valueStr} ${config.canonicalUnit}`;
+    return `${valueStr} ${unit}`;
   }
   if (config.tolerance?.absolute != null) {
     return `${valueStr} (±${config.tolerance.absolute})`;

@@ -193,6 +193,26 @@ export function openWhatsAppShare(text: string): void {
   window.open(url, "_blank", "noopener,noreferrer");
 }
 
+/** Opens the browser print dialog scoped to `#qr-share-print` (Save as PDF). */
+export function exportQrSharePdf(downloadFilename: string): void {
+  const previousTitle = document.title;
+  document.title = downloadFilename.replace(/\.(png|pdf)$/i, "");
+  document.body.classList.add("printing-qr-share");
+
+  let cleaned = false;
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
+    document.title = previousTitle;
+    document.body.classList.remove("printing-qr-share");
+    window.removeEventListener("afterprint", cleanup);
+  };
+  window.addEventListener("afterprint", cleanup);
+  window.print();
+  // Fallback if `afterprint` does not fire in some browsers.
+  window.setTimeout(cleanup, 60_000);
+}
+
 export function sanitizeFilenameSegment(value: string): string {
   return value
     .toLowerCase()
