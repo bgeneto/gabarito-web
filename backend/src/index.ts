@@ -307,6 +307,7 @@ app.post("/api/exams", async (c) => {
       title,
       publicCode,
       adminCodeHash,
+      adminToken,
       status: "open",
       createdAt: now,
     });

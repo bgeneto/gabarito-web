@@ -14,6 +14,7 @@ export const exams = sqliteTable(
     title: text("title").notNull(),
     publicCode: text("public_code").unique().notNull(),
     adminCodeHash: text("admin_code_hash").notNull(),
+    adminToken: text("admin_token"),
     status: text("status").$type<"open" | "closed">().default("open").notNull(),
     createdAt: integer("created_at").notNull(),
     closedAt: integer("closed_at"),

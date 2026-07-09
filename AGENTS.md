@@ -67,7 +67,8 @@ As relações do banco de dados estão estruturadas da seguinte forma em `backen
    - `id` (PK, string): UUID.
    - `title` (string): Nome da prova.
    - `publicCode` (string, unique): Código público gerado no backend (`GYY-XXXXXX`, ex: `G26-DNEM9G`).
-   - `adminCodeHash` (string): Hash SHA-256 do token administrativo do professor (`adm_XXXXXX`, ex: `adm_A7K9QF`).
+   - `adminCodeHash` (string): Hash SHA-256 do token administrativo do professor (`adm_XXXXXX`, ex: `adm_A7K9QF`). Usado para autenticação do professor; nunca exposto em respostas JSON.
+   - `adminToken` (string, nullable): Token administrativo em texto plano (`adm_XXXXXX`). Persistido na criação da prova; pode ser `null` em provas antigas criadas antes da migração que passou a armazená-lo.
    - `status` (string): `'open'` ou `'closed'`.
    - `createdAt` e `closedAt` (integer): Timestamps epoch milissegundos.
 
@@ -297,7 +298,7 @@ Painel global para o operador do serviço, acessível em `/superadmin` (não lin
 - **Autenticação**: `SUPERADMIN_TOKEN` no `.env` do servidor; enviado pelo frontend via header `Authorization: Bearer <token>` (armazenado em `sessionStorage`).
 - **Endpoints de leitura** (`GET`, prefixo `/api/superadmin/`): `session`, `overview`, `exams`, `exams/:examId`, `access`.
 - **Backup seletivo** (`POST`, prefixo `/api/superadmin/backup/`): `export` (gzip JSON com provas selecionadas) e `restore` (importa provas ausentes; ignora conflitos de `id` ou `public_code`). Demais rotas superadmin permanecem somente leitura (405 em `POST`/`PATCH`/`DELETE`).
-- **Respostas JSON de leitura** nunca incluem `admin_token` nem `admin_code_hash` (arquivos de backup contêm `admin_code_hash` para recuperação do acesso do professor).
+- **Exposição do token administrativo**: `admin_token` (texto plano, formato `adm_XXXXXX`) é exposto **somente** nas respostas autenticadas da API superadmin (`GET /api/superadmin/exams` e `GET /api/superadmin/exams/:examId`). Rotas públicas e de professor/aluno — por exemplo `GET /api/exams/:public_code`, `POST /api/exams/:public_code/submissions`, `GET /api/submissions/:id` e autenticação admin via `admin_token` no body — **nunca** retornam `admin_token` nem `admin_code_hash`. Arquivos de backup podem conter `admin_code_hash` e `admin_token` (quando disponível) para recuperação do acesso do professor.
 - **Telemetria**: `POST /api/telemetry/pageview` registra page views do SPA em `access_logs`; middleware `accessLogger` registra requisições API.
 - **Variáveis opcionais**: `SUPERADMIN_ALLOWED_IPS`, `ACCESS_LOG_RETENTION_DAYS`, `SUPERADMIN_BACKUP_ENABLED` (padrão habilitado quando superadmin está ativo).
 
@@ -307,5 +308,6 @@ Painel global para o operador do serviço, acessível em `/superadmin` (não lin
 
 - **Sem Bibliotecas de Roteamento Complexas**: O frontend utiliza um mini roteador reativo no próprio [App.tsx](file:///home/bgeneto/github/gabarito-web/frontend/src/App.tsx) que escuta eventos `popstate`. Mantenha essa abordagem para evitar inflar o bundle ou introduzir incompatibilidades de rotas no Vite.
 - **Segurança de Gabaritos**: Nunca modifique a rota pública `GET /api/exams/:public_code` para retornar as respostas corretas (`answer_config_json`). A correção e atribuição de pontos devem ocorrer estritamente no servidor (`POST /api/exams/:public_code/submissions`).
+- **Exposição do `admin_token`**: O token administrativo em texto plano só pode aparecer em respostas da API superadmin autenticada. Não adicione `admin_token` a rotas públicas, de professor ou de aluno.
 - **Exposição de Notas**: O estudante só pode visualizar sua nota final e o detalhamento das questões no endpoint `/api/submissions/:submission_id` se a prova estiver com o status `'closed'`. Se estiver aberta, a nota deve retornar como `null`.
 - **Aparência e Design**: Mantenha o tema escuro moderno do Tailwind CSS v4, aproveitando o painel de glassmorphism (`glass-panel`) e paletas em tons de ardósia, ciano e azul profundo. Certifique-se de que todas as telas sejam otimizadas para toque e telas de celular (mobile-first).

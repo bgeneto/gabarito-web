@@ -24,10 +24,10 @@
       "breakpoints": true
     },
     {
-      "idx": 3,
+      "idx": 4,
       "version": "6",
-      "when": 1783624800000,
-      "tag": "0003_rename_text_exact_to_short_text",
+      "when": 1783711200000,
+      "tag": "0004_exams_admin_token",
       "breakpoints": true
     }
   ]

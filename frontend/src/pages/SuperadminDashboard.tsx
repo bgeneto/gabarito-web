@@ -21,6 +21,7 @@ import {
   superadminUpload,
 } from "../utils/superadminApi";
 import { clearSuperadminToken } from "../utils/superadminSession";
+import { formatExamAccessCodes } from "../utils/formatExamAccessCodes";
 
 interface Overview {
   generated_at: number;
@@ -57,6 +58,7 @@ interface ExamRow {
   id: string;
   title: string;
   public_code: string;
+  admin_token: string | null;
   status: "open" | "closed";
   created_at: number;
   closed_at: number | null;
@@ -342,7 +344,7 @@ export default function SuperadminDashboard() {
           <div className="flex items-center gap-2 mb-1">
             <Shield className="w-5 h-5 text-amber-400" />
             <span className="text-[10px] uppercase tracking-wider font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
-              Leitura + backup
+              Leitura &amp; backup
             </span>
           </div>
           <h1 className="text-2xl font-extrabold text-slate-100">
@@ -585,7 +587,10 @@ export default function SuperadminDashboard() {
                         {exam.title}
                       </p>
                       <p className="text-xs text-slate-500 font-mono">
-                        {exam.public_code}
+                        {formatExamAccessCodes(
+                          exam.public_code,
+                          exam.admin_token,
+                        )}
                       </p>
                     </td>
                     <td className="p-3">

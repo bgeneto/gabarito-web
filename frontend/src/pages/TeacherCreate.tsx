@@ -1059,221 +1059,230 @@ export default function TeacherCreate() {
               className="glass-panel border border-slate-800 rounded-2xl p-5 space-y-4 relative"
             >
               {/* Top Row: Numero, Subitem, Pontos, Botao Excluir */}
-              <div className="grid grid-cols-12 gap-3 items-end">
-                {/* Número da Questão */}
-                <div className="col-span-3">
-                  <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
-                    Questão
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={item.questionNumber}
-                    onChange={(e) =>
-                      handleUpdateItem(item.id, {
-                        questionNumber: parseInt(e.target.value) || 1,
-                      })
-                    }
-                    className="w-full bg-slate-900 border border-slate-850 rounded-xl px-3 py-2 text-sm text-center font-bold"
-                    required
-                  />
+              <div className="flex items-end gap-3">
+                <div className="grid grid-cols-3 gap-3 flex-1 min-w-0">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
+                      Questão
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={item.questionNumber}
+                      onChange={(e) =>
+                        handleUpdateItem(item.id, {
+                          questionNumber: parseInt(e.target.value) || 1,
+                        })
+                      }
+                      className="w-full bg-slate-900 border border-slate-850 rounded-xl px-3 py-2 text-sm text-center font-bold"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
+                      Subitem
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={3}
+                      placeholder="Sem"
+                      value={item.subLabel}
+                      onChange={(e) =>
+                        handleUpdateItem(item.id, {
+                          subLabel: e.target.value
+                            .toLowerCase()
+                            .replace(/[^a-z]/g, ""),
+                        })
+                      }
+                      className="w-full bg-slate-900 border border-slate-850 rounded-xl px-3 py-2 text-sm text-center font-bold uppercase placeholder:text-slate-700"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
+                      Pontos
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.1"
+                      value={item.points}
+                      onChange={(e) =>
+                        handleUpdateItem(item.id, {
+                          points: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      className="w-full bg-slate-900 border border-slate-850 rounded-xl px-3 py-2 text-sm text-center font-bold text-blue-400"
+                      required
+                    />
+                  </div>
                 </div>
 
-                {/* Subitem (ex: a, b) */}
-                <div className="col-span-3">
-                  <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
-                    Subitem
-                  </label>
-                  <input
-                    type="text"
-                    maxLength={3}
-                    placeholder="Sem"
-                    value={item.subLabel}
-                    onChange={(e) =>
-                      handleUpdateItem(item.id, {
-                        subLabel: e.target.value
-                          .toLowerCase()
-                          .replace(/[^a-z]/g, ""),
-                      })
-                    }
-                    className="w-full bg-slate-900 border border-slate-850 rounded-xl px-3 py-2 text-sm text-center font-bold uppercase placeholder:text-slate-700"
-                  />
-                </div>
-
-                {/* Pontos */}
-                <div className="col-span-3">
-                  <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
-                    Pontos
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0.1"
-                    value={item.points}
-                    onChange={(e) =>
-                      handleUpdateItem(item.id, {
-                        points: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                    className="w-full bg-slate-900 border border-slate-850 rounded-xl px-3 py-2 text-sm text-center font-bold text-blue-400"
-                    required
-                  />
-                </div>
-
-                {/* Remover Questão */}
-                <div className="col-span-3 text-right">
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveItem(item.id)}
-                    disabled={items.length === 1}
-                    className="p-2 border border-slate-850 hover:border-rose-900/50 rounded-xl text-slate-500 hover:text-rose-400 disabled:opacity-40 disabled:hover:text-slate-500 disabled:border-slate-850 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                    title="Excluir Questão"
-                  >
-                    <Trash2 className="w-5 h-5 mx-auto" />
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveItem(item.id)}
+                  disabled={items.length === 1}
+                  className="shrink-0 p-2 border border-slate-850 hover:border-rose-900/50 rounded-xl text-slate-500 hover:text-rose-400 disabled:opacity-40 disabled:hover:text-slate-500 disabled:border-slate-850 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  title="Excluir Questão"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
               </div>
 
-              {/* Bottom Row: Tipo e Gabarito */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-900">
-                {/* Tipo de Questão */}
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase">
-                    Tipo de Resposta
-                  </label>
-                  <select
-                    value={item.answerType}
-                    onChange={(e) =>
-                      handleUpdateItem(item.id, {
-                        answerType: e.target.value as any,
-                      })
-                    }
-                    className="w-full bg-slate-900 border border-slate-850 rounded-xl px-3 py-2 text-sm focus:outline-none"
-                  >
-                    <option value="choice">Múltipla Escolha</option>
-                    <option value="true_false">
-                      Verdadeiro ou Falso (V/F)
-                    </option>
-                    <option value="short_text">Texto Curto</option>
-                    <option value="numerical">Numérica</option>
-                  </select>
-                </div>
+              {/* Tipo + Gabarito: side-by-side for compact types; stacked full-width for numerical */}
+              <div className="pt-2 border-t border-slate-900 space-y-4">
+                <div
+                  className={
+                    item.answerType === "numerical"
+                      ? "max-w-sm"
+                      : "grid grid-cols-1 md:grid-cols-2 gap-4"
+                  }
+                >
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase">
+                      Tipo de Resposta
+                    </label>
+                    <select
+                      value={item.answerType}
+                      onChange={(e) =>
+                        handleUpdateItem(item.id, {
+                          answerType: e.target.value as any,
+                        })
+                      }
+                      className="w-full bg-slate-900 border border-slate-850 rounded-xl px-3 py-2 text-sm focus:outline-none"
+                    >
+                      <option value="choice">Múltipla Escolha</option>
+                      <option value="true_false">
+                        Verdadeiro ou Falso (V/F)
+                      </option>
+                      <option value="short_text">Texto Curto</option>
+                      <option value="numerical">Numérica</option>
+                    </select>
+                  </div>
 
-                {/* Gabarito da Questão */}
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase">
-                    Gabarito Oficial
-                  </label>
+                  {item.answerType !== "numerical" && (
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase">
+                        Gabarito Oficial
+                      </label>
 
-                  {/* Múltipla Escolha */}
-                  {item.answerType === "choice" && (
-                    <div className="flex gap-1.5 justify-between">
-                      {["A", "B", "C", "D", "E"].map((option) => (
-                        <button
-                          key={option}
-                          type="button"
-                          onClick={() =>
-                            handleUpdateItem(item.id, { accepted: [option] })
-                          }
-                          className={`flex-1 py-1.5 rounded-lg border text-sm font-bold transition-all cursor-pointer ${
-                            item.accepted.includes(option)
-                              ? "bg-cyan-500 text-slate-950 border-cyan-400"
-                              : "bg-slate-900 border-slate-850 text-slate-400 hover:border-slate-800"
-                          }`}
-                        >
-                          {option}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Verdadeiro ou Falso */}
-                  {item.answerType === "true_false" && (
-                    <div className="flex gap-2">
-                      {["V", "F"].map((option) => (
-                        <button
-                          key={option}
-                          type="button"
-                          onClick={() =>
-                            handleUpdateItem(item.id, { accepted: [option] })
-                          }
-                          className={`flex-1 py-1.5 rounded-lg border text-sm font-bold transition-all cursor-pointer ${
-                            item.accepted.includes(option)
-                              ? "bg-blue-500 text-white border-blue-400"
-                              : "bg-slate-900 border-slate-850 text-slate-400 hover:border-slate-800"
-                          }`}
-                        >
-                          {option === "V" ? "Verdadeiro (V)" : "Falso (F)"}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Texto Curto com variantes */}
-                  {item.answerType === "short_text" && (
-                    <div className="space-y-2">
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          placeholder="Nova variação aceita..."
-                          value={item.tempVariant}
-                          onChange={(e) =>
-                            handleUpdateItem(item.id, {
-                              tempVariant: e.target.value,
-                            })
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              handleAddTextVariant(item.id);
-                            }
-                          }}
-                          className="flex-1 bg-slate-900 border border-slate-850 rounded-xl px-3 py-1.5 text-xs placeholder:text-slate-600"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => handleAddTextVariant(item.id)}
-                          className="px-3 bg-slate-900 border border-slate-850 hover:bg-slate-800 text-slate-300 rounded-xl text-xs font-bold cursor-pointer"
-                        >
-                          Adicionar
-                        </button>
-                      </div>
-
-                      {/* Lista de Variantes adicionadas */}
-                      <div className="flex flex-wrap gap-1">
-                        {item.accepted.map((val, variantIdx) => (
-                          <span
-                            key={variantIdx}
-                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-850 border border-slate-800 text-[10px] text-slate-300 font-mono"
-                          >
-                            {val}
+                      {item.answerType === "choice" && (
+                        <div className="flex gap-1.5 justify-between">
+                          {["A", "B", "C", "D", "E"].map((option) => (
                             <button
+                              key={option}
                               type="button"
                               onClick={() =>
-                                handleRemoveTextVariant(item.id, variantIdx)
+                                handleUpdateItem(item.id, {
+                                  accepted: [option],
+                                })
                               }
-                              className="text-slate-500 hover:text-rose-400 font-bold"
+                              className={`flex-1 py-1.5 rounded-lg border text-sm font-bold transition-all cursor-pointer ${
+                                item.accepted.includes(option)
+                                  ? "bg-cyan-500 text-slate-950 border-cyan-400"
+                                  : "bg-slate-900 border-slate-850 text-slate-400 hover:border-slate-800"
+                              }`}
                             >
-                              ×
+                              {option}
                             </button>
-                          </span>
-                        ))}
-                        {item.accepted.length === 0 && (
-                          <span className="text-[10px] text-slate-650 italic">
-                            Insira variações de resposta (ex: "cinco", "5")
-                          </span>
-                        )}
-                      </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {item.answerType === "true_false" && (
+                        <div className="flex gap-2">
+                          {["V", "F"].map((option) => (
+                            <button
+                              key={option}
+                              type="button"
+                              onClick={() =>
+                                handleUpdateItem(item.id, {
+                                  accepted: [option],
+                                })
+                              }
+                              className={`flex-1 py-1.5 rounded-lg border text-sm font-bold transition-all cursor-pointer ${
+                                item.accepted.includes(option)
+                                  ? "bg-blue-500 text-white border-blue-400"
+                                  : "bg-slate-900 border-slate-850 text-slate-400 hover:border-slate-800"
+                              }`}
+                            >
+                              {option === "V" ? "Verdadeiro (V)" : "Falso (F)"}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {item.answerType === "short_text" && (
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              placeholder="Nova variação aceita..."
+                              value={item.tempVariant}
+                              onChange={(e) =>
+                                handleUpdateItem(item.id, {
+                                  tempVariant: e.target.value,
+                                })
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  handleAddTextVariant(item.id);
+                                }
+                              }}
+                              className="flex-1 bg-slate-900 border border-slate-850 rounded-xl px-3 py-1.5 text-xs placeholder:text-slate-600"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleAddTextVariant(item.id)}
+                              className="px-3 bg-slate-900 border border-slate-850 hover:bg-slate-800 text-slate-300 rounded-xl text-xs font-bold cursor-pointer"
+                            >
+                              Adicionar
+                            </button>
+                          </div>
+
+                          <div className="flex flex-wrap gap-1">
+                            {item.accepted.map((val, variantIdx) => (
+                              <span
+                                key={variantIdx}
+                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-850 border border-slate-800 text-[10px] text-slate-300 font-mono"
+                              >
+                                {val}
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleRemoveTextVariant(item.id, variantIdx)
+                                  }
+                                  className="text-slate-500 hover:text-rose-400 font-bold"
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ))}
+                            {item.accepted.length === 0 && (
+                              <span className="text-[10px] text-slate-650 italic">
+                                Insira variações de resposta (ex: "cinco", "5")
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
+                </div>
 
-                  {item.answerType === "numerical" && (
+                {item.answerType === "numerical" && (
+                  <div className="min-w-0">
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1.5 uppercase">
+                      Gabarito Oficial
+                    </label>
                     <NumericalAnswerEditor
                       value={item}
                       onChange={(patch) => handleUpdateItem(item.id, patch)}
                     />
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           ))}

@@ -123,15 +123,14 @@ export default function NumericalAnswerEditor({
 
   const handleUnitRequiredChange = (checked: boolean) => {
     if (checked && value.acceptedUnits.length === 0) {
-      const canonical = value.canonicalUnit.trim() || "un";
+      const canonical = value.canonicalUnit.trim();
       onChange({
         unitRequired: true,
-        canonicalUnit: value.canonicalUnit.trim() || canonical,
         acceptedUnits: [
           {
-            unit: value.canonicalUnit.trim() || canonical,
+            unit: canonical,
             unitToCanonical: 1,
-            aliases: [value.canonicalUnit.trim() || canonical],
+            aliases: canonical ? [canonical] : [],
             tempAlias: "",
           },
         ],
@@ -141,10 +140,13 @@ export default function NumericalAnswerEditor({
     onChange({ unitRequired: checked });
   };
 
+  const fieldClass =
+    "w-full min-w-0 bg-slate-900 border border-slate-850 rounded-xl px-3 py-1.5 text-xs disabled:opacity-60";
+
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-2 gap-2">
-        <div>
+    <div className="space-y-3 min-w-0">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="min-w-0">
           <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
             Valor esperado
           </label>
@@ -156,48 +158,53 @@ export default function NumericalAnswerEditor({
             onChange={(e) =>
               onChange({ numericalValue: Number(e.target.value) })
             }
-            className="w-full bg-slate-900 border border-slate-850 rounded-xl px-3 py-1.5 text-xs disabled:opacity-60"
+            className={fieldClass}
           />
         </div>
-        <div>
+        <div className="min-w-0">
           <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
-            Tolerância
+            Tipo de tolerância
           </label>
-          <div className="flex gap-1">
-            <select
-              value={value.toleranceKind}
-              disabled={disabled}
-              onChange={(e) =>
-                onChange({
-                  toleranceKind: e.target.value as "relative" | "absolute",
-                })
-              }
-              className="bg-slate-900 border border-slate-850 rounded-xl px-2 py-1.5 text-xs disabled:opacity-60"
-            >
-              <option value="absolute">Absoluta</option>
-              <option value="relative">Relativa (%)</option>
-            </select>
-            <input
-              type="number"
-              step="any"
-              min={0}
-              value={
-                value.toleranceKind === "relative"
-                  ? value.toleranceValue * 100
-                  : value.toleranceValue
-              }
-              disabled={disabled}
-              onChange={(e) => {
-                const n = Number(e.target.value);
-                onChange({
-                  toleranceValue:
-                    value.toleranceKind === "relative" ? n / 100 : n,
-                });
-              }}
-              className="flex-1 bg-slate-900 border border-slate-850 rounded-xl px-3 py-1.5 text-xs disabled:opacity-60"
-              placeholder={value.toleranceKind === "relative" ? "0.5" : "0.01"}
-            />
-          </div>
+          <select
+            value={value.toleranceKind}
+            disabled={disabled}
+            onChange={(e) =>
+              onChange({
+                toleranceKind: e.target.value as "relative" | "absolute",
+              })
+            }
+            className={fieldClass}
+          >
+            <option value="absolute">Absoluta</option>
+            <option value="relative">Relativa (%)</option>
+          </select>
+        </div>
+        <div className="min-w-0">
+          <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
+            {value.toleranceKind === "relative"
+              ? "Tolerância (%)"
+              : "Tolerância"}
+          </label>
+          <input
+            type="number"
+            step="any"
+            min={0}
+            value={
+              value.toleranceKind === "relative"
+                ? value.toleranceValue * 100
+                : value.toleranceValue
+            }
+            disabled={disabled}
+            onChange={(e) => {
+              const n = Number(e.target.value);
+              onChange({
+                toleranceValue:
+                  value.toleranceKind === "relative" ? n / 100 : n,
+              });
+            }}
+            className={fieldClass}
+            placeholder={value.toleranceKind === "relative" ? "0.5" : "0.01"}
+          />
         </div>
       </div>
 
@@ -213,8 +220,8 @@ export default function NumericalAnswerEditor({
       </label>
 
       {value.unitRequired && (
-        <div className="space-y-3 pt-1 border-t border-slate-900">
-          <div>
+        <div className="space-y-3 pt-3 border-t border-slate-900">
+          <div className="max-w-xs">
             <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase">
               Unidade canônica
             </label>
@@ -224,12 +231,12 @@ export default function NumericalAnswerEditor({
               disabled={disabled}
               onChange={(e) => onChange({ canonicalUnit: e.target.value })}
               placeholder="Ex: m/s"
-              className="w-full bg-slate-900 border border-slate-850 rounded-xl px-3 py-1.5 text-xs disabled:opacity-60"
+              className={fieldClass}
             />
           </div>
 
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <span className="text-[10px] font-bold text-slate-500 uppercase">
                 Unidades aceitas
               </span>
@@ -247,9 +254,9 @@ export default function NumericalAnswerEditor({
             {value.acceptedUnits.map((unit, unitIdx) => (
               <div
                 key={unitIdx}
-                className="p-2.5 rounded-xl bg-slate-950/60 border border-slate-900 space-y-2"
+                className="p-3 rounded-xl bg-slate-950/60 border border-slate-900 space-y-2 min-w-0"
               >
-                <div className="flex gap-2 items-start">
+                <div className="grid grid-cols-[1fr_auto_auto] gap-2 items-center">
                   <input
                     type="text"
                     value={unit.unit}
@@ -258,7 +265,7 @@ export default function NumericalAnswerEditor({
                       updateUnit(unitIdx, { unit: e.target.value })
                     }
                     placeholder="Unidade"
-                    className="flex-1 bg-slate-900 border border-slate-850 rounded-lg px-2 py-1 text-xs disabled:opacity-60"
+                    className="min-w-0 bg-slate-900 border border-slate-850 rounded-lg px-2 py-1.5 text-xs disabled:opacity-60"
                   />
                   <input
                     type="number"
@@ -271,8 +278,8 @@ export default function NumericalAnswerEditor({
                       })
                     }
                     placeholder="× fator"
-                    title="unitToCanonical"
-                    className="w-24 bg-slate-900 border border-slate-850 rounded-lg px-2 py-1 text-xs disabled:opacity-60"
+                    title="Fator unitToCanonical"
+                    className="w-20 sm:w-24 bg-slate-900 border border-slate-850 rounded-lg px-2 py-1.5 text-xs disabled:opacity-60"
                   />
                   <button
                     type="button"
@@ -284,7 +291,7 @@ export default function NumericalAnswerEditor({
                   </button>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 min-w-0">
                   <input
                     type="text"
                     value={unit.tempAlias}
@@ -299,36 +306,38 @@ export default function NumericalAnswerEditor({
                       }
                     }}
                     placeholder="Novo alias..."
-                    className="flex-1 bg-slate-900 border border-slate-850 rounded-lg px-2 py-1 text-[10px] disabled:opacity-60"
+                    className="flex-1 min-w-0 bg-slate-900 border border-slate-850 rounded-lg px-2 py-1 text-[10px] disabled:opacity-60"
                   />
                   <button
                     type="button"
                     disabled={disabled}
                     onClick={() => addAlias(unitIdx)}
-                    className="px-2 py-1 text-[10px] font-bold border border-slate-850 rounded-lg hover:bg-slate-900 cursor-pointer disabled:opacity-40"
+                    className="shrink-0 px-2 py-1 text-[10px] font-bold border border-slate-850 rounded-lg hover:bg-slate-900 cursor-pointer disabled:opacity-40"
                   >
                     Alias
                   </button>
                 </div>
 
-                <div className="flex flex-wrap gap-1">
-                  {unit.aliases.map((alias: string, aliasIdx: number) => (
-                    <span
-                      key={aliasIdx}
-                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-850 border border-slate-800 text-[10px] text-slate-300 font-mono"
-                    >
-                      {alias}
-                      <button
-                        type="button"
-                        disabled={disabled}
-                        onClick={() => removeAlias(unitIdx, aliasIdx)}
-                        className="text-slate-500 hover:text-rose-400 cursor-pointer"
+                {unit.aliases.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {unit.aliases.map((alias: string, aliasIdx: number) => (
+                      <span
+                        key={aliasIdx}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-850 border border-slate-800 text-[10px] text-slate-300 font-mono"
                       >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
+                        {alias}
+                        <button
+                          type="button"
+                          disabled={disabled}
+                          onClick={() => removeAlias(unitIdx, aliasIdx)}
+                          className="text-slate-500 hover:text-rose-400 cursor-pointer"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>

@@ -35,6 +35,7 @@ function examToSnake(row: ExamRow) {
     title: row.title,
     public_code: row.publicCode,
     admin_code_hash: row.adminCodeHash,
+    admin_token: row.adminToken,
     status: row.status,
     created_at: row.createdAt,
     closed_at: row.closedAt,
@@ -83,6 +84,10 @@ function examFromSnake(row: Record<string, unknown>): ExamRow {
     title: String(row.title),
     publicCode: String(row.public_code),
     adminCodeHash: String(row.admin_code_hash),
+    adminToken:
+      row.admin_token != null && row.admin_token !== ""
+        ? String(row.admin_token)
+        : null,
     status: row.status as "open" | "closed",
     createdAt: Number(row.created_at),
     closedAt: row.closed_at != null ? Number(row.closed_at) : null,

@@ -12,12 +12,14 @@ import { QuestionDifficultyTable } from "../components/exam/QuestionDifficultyTa
 import { ScoreDistributionChart } from "../components/exam/ScoreDistributionChart";
 import type { ExamItemWithStats, ScoreStats } from "../types/examStats";
 import { formatExamDate, formatExamDuration } from "../utils/examFormat";
+import { formatExamAccessCodes } from "../utils/formatExamAccessCodes";
 import { superadminJson } from "../utils/superadminApi";
 
 interface ExamDetail {
   id: string;
   title: string;
   public_code: string;
+  admin_token: string | null;
   status: "open" | "closed";
   created_at: number;
   closed_at: number | null;
@@ -99,14 +101,14 @@ export default function SuperadminExamDetail({ examId }: { examId: string }) {
           <div className="flex items-center gap-2 mb-2">
             <Shield className="w-4 h-4 text-amber-400" />
             <span className="text-[10px] uppercase tracking-wider font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
-              Leitura + backup
+              Leitura &amp; backup
             </span>
           </div>
           <h1 className="text-2xl font-extrabold text-slate-100">
             {data.title}
           </h1>
           <p className="text-sm text-slate-500 font-mono mt-1">
-            {data.public_code}
+            {formatExamAccessCodes(data.public_code, data.admin_token)}
           </p>
         </div>
         <span
