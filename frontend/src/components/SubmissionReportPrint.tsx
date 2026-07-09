@@ -8,6 +8,7 @@ import {
   formatMetricNumber,
   formatMetricPercent,
 } from "../utils/normalDistribution";
+import { NormalDistributionChart } from "./exam/NormalDistributionChart";
 
 export default function SubmissionReportPrint({
   data,
@@ -100,6 +101,16 @@ export default function SubmissionReportPrint({
               {data.performance_context.sample_size}).
             </p>
           )}
+          <p className="report-performance-status">
+            {data.performance_context.above_cutoff
+              ? "Status: acima do corte de aprovação (50%)."
+              : "Status: abaixo do corte de aprovação (50%)."}
+          </p>
+          <NormalDistributionChart
+            context={data.performance_context}
+            variant="print"
+            title="Distribuição de notas (0–100%)"
+          />
         </section>
       )}
 

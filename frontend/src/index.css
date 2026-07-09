@@ -313,6 +313,45 @@
     font-style: italic;
   }
 
+  #submission-report-print .report-performance-status {
+    margin: 0.5rem 0 0.75rem;
+    font-size: 9pt;
+    color: #333;
+    font-weight: 600;
+  }
+
+  #submission-report-print .report-performance-chart {
+    margin-top: 0.75rem;
+    padding: 0.5rem 0;
+    page-break-inside: avoid;
+  }
+
+  #submission-report-print .report-performance-chart-title {
+    font-size: 8pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #555;
+    margin: 0 0 0.35rem;
+  }
+
+  #submission-report-print .report-performance-chart-svg {
+    display: block;
+    width: 100%;
+    max-width: 420px;
+    height: auto;
+    margin: 0 auto;
+  }
+
+  #submission-report-print .report-performance-chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 0.35rem;
+    font-size: 8pt;
+    color: #374151;
+  }
+
   #submission-report-print .report-answers {
     margin-bottom: 1rem;
   }
