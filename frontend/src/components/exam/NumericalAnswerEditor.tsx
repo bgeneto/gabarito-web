@@ -4,14 +4,23 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type ClipboardEvent,
+  type KeyboardEvent,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
 import { Info, Plus, Trash2, X } from "lucide-react";
-import type {
-  AcceptedUnitInput,
-  NumberDraft,
+import {
+  formatAcceptedValueRangeHint,
+  formatAcceptedValueRangeHintForUnit,
+  type AcceptedUnitInput,
+  type NumberDraft,
 } from "../../types/numericalConfig";
+
+/** Collapse IEEE-754 noise from % ↔ fraction conversions (e.g. 0.07 * 100). */
+function scrubFloat(n: number): number {
+  return Number(n.toPrecision(12));
+}
 
 export interface NumericalFormState {
   numericalValue: NumberDraft;
@@ -30,8 +39,26 @@ interface NumericalAnswerEditorProps {
 /** Parse number input without forcing empty → 0 (breaks mobile editing). */
 function parseNumberDraft(raw: string): NumberDraft {
   if (raw.trim() === "") return "";
-  const n = Number(raw);
+  // Accept Brazilian decimal comma (2,75 → 2.75).
+  const n = Number(raw.trim().replace(/,/g, "."));
   return Number.isFinite(n) ? n : "";
+}
+
+/**
+ * `type="number"` rejects "," before React sees it. Convert typed/pasted
+ * commas to "." so locale-friendly decimals are not silently dropped.
+ */
+function onDecimalCommaKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+  if (e.key !== ",") return;
+  e.preventDefault();
+  document.execCommand("insertText", false, ".");
+}
+
+function onDecimalCommaPaste(e: ClipboardEvent<HTMLInputElement>) {
+  const text = e.clipboardData.getData("text");
+  if (!text.includes(",")) return;
+  e.preventDefault();
+  document.execCommand("insertText", false, text.replace(/,/g, "."));
 }
 
 export function defaultNumericalFormState(): NumericalFormState {
@@ -312,6 +339,32 @@ export default function NumericalAnswerEditor({
     onChange({ unitRequired: checked });
   };
 
+  const canonicalUnitLabel = value.unitRequired
+    ? value.acceptedUnits.find((u) => u.unitToCanonical === 1)?.unit?.trim()
+    : undefined;
+
+  const rangeInputsReady =
+    value.numericalValue !== "" &&
+    value.toleranceValue !== "" &&
+    Number.isFinite(value.numericalValue) &&
+    Number.isFinite(value.toleranceValue) &&
+    value.toleranceValue >= 0 &&
+    !(value.toleranceKind === "relative" && value.numericalValue === 0);
+
+  const toleranceConfig = rangeInputsReady
+    ? value.toleranceKind === "relative"
+      ? { relative: value.toleranceValue }
+      : { absolute: value.toleranceValue }
+    : null;
+
+  const acceptedRangeHint = toleranceConfig
+    ? formatAcceptedValueRangeHint(
+        value.numericalValue,
+        toleranceConfig,
+        canonicalUnitLabel,
+      )
+    : null;
+
   return (
     <div className="space-y-4 min-w-0 overflow-hidden">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -323,10 +376,12 @@ export default function NumericalAnswerEditor({
             inputMode="decimal"
             value={value.numericalValue}
             disabled={disabled}
+            onKeyDown={onDecimalCommaKeyDown}
+            onPaste={onDecimalCommaPaste}
             onChange={(e) =>
               onChange({ numericalValue: parseNumberDraft(e.target.value) })
             }
-            placeholder="Ex: 5"
+            placeholder="Ex: 2,75"
             className={`w-full min-w-0 ${controlClass}`}
           />
         </div>
@@ -361,10 +416,12 @@ export default function NumericalAnswerEditor({
               value.toleranceValue === ""
                 ? ""
                 : value.toleranceKind === "relative"
-                  ? value.toleranceValue * 100
+                  ? scrubFloat(value.toleranceValue * 100)
                   : value.toleranceValue
             }
             disabled={disabled}
+            onKeyDown={onDecimalCommaKeyDown}
+            onPaste={onDecimalCommaPaste}
             onChange={(e) => {
               const draft = parseNumberDraft(e.target.value);
               onChange({
@@ -372,7 +429,7 @@ export default function NumericalAnswerEditor({
                   draft === ""
                     ? ""
                     : value.toleranceKind === "relative"
-                      ? draft / 100
+                      ? scrubFloat(draft / 100)
                       : draft,
               });
             }}
@@ -381,6 +438,12 @@ export default function NumericalAnswerEditor({
           />
         </div>
       </div>
+
+      {acceptedRangeHint && (
+        <p className="text-[11px] text-cyan-400/90 font-mono tracking-tight -mt-2">
+          {acceptedRangeHint}
+        </p>
+      )}
 
       <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
         <input
@@ -413,6 +476,19 @@ export default function NumericalAnswerEditor({
 
             {value.acceptedUnits.map((unit, unitIdx) => {
               const isCanonical = unit.unitToCanonical === 1;
+              const unitRangeHint =
+                toleranceConfig &&
+                unit.unitToCanonical !== "" &&
+                Number.isFinite(unit.unitToCanonical) &&
+                unit.unitToCanonical > 0
+                  ? formatAcceptedValueRangeHintForUnit(
+                      value.numericalValue as number,
+                      toleranceConfig,
+                      unit.unitToCanonical,
+                      unit.unit.trim() || undefined,
+                    )
+                  : null;
+
               return (
                 <div
                   key={unitIdx}
@@ -451,6 +527,8 @@ export default function NumericalAnswerEditor({
                         inputMode="decimal"
                         value={unit.unitToCanonical}
                         disabled={disabled}
+                        onKeyDown={onDecimalCommaKeyDown}
+                        onPaste={onDecimalCommaPaste}
                         onChange={(e) =>
                           updateUnit(unitIdx, {
                             unitToCanonical: parseNumberDraft(e.target.value),
@@ -471,9 +549,15 @@ export default function NumericalAnswerEditor({
                     </button>
                   </div>
 
+                  {unitRangeHint && (
+                    <p className="text-[11px] text-cyan-400/90 font-mono tracking-tight -mt-1">
+                      {unitRangeHint}
+                    </p>
+                  )}
+
                   <div>
                     <FieldLabel help="Opcionais. Formas alternativas que o aluno pode digitar além do identificador da unidade (ex.: “metros por segundo”, “mps”). Se vazio, só o texto exato da unidade é aceito.">
-                      Aliases / alternativas
+                      Nomes alternativos
                     </FieldLabel>
                     <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-center">
                       <input
@@ -489,7 +573,7 @@ export default function NumericalAnswerEditor({
                             addAlias(unitIdx);
                           }
                         }}
-                        placeholder="Ex: quilômetros por hora"
+                        placeholder="Ex: metros"
                         className={`min-w-0 w-full ${controlClass}`}
                       />
                       <button
@@ -498,7 +582,7 @@ export default function NumericalAnswerEditor({
                         onClick={() => addAlias(unitIdx)}
                         className={btnClass}
                       >
-                        + Alias
+                        + Alt.
                       </button>
                     </div>
                   </div>
