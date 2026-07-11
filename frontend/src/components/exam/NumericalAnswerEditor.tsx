@@ -5,7 +5,7 @@ import {
   useRef,
   useState,
   type ClipboardEvent,
-  type KeyboardEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
@@ -15,6 +15,7 @@ import {
   formatAcceptedValueRangeHintForUnit,
   type AcceptedUnitInput,
   type NumberDraft,
+  type NumericalTolerance,
 } from "../../types/numericalConfig";
 
 /** Collapse IEEE-754 noise from % ↔ fraction conversions (e.g. 0.07 * 100). */
@@ -48,7 +49,7 @@ function parseNumberDraft(raw: string): NumberDraft {
  * `type="number"` rejects "," before React sees it. Convert typed/pasted
  * commas to "." so locale-friendly decimals are not silently dropped.
  */
-function onDecimalCommaKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+function onDecimalCommaKeyDown(e: ReactKeyboardEvent<HTMLInputElement>) {
   if (e.key !== ",") return;
   e.preventDefault();
   document.execCommand("insertText", false, ".");
@@ -343,27 +344,32 @@ export default function NumericalAnswerEditor({
     ? value.acceptedUnits.find((u) => u.unitToCanonical === 1)?.unit?.trim()
     : undefined;
 
-  const rangeInputsReady =
+  // Narrow NumberDraft → number in a block so TS keeps the refined types.
+  let toleranceConfig: NumericalTolerance | null = null;
+  let expectedValue: number | null = null;
+  if (
     value.numericalValue !== "" &&
     value.toleranceValue !== "" &&
     Number.isFinite(value.numericalValue) &&
     Number.isFinite(value.toleranceValue) &&
     value.toleranceValue >= 0 &&
-    !(value.toleranceKind === "relative" && value.numericalValue === 0);
+    !(value.toleranceKind === "relative" && value.numericalValue === 0)
+  ) {
+    expectedValue = value.numericalValue;
+    toleranceConfig =
+      value.toleranceKind === "relative"
+        ? { relative: value.toleranceValue }
+        : { absolute: value.toleranceValue };
+  }
 
-  const toleranceConfig = rangeInputsReady
-    ? value.toleranceKind === "relative"
-      ? { relative: value.toleranceValue }
-      : { absolute: value.toleranceValue }
-    : null;
-
-  const acceptedRangeHint = toleranceConfig
-    ? formatAcceptedValueRangeHint(
-        value.numericalValue,
-        toleranceConfig,
-        canonicalUnitLabel,
-      )
-    : null;
+  const acceptedRangeHint =
+    expectedValue !== null && toleranceConfig
+      ? formatAcceptedValueRangeHint(
+          expectedValue,
+          toleranceConfig,
+          canonicalUnitLabel,
+        )
+      : null;
 
   return (
     <div className="space-y-4 min-w-0 overflow-hidden">
@@ -477,12 +483,13 @@ export default function NumericalAnswerEditor({
             {value.acceptedUnits.map((unit, unitIdx) => {
               const isCanonical = unit.unitToCanonical === 1;
               const unitRangeHint =
+                expectedValue !== null &&
                 toleranceConfig &&
                 unit.unitToCanonical !== "" &&
                 Number.isFinite(unit.unitToCanonical) &&
                 unit.unitToCanonical > 0
                   ? formatAcceptedValueRangeHintForUnit(
-                      value.numericalValue as number,
+                      expectedValue,
                       toleranceConfig,
                       unit.unitToCanonical,
                       unit.unit.trim() || undefined,
