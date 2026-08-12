@@ -1,0 +1,27 @@
+gabarito.sistema.pro.br {
+	encode gzip zstd
+
+	handle /api/* {
+		reverse_proxy gabarito-api:3000 {
+			header_up Authorization {http.request.header.Authorization}
+			flush_interval -1
+		}
+	}
+
+	handle {
+		root * /srv/gabarito
+		try_files {path} /index.html
+		file_server
+
+		@hashed path /assets/*
+		header @hashed Cache-Control "public, max-age=31536000, immutable"
+
+		header /index.html Cache-Control "no-cache"
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+}
