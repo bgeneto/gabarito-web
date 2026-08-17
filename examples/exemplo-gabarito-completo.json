@@ -6,74 +6,80 @@
       "subLabel": "",
       "points": 1,
       "answerType": "choice",
-      "accepted": ["A"]
+      "accepted": [
+        "A"
+      ]
     },
     {
       "questionNumber": 2,
       "subLabel": "a",
       "points": 0.5,
-      "answerType": "choice",
-      "accepted": ["B"]
+      "answerType": "true_false",
+      "accepted": [
+        "V"
+      ]
     },
     {
       "questionNumber": 2,
       "subLabel": "b",
       "points": 0.5,
-      "answerType": "choice",
-      "accepted": ["C"]
+      "answerType": "true_false",
+      "accepted": [
+        "F"
+      ]
     },
     {
       "questionNumber": 2,
       "subLabel": "c",
       "points": 0.5,
-      "answerType": "choice",
-      "accepted": ["D"]
+      "answerType": "true_false",
+      "accepted": [
+        "F"
+      ]
     },
     {
       "questionNumber": 2,
       "subLabel": "d",
       "points": 0.5,
-      "answerType": "choice",
-      "accepted": ["E"]
+      "answerType": "true_false",
+      "accepted": [
+        "V"
+      ]
+    },
+    {
+      "questionNumber": 2,
+      "subLabel": "e",
+      "points": 0.52,
+      "answerType": "true_false",
+      "accepted": [
+        "V"
+      ]
+    },
+    {
+      "questionNumber": 2,
+      "subLabel": "f",
+      "points": 1,
+      "answerType": "true_false",
+      "accepted": [
+        "F"
+      ]
     },
     {
       "questionNumber": 3,
       "subLabel": "",
-      "points": 1,
-      "answerType": "true_false",
-      "accepted": ["V"]
+      "points": 1.5,
+      "answerType": "short_text",
+      "accepted": [
+        "cinco",
+        "5",
+        "5,0",
+        "cinco metros"
+      ]
     },
     {
       "questionNumber": 4,
       "subLabel": "",
-      "points": 1,
-      "answerType": "true_false",
-      "accepted": ["F"]
-    },
-    {
-      "questionNumber": 5,
-      "subLabel": "",
-      "points": 1.5,
-      "answerType": "short_text",
-      "accepted": ["cinco", "5", "5,0", "cinco unidades"]
-    },
-    {
-      "questionNumber": 6,
-      "subLabel": "",
-      "points": 1,
-      "answerType": "numerical",
-      "answer_config": {
-        "value": 25.75,
-        "unitRequired": false,
-        "tolerance": {
-          "absolute": 0.01
-        }
-      }
-    },
-    {
-      "questionNumber": 7,
-      "subLabel": "",
-      "points": 1,
+      "points": 1.25,
       "answerType": "numerical",
       "answer_config": {
         "value": 100,
@@ -84,12 +90,12 @@
       }
     },
     {
-      "questionNumber": 8,
+      "questionNumber": 5,
       "subLabel": "",
       "points": 1,
       "answerType": "numerical",
       "answer_config": {
-        "value": 0,
+        "value": 1.45,
         "unitRequired": false,
         "tolerance": {
           "absolute": 0.01
@@ -97,7 +103,7 @@
       }
     },
     {
-      "questionNumber": 9,
+      "questionNumber": 6,
       "subLabel": "",
       "points": 1,
       "answerType": "numerical",
@@ -110,19 +116,25 @@
       }
     },
     {
-      "questionNumber": 10,
+      "questionNumber": 7,
       "subLabel": "a",
       "points": 2,
       "answerType": "numerical",
       "answer_config": {
         "value": 30,
-        "canonicalUnit": "m/s",
         "unitRequired": true,
+        "tolerance": {
+          "relative": 0.005
+        },
         "acceptedUnits": [
           {
             "unit": "m/s",
             "unitToCanonical": 1,
-            "aliases": ["m/s", "metro por segundo", "metros por segundo"]
+            "aliases": [
+              "m/s",
+              "metro por segundo",
+              "metros por segundo"
+            ]
           },
           {
             "unit": "km/h",
@@ -130,65 +142,81 @@
             "aliases": [
               "km/h",
               "quilometro por hora",
-              "quilometros por hora"
+              "quilometros por hora",
+              "quilômetros por hora",
+              "quilômetro por hora",
+              "kph"
             ]
           },
           {
             "unit": "mph",
             "unitToCanonical": 0.44704,
-            "aliases": ["mph", "mi/h", "milha por hora", "milhas por hora"]
+            "aliases": [
+              "mph",
+              "mi/h",
+              "milha por hora",
+              "milhas por hora"
+            ]
           }
         ],
-        "tolerance": {
-          "relative": 0.005
-        }
+        "canonicalUnit": "m/s"
       }
     },
     {
-      "questionNumber": 10,
+      "questionNumber": 7,
       "subLabel": "b",
       "points": 2,
       "answerType": "numerical",
       "answer_config": {
         "value": 2,
-        "canonicalUnit": "kg",
         "unitRequired": true,
+        "tolerance": {
+          "absolute": 0.01
+        },
         "acceptedUnits": [
           {
             "unit": "kg",
             "unitToCanonical": 1,
-            "aliases": ["kg", "quilograma", "quilogramas"]
+            "aliases": [
+              "kg",
+              "quilograma",
+              "quilogramas"
+            ]
           },
           {
             "unit": "g",
             "unitToCanonical": 0.001,
-            "aliases": ["g", "grama", "gramas"]
+            "aliases": [
+              "g",
+              "grama",
+              "gramas"
+            ]
           }
         ],
-        "tolerance": {
-          "absolute": 0.01
-        }
+        "canonicalUnit": "kg"
       }
     },
     {
-      "questionNumber": 10,
+      "questionNumber": 7,
       "subLabel": "c",
       "points": 1,
       "answerType": "numerical",
       "answer_config": {
         "value": 9.8,
-        "canonicalUnit": "m/s²",
         "unitRequired": true,
+        "tolerance": {
+          "absolute": 0.1
+        },
         "acceptedUnits": [
           {
             "unit": "m/s²",
             "unitToCanonical": 1,
-            "aliases": []
+            "aliases": [
+              "metros por segundo"
+            ]
           }
         ],
-        "tolerance": {
-          "absolute": 0.1
-        }
+        "canonicalUnit": "m/s²"
       }
     }
   ]
