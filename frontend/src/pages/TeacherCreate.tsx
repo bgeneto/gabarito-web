@@ -797,20 +797,20 @@ export default function TeacherCreate() {
               title: examTitle,
               publicCode: result.public_code,
             })}
-            actions={["whatsapp"]}
+            actions={["download", "whatsapp"]}
             extraActions={
               <button
                 onClick={handleOpenPresentation}
                 disabled={!credentialsSavedAcknowledged}
-                className="flex-1 min-w-[140px] inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-cyan-500 hover:bg-cyan-600 disabled:bg-cyan-900/30 disabled:text-cyan-700 text-slate-950 font-bold rounded-xl text-xs transition-all cursor-pointer disabled:cursor-not-allowed"
+                className="flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-cyan-500 hover:bg-cyan-600 disabled:bg-cyan-900/30 disabled:text-cyan-700 text-slate-950 font-bold rounded-xl text-xs whitespace-nowrap transition-all cursor-pointer disabled:cursor-not-allowed"
                 title={
                   credentialsSavedAcknowledged
-                    ? "Abrir modo apresentação"
+                    ? "Abrir modo apresentação em tela cheia"
                     : "Salve as credenciais antes de exibir para a turma"
                 }
               >
-                <Monitor className="w-4 h-4" />
-                Mostrar para a turma
+                <Monitor className="w-4 h-4 shrink-0" />
+                Exibir em telecheia
               </button>
             }
           />

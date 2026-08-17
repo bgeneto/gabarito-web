@@ -231,16 +231,17 @@ export default function QrSharePanel({
             {showDownload && (
               <button
                 onClick={handleDownloadQrPng}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/40 hover:border-cyan-400/70 rounded-xl text-xs font-bold text-cyan-300 transition-all cursor-pointer"
+                className="shrink-0 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/40 hover:border-cyan-400/70 rounded-xl text-xs font-bold text-cyan-300 whitespace-nowrap transition-all cursor-pointer"
+                title="Baixar apenas o QR code em PNG"
               >
-                <Download className="w-3.5 h-3.5" />
+                <Download className="w-3.5 h-3.5 shrink-0" />
                 Baixar QR
               </button>
             )}
             {showPdf && (
               <button
                 onClick={handleSavePdf}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/40 hover:border-red-400/70 rounded-xl text-xs font-bold text-red-300 transition-all cursor-pointer"
+                className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/40 hover:border-red-400/70 rounded-xl text-xs font-bold text-red-300 transition-all cursor-pointer"
                 title="Salvar ou imprimir em PDF"
               >
                 <Printer className="w-3.5 h-3.5" />
@@ -250,7 +251,7 @@ export default function QrSharePanel({
             {showWhatsApp && (
               <button
                 onClick={handleShareWhatsApp}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/50 hover:border-emerald-400/80 rounded-xl text-xs font-bold text-emerald-300 transition-all cursor-pointer"
+                className="shrink-0 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/50 hover:border-emerald-400/80 rounded-xl text-xs font-bold text-emerald-300 whitespace-nowrap transition-all cursor-pointer"
               >
                 <WhatsAppIcon className="w-5 h-5 shrink-0" />
                 WhatsApp
