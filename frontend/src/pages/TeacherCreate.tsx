@@ -810,7 +810,7 @@ export default function TeacherCreate() {
                 }
               >
                 <Monitor className="w-4 h-4 shrink-0" />
-                Exibir em telecheia
+                Exibir em tela cheia
               </button>
             }
           />
