@@ -604,4 +604,211 @@ if [ -z "$NUM_EXPECTED" ] || [ "$NUM_EXPECTED" = "null" ]; then
 fi
 echo "OK: questão numérica (km/h -> m/s, tolerância absoluta sem unidade)"
 
-echo -e "\n=== TESTES DE API CONCLUÍDOS ==="
+# 12. Testes de Autenticação Magic Link e Histórico de Usuários
+echo -e "\n12. Testando autenticação Magic Link e histórico de usuários..."
+
+# 12.1. Solicitar Magic Link
+echo "12.1. Solicitando Magic Link para professor..."
+MAGIC_REQ_RESP=$(curl -s -X POST "$BASE_URL/auth/magic-link/request" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "Professor.Teste@Universidade.edu.br"}')
+
+DEV_TOKEN=$(echo "$MAGIC_REQ_RESP" | jq -r '.dev_token // empty')
+if [ -z "$DEV_TOKEN" ] || [ "$DEV_TOKEN" = "null" ]; then
+  echo "FALHOU: solicitação de magic link não retornou token de desenvolvimento"
+  echo "$MAGIC_REQ_RESP"
+  exit 1
+fi
+echo "OK: Magic link solicitado com sucesso (dev_token obtido)"
+
+# 12.2. Verificar Magic Link e obter sessão
+echo "12.2. Validando Magic Link..."
+MAGIC_VERIFY_RESP=$(curl -s -X POST "$BASE_URL/auth/magic-link/verify" \
+  -H "Content-Type: application/json" \
+  -d "{\"token\": \"$DEV_TOKEN\"}")
+
+PROF_USER_SESSION=$(echo "$MAGIC_VERIFY_RESP" | jq -r '.session_token // empty')
+PROF_USER_EMAIL=$(echo "$MAGIC_VERIFY_RESP" | jq -r '.user.email // empty')
+
+if [ -z "$PROF_USER_SESSION" ] || [ "$PROF_USER_EMAIL" != "professor.teste@universidade.edu.br" ]; then
+  echo "FALHOU: validação do magic link"
+  echo "$MAGIC_VERIFY_RESP"
+  exit 1
+fi
+echo "OK: Magic link validado. Conectado como $PROF_USER_EMAIL"
+
+# 12.3. Consultar /api/auth/me
+echo "12.3. Consultando /api/auth/me..."
+ME_RESP=$(curl -s "$BASE_URL/auth/me" \
+  -H "Authorization: Bearer $PROF_USER_SESSION")
+ME_EMAIL=$(echo "$ME_RESP" | jq -r '.user.email // empty')
+
+if [ "$ME_EMAIL" != "professor.teste@universidade.edu.br" ]; then
+  echo "FALHOU: /api/auth/me retornou e-mail inesperado"
+  echo "$ME_RESP"
+  exit 1
+fi
+echo "OK: /api/auth/me verificado"
+
+# 12.4. Criar prova autenticado e verificar em /api/user/exams
+echo "12.4. Criando prova como professor autenticado..."
+AUTH_EXAM_RESP=$(curl -s -X POST "$BASE_URL/exams" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $PROF_USER_SESSION" \
+  -d '{
+    "title": "Prova Autenticada de História",
+    "items": [
+      {"question_number": 1, "sub_label": null, "points": 10.0, "answer_type": "choice", "answer_config": {"accepted": ["C"]}}
+    ]
+  }')
+
+AUTH_EXAM_CODE=$(echo "$AUTH_EXAM_RESP" | jq -r '.public_code')
+if [ -z "$AUTH_EXAM_CODE" ] || [ "$AUTH_EXAM_CODE" = "null" ]; then
+  echo "FALHOU: criação de prova autenticada"
+  echo "$AUTH_EXAM_RESP"
+  exit 1
+fi
+
+USER_EXAMS_RESP=$(curl -s "$BASE_URL/user/exams" \
+  -H "Authorization: Bearer $PROF_USER_SESSION")
+HAS_EXAM=$(echo "$USER_EXAMS_RESP" | jq -r "[.exams[] | select(.public_code==\"$AUTH_EXAM_CODE\")] | length")
+
+if [ "$HAS_EXAM" -lt 1 ]; then
+  echo "FALHOU: prova autenticada não apareceu na lista /api/user/exams"
+  echo "$USER_EXAMS_RESP"
+  exit 1
+fi
+echo "OK: Prova criada autenticada listada em /api/user/exams"
+
+# 12.5. Criar prova anônima e resgatar/vincular via claim-exam
+echo "12.5. Criando prova anônima e vinculando retroativamente..."
+ANON_EXAM_RESP=$(curl -s -X POST "$BASE_URL/exams" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Prova Anônima para Resgate",
+    "items": [
+      {"question_number": 1, "sub_label": null, "points": 5.0, "answer_type": "short_text", "answer_config": {"accepted": ["brasília"]}}
+    ]
+  }')
+ANON_ADMIN_TOKEN=$(echo "$ANON_EXAM_RESP" | jq -r '.admin_token')
+ANON_PUBLIC_CODE=$(echo "$ANON_EXAM_RESP" | jq -r '.public_code')
+
+CLAIM_EXAM_RESP=$(curl -s -X POST "$BASE_URL/user/claim-exam" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $PROF_USER_SESSION" \
+  -d "{\"admin_token\": \"$ANON_ADMIN_TOKEN\"}")
+CLAIM_OK=$(echo "$CLAIM_EXAM_RESP" | jq -r '.ok')
+
+if [ "$CLAIM_OK" != "true" ]; then
+  echo "FALHOU: resgate de prova por token admin"
+  echo "$CLAIM_EXAM_RESP"
+  exit 1
+fi
+
+USER_EXAMS_AFTER=$(curl -s "$BASE_URL/user/exams" \
+  -H "Authorization: Bearer $PROF_USER_SESSION")
+HAS_CLAIMED=$(echo "$USER_EXAMS_AFTER" | jq -r "[.exams[] | select(.public_code==\"$ANON_PUBLIC_CODE\")] | length")
+
+if [ "$HAS_CLAIMED" -lt 1 ]; then
+  echo "FALHOU: prova resgatada não apareceu em /api/user/exams"
+  echo "$USER_EXAMS_AFTER"
+  exit 1
+fi
+echo "OK: Prova anônima vinculada retroativamente com sucesso!"
+
+# 12.6. Autenticar aluno e submeter prova
+echo "12.6. Autenticando aluno e enviando submissão..."
+ALUNO_MAGIC_REQ=$(curl -s -X POST "$BASE_URL/auth/magic-link/request" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "aluno.gabarito@escola.org"}')
+ALUNO_DEV_TOKEN=$(echo "$ALUNO_MAGIC_REQ" | jq -r '.dev_token // empty')
+
+ALUNO_VERIFY=$(curl -s -X POST "$BASE_URL/auth/magic-link/verify" \
+  -H "Content-Type: application/json" \
+  -d "{\"token\": \"$ALUNO_DEV_TOKEN\"}")
+ALUNO_SESSION=$(echo "$ALUNO_VERIFY" | jq -r '.session_token // empty')
+
+# Buscar item da prova autenticada
+AUTH_EXAM_GET=$(curl -s "$BASE_URL/exams/$AUTH_EXAM_CODE")
+AUTH_ITEM_ID=$(echo "$AUTH_EXAM_GET" | jq -r '.items[0].id')
+
+ALUNO_SUB_RESP=$(curl -s -X POST "$BASE_URL/exams/$AUTH_EXAM_CODE/submissions" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ALUNO_SESSION" \
+  -d "{
+    \"student_name\": \"Aluno Teste Auth\",
+    \"student_identifier\": \"MATR999\",
+    \"answers\": {
+      \"$AUTH_ITEM_ID\": \"C\"
+    }
+  }")
+ALUNO_SUB_ID=$(echo "$ALUNO_SUB_RESP" | jq -r '.submission_id')
+
+ALUNO_SUBS_LIST=$(curl -s "$BASE_URL/user/submissions" \
+  -H "Authorization: Bearer $ALUNO_SESSION")
+HAS_SUB=$(echo "$ALUNO_SUBS_LIST" | jq -r "[.submissions[] | select(.id==\"$ALUNO_SUB_ID\")] | length")
+
+if [ "$HAS_SUB" -lt 1 ]; then
+  echo "FALHOU: submissão autenticada não apareceu em /api/user/submissions"
+  echo "$ALUNO_SUBS_LIST"
+  exit 1
+fi
+echo "OK: Submissão autenticada listada em /api/user/submissions"
+
+# 12.7. Resgatar submissão anônima anterior via claim-submission
+echo "12.7. Vinculando submissão anterior anônima por comprovante..."
+# Buscar item da prova anônima
+ANON_EXAM_GET=$(curl -s "$BASE_URL/exams/$ANON_PUBLIC_CODE")
+ANON_ITEM_ID=$(echo "$ANON_EXAM_GET" | jq -r '.items[0].id')
+
+ANON_SUB_RESP=$(curl -s -X POST "$BASE_URL/exams/$ANON_PUBLIC_CODE/submissions" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"student_name\": \"Aluno Anonimo Resgatador\",
+    \"student_identifier\": \"MATR888\",
+    \"answers\": {
+      \"$ANON_ITEM_ID\": \"Brasilia\"
+    }
+  }")
+ANON_SUB_ID=$(echo "$ANON_SUB_RESP" | jq -r '.submission_id')
+
+CLAIM_SUB_RESP=$(curl -s -X POST "$BASE_URL/user/claim-submission" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ALUNO_SESSION" \
+  -d "{\"submission_id\": \"$ANON_SUB_ID\"}")
+CLAIM_SUB_OK=$(echo "$CLAIM_SUB_RESP" | jq -r '.ok')
+
+if [ "$CLAIM_SUB_OK" != "true" ]; then
+  echo "FALHOU: vinculação de submissão por comprovante"
+  echo "$CLAIM_SUB_RESP"
+  exit 1
+fi
+
+ALUNO_SUBS_AFTER=$(curl -s "$BASE_URL/user/submissions" \
+  -H "Authorization: Bearer $ALUNO_SESSION")
+HAS_CLAIMED_SUB=$(echo "$ALUNO_SUBS_AFTER" | jq -r "[.submissions[] | select(.id==\"$ANON_SUB_ID\")] | length")
+
+if [ "$HAS_CLAIMED_SUB" -lt 1 ]; then
+  echo "FALHOU: submissão vinculada não apareceu em /api/user/submissions"
+  echo "$ALUNO_SUBS_AFTER"
+  exit 1
+fi
+echo "OK: Submissão vinculada retroativamente com sucesso!"
+
+# 12.8. Testar Logout
+echo "12.8. Testando encerramento de sessão (logout)..."
+LOGOUT_RESP=$(curl -s -X POST "$BASE_URL/auth/logout" \
+  -H "Authorization: Bearer $ALUNO_SESSION")
+LOGOUT_OK=$(echo "$LOGOUT_RESP" | jq -r '.ok')
+
+AFTER_LOGOUT_ME=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/auth/me" \
+  -H "Authorization: Bearer $ALUNO_SESSION")
+
+if [ "$LOGOUT_OK" != "true" ] || [ "$AFTER_LOGOUT_ME" != "401" ]; then
+  echo "FALHOU: logout não invalidou a sessão (código HTTP $AFTER_LOGOUT_ME, esperado 401)"
+  exit 1
+fi
+echo "OK: Logout encerrou a sessão e invalidou o token Bearer"
+
+echo -e "\n=== TESTES DE API CONCLUÍDOS COM SUCESSO! ==="
+

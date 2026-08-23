@@ -36,6 +36,12 @@ import {
   categorizePagePath,
   normalizePagePath,
 } from "./utils/pathNormalizer.js";
+import authRouter from "./routes/auth.js";
+import userRouter from "./routes/user.js";
+import {
+  getAuthenticatedUser,
+  optionalUserAuth,
+} from "./middleware/userAuth.js";
 import {
   generateAdminToken,
   generatePublicCode,
@@ -118,6 +124,10 @@ app.post("/api/telemetry/pageview", telemetryRateLimiter, async (c) => {
 // Rotas superadmin (leitura + backup seletivo)
 app.route("/api/superadmin", superadmin);
 
+// Rotas de autenticação (Magic Link) e usuário logado
+app.route("/api/auth", authRouter);
+app.route("/api/user", userRouter);
+
 // Constantes de validação
 const MAX_TITLE_LENGTH = 200;
 const MAX_STUDENT_NAME_LENGTH = 150;
@@ -144,8 +154,9 @@ app.get("/health", (c) => {
 });
 
 // ROTA: Criar Prova (Professor)
-app.post("/api/exams", async (c) => {
+app.post("/api/exams", optionalUserAuth, async (c) => {
   try {
+    const currentUser = getAuthenticatedUser(c);
     const body = await c.req.json();
     const { title, items } = body;
 
@@ -312,6 +323,7 @@ app.post("/api/exams", async (c) => {
       publicCode,
       adminCodeHash,
       adminToken,
+      creatorUserId: currentUser ? currentUser.id : null,
       status: "open",
       createdAt: now,
     });
@@ -402,9 +414,11 @@ app.get("/api/exams/:public_code", async (c) => {
 // ROTA: Enviar Respostas (Aluno) com Rate Limiting e Prevenção de Duplicidade
 app.post(
   "/api/exams/:public_code/submissions",
+  optionalUserAuth,
   submissionRateLimiter,
   async (c) => {
     try {
+      const currentUser = getAuthenticatedUser(c);
       const publicCode = (c.req.param("public_code") || "").toUpperCase();
       const body = getSubmissionRequestBody(c) as {
         student_name?: unknown;
@@ -578,6 +592,8 @@ app.post(
             .values({
               id: submissionId,
               examId: exam.id,
+              studentUserId: currentUser ? currentUser.id : null,
+              studentEmail: currentUser ? currentUser.email : null,
               studentName: student_name.trim(),
               studentIdentifier: cleanIdentifier,
               submittedAt: now,

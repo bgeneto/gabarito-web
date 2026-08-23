@@ -36,6 +36,7 @@ function examToSnake(row: ExamRow) {
     public_code: row.publicCode,
     admin_code_hash: row.adminCodeHash,
     admin_token: row.adminToken,
+    creator_user_id: row.creatorUserId,
     status: row.status,
     created_at: row.createdAt,
     closed_at: row.closedAt,
@@ -59,6 +60,8 @@ function submissionToSnake(row: SubmissionRow) {
   return {
     id: row.id,
     exam_id: row.examId,
+    student_user_id: row.studentUserId,
+    student_email: row.studentEmail,
     student_name: row.studentName,
     student_identifier: row.studentIdentifier,
     submitted_at: row.submittedAt,
@@ -88,6 +91,10 @@ function examFromSnake(row: Record<string, unknown>): ExamRow {
       row.admin_token != null && row.admin_token !== ""
         ? String(row.admin_token)
         : null,
+    creatorUserId:
+      row.creator_user_id != null && row.creator_user_id !== ""
+        ? String(row.creator_user_id)
+        : null,
     status: row.status as "open" | "closed",
     createdAt: Number(row.created_at),
     closedAt: row.closed_at != null ? Number(row.closed_at) : null,
@@ -111,6 +118,14 @@ function submissionFromSnake(row: Record<string, unknown>): SubmissionRow {
   return {
     id: String(row.id),
     examId: String(row.exam_id),
+    studentUserId:
+      row.student_user_id != null && row.student_user_id !== ""
+        ? String(row.student_user_id)
+        : null,
+    studentEmail:
+      row.student_email != null && row.student_email !== ""
+        ? String(row.student_email)
+        : null,
     studentName: String(row.student_name),
     studentIdentifier: String(row.student_identifier),
     submittedAt: Number(row.submitted_at),

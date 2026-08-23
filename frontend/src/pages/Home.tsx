@@ -7,10 +7,13 @@ import {
   ClipboardList,
   Receipt,
   ArrowLeft,
+  ArrowRight,
+  User,
 } from "lucide-react";
 import { setAdminSession } from "../utils/adminSession";
 import { exchangeAdminToken } from "../utils/adminApi";
 import { normalizeAdminToken } from "../utils/adminTokenUrl";
+import { useAuth } from "../contexts/AuthContext";
 
 function parseReceiptCode(raw: string): string {
   const trimmed = raw.trim().toUpperCase();
@@ -20,6 +23,7 @@ function parseReceiptCode(raw: string): string {
 }
 
 export default function Home() {
+  const { user, isAuthenticated } = useAuth();
   const [role, setRole] = useState<"student" | "teacher" | null>(null);
   const [publicCode, setPublicCode] = useState("");
   const [receiptCode, setReceiptCode] = useState("");
@@ -96,43 +100,96 @@ export default function Home() {
         </p>
       </div>
 
+      {/* Banner de Usuário Autenticado */}
+      {role === null && isAuthenticated && user && (
+        <div className="mb-4 p-4 rounded-2xl glass-panel border border-cyan-800/40 bg-cyan-950/20 flex flex-col sm:flex-row items-center justify-between gap-3 animate-fade-in">
+          <div className="flex items-center gap-2.5 text-center sm:text-left">
+            <div className="w-8 h-8 rounded-full bg-cyan-900 border border-cyan-700/60 flex items-center justify-center text-cyan-300 font-bold text-xs shrink-0">
+              {user.email.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div className="text-xs font-semibold text-slate-200">
+                Olá, {user.name || user.email}
+              </div>
+              <div className="text-[11px] text-slate-400">
+                Acesse seus históricos salvos
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigateTo("/minhas-provas")}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-cyan-600 hover:bg-cyan-500 transition-all cursor-pointer"
+            >
+              Minhas Provas
+            </button>
+            <button
+              onClick={() => navigateTo("/meus-resultados")}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-all cursor-pointer"
+            >
+              Meus Resultados
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Role Selection */}
       {role === null && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Card Aluno */}
-          <button
-            onClick={() => setRole("student")}
-            className="group flex flex-col items-center justify-center p-8 rounded-2xl glass-panel border border-slate-800 hover:border-cyan-500/50 hover:bg-slate-900/60 transition-all text-center cursor-pointer relative overflow-hidden"
-          >
-            <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl group-hover:bg-cyan-500/10 transition-colors"></div>
-            <div className="w-14 h-14 bg-cyan-950/80 border border-cyan-800/50 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <GraduationCap className="w-8 h-8 text-cyan-400" />
-            </div>
-            <h3 className="font-bold text-lg mb-1 group-hover:text-cyan-400 transition-colors">
-              Sou Aluno
-            </h3>
-            <p className="text-xs text-slate-500 max-w-[180px]">
-              Responder gabarito e consultar notas de provas finalizadas.
-            </p>
-          </button>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Card Aluno */}
+            <button
+              onClick={() => setRole("student")}
+              className="group flex flex-col items-center justify-center p-8 rounded-2xl glass-panel border border-slate-800 hover:border-cyan-500/50 hover:bg-slate-900/60 transition-all text-center cursor-pointer relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl group-hover:bg-cyan-500/10 transition-colors"></div>
+              <div className="w-14 h-14 bg-cyan-950/80 border border-cyan-800/50 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <GraduationCap className="w-8 h-8 text-cyan-400" />
+              </div>
+              <h3 className="font-bold text-lg mb-1 group-hover:text-cyan-400 transition-colors">
+                Sou Aluno
+              </h3>
+              <p className="text-xs text-slate-500 max-w-[180px]">
+                Responder gabarito e consultar notas de provas finalizadas.
+              </p>
+            </button>
 
-          {/* Card Professor */}
-          <button
-            onClick={() => setRole("teacher")}
-            className="group flex flex-col items-center justify-center p-8 rounded-2xl glass-panel border border-slate-800 hover:border-blue-500/50 hover:bg-slate-900/60 transition-all text-center cursor-pointer relative overflow-hidden"
-          >
-            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-colors"></div>
-            <div className="w-14 h-14 bg-blue-950/80 border border-blue-800/50 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-              <ClipboardList className="w-8 h-8 text-blue-400" />
+            {/* Card Professor */}
+            <button
+              onClick={() => setRole("teacher")}
+              className="group flex flex-col items-center justify-center p-8 rounded-2xl glass-panel border border-slate-800 hover:border-blue-500/50 hover:bg-slate-900/60 transition-all text-center cursor-pointer relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-colors"></div>
+              <div className="w-14 h-14 bg-blue-950/80 border border-blue-800/50 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <ClipboardList className="w-8 h-8 text-blue-400" />
+              </div>
+              <h3 className="font-bold text-lg mb-1 group-hover:text-blue-400 transition-colors">
+                Sou Professor
+              </h3>
+              <p className="text-xs text-slate-500 max-w-[180px]">
+                Criar gabaritos oficiais, emitir QR codes e monitorar notas.
+              </p>
+            </button>
+          </div>
+
+          {!isAuthenticated && (
+            <div className="text-center mt-6">
+              <button
+                onClick={() => navigateTo("/entrar")}
+                className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-cyan-400 transition-colors cursor-pointer group"
+              >
+                <User className="w-3.5 h-3.5 text-cyan-400" />
+                <span>
+                  Deseja salvar e ver seu histórico completo?{" "}
+                  <strong className="underline underline-offset-2">
+                    Entrar sem senha
+                  </strong>
+                </span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+              </button>
             </div>
-            <h3 className="font-bold text-lg mb-1 group-hover:text-blue-400 transition-colors">
-              Sou Professor
-            </h3>
-            <p className="text-xs text-slate-500 max-w-[180px]">
-              Criar gabaritos oficiais, emitir QR codes e monitorar notas.
-            </p>
-          </button>
-        </div>
+          )}
+        </>
       )}
 
       {/* Aluno View */}

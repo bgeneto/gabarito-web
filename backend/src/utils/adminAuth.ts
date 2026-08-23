@@ -9,6 +9,15 @@ const DUMMY_ADMIN_HASH = crypto
   .update("__gabarito_invalid_admin_token__")
   .digest("hex");
 
+export function normalizeAdminToken(value: string): string | null {
+  const trimmed = value.trim();
+  const match = trimmed.match(/^adm_([0-9A-Za-z]{6})$/i);
+  if (!match) {
+    return null;
+  }
+  return `adm_${match[1].toUpperCase()}`;
+}
+
 export function hashAdminToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
 }

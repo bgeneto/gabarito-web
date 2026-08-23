@@ -7,8 +7,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default defineConfig({
-  schema: path.resolve(__dirname, "./src/db/schema.ts"),
-  out: path.resolve(__dirname, "./drizzle"),
+  schema: "./backend/src/db/schema.ts",
+  out: "./backend/drizzle",
   dialect: "sqlite",
   dbCredentials: {
     url: getDatabasePath(),
