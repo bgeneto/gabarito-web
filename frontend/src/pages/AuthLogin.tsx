@@ -151,7 +151,7 @@ export default function AuthLogin() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="exemplo@universidade.edu.br"
+                placeholder="seu@email.com"
                 disabled={loading}
                 autoFocus
                 required
@@ -181,7 +181,8 @@ export default function AuthLogin() {
 
         <div className="mt-6 pt-4 border-t border-slate-800/80 text-center">
           <p className="text-[11px] text-slate-500">
-            Não é obrigatório criar conta para fazer ou criar provas avulsas.
+            Não é obrigatório criar conta para responder ou criar provas
+            avulsas.
           </p>
         </div>
       </div>

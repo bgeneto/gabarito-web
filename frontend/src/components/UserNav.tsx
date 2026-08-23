@@ -59,12 +59,15 @@ export default function UserNav() {
       </button>
 
       {dropdownOpen && (
-        <div className="absolute right-0 mt-2 w-56 glass-panel rounded-2xl border border-slate-700 shadow-2xl py-2 z-50 animate-fade-in text-xs">
-          <div className="px-4 py-2 border-b border-slate-800/80 mb-1">
-            <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+        <div className="absolute right-0 mt-2 w-60 bg-slate-900/98 backdrop-blur-xl rounded-2xl border border-slate-700/80 shadow-2xl shadow-black/90 ring-1 ring-white/10 py-2 z-50 animate-fade-in text-xs">
+          <div className="px-4 py-2.5 border-b border-slate-800 mb-1">
+            <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
               Conectado como
             </div>
-            <div className="text-slate-200 font-semibold truncate mt-0.5">
+            <div
+              className="text-slate-100 font-semibold truncate mt-0.5"
+              title={user.email}
+            >
               {user.email}
             </div>
           </div>
@@ -74,10 +77,10 @@ export default function UserNav() {
               setDropdownOpen(false);
               navigateTo("/minhas-provas");
             }}
-            className="w-full px-4 py-2 text-left text-slate-300 hover:text-white hover:bg-slate-800/80 flex items-center gap-2.5 transition-colors cursor-pointer"
+            className="w-full px-4 py-2.5 text-left text-slate-200 hover:text-white hover:bg-slate-800 flex items-center gap-2.5 transition-colors cursor-pointer"
           >
-            <ClipboardList className="w-4 h-4 text-cyan-400" />
-            <span>Minhas Provas (Professor)</span>
+            <ClipboardList className="w-4 h-4 text-cyan-400 shrink-0" />
+            <span className="font-medium">Minhas Provas (Professor)</span>
           </button>
 
           <button
@@ -85,13 +88,13 @@ export default function UserNav() {
               setDropdownOpen(false);
               navigateTo("/meus-resultados");
             }}
-            className="w-full px-4 py-2 text-left text-slate-300 hover:text-white hover:bg-slate-800/80 flex items-center gap-2.5 transition-colors cursor-pointer"
+            className="w-full px-4 py-2.5 text-left text-slate-200 hover:text-white hover:bg-slate-800 flex items-center gap-2.5 transition-colors cursor-pointer"
           >
-            <Receipt className="w-4 h-4 text-blue-400" />
-            <span>Meus Resultados (Aluno)</span>
+            <Receipt className="w-4 h-4 text-blue-400 shrink-0" />
+            <span className="font-medium">Meus Resultados (Aluno)</span>
           </button>
 
-          <div className="border-t border-slate-800/80 my-1" />
+          <div className="border-t border-slate-800 my-1" />
 
           <button
             onClick={async () => {
@@ -99,10 +102,10 @@ export default function UserNav() {
               await logout();
               navigateTo("/");
             }}
-            className="w-full px-4 py-2 text-left text-rose-400 hover:text-rose-300 hover:bg-rose-950/30 flex items-center gap-2.5 transition-colors cursor-pointer"
+            className="w-full px-4 py-2.5 text-left text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 flex items-center gap-2.5 transition-colors cursor-pointer"
           >
-            <LogOut className="w-4 h-4" />
-            <span>Sair da conta</span>
+            <LogOut className="w-4 h-4 shrink-0" />
+            <span className="font-medium">Sair da conta</span>
           </button>
         </div>
       )}

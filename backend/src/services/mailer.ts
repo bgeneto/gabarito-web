@@ -107,8 +107,14 @@ https://gabarito.sistema.pro.br`;
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="color-scheme" content="dark">
+  <meta name="supported-color-schemes" content="dark">
   <title>Seu link de acesso ao GabaritoWEB</title>
   <style>
+    :root {
+      color-scheme: dark;
+      supported-color-schemes: dark;
+    }
     body {
       margin: 0;
       padding: 0;
@@ -134,6 +140,23 @@ https://gabarito.sistema.pro.br`;
     }
     a {
       text-decoration: none;
+      color: #38bdf8 !important;
+    }
+    /* Previne sobreposição de cor de links do Gmail / iOS Mail */
+    .raw-url a,
+    .raw-url,
+    a[href^="http"],
+    a[href^="https"] {
+      color: #38bdf8 !important;
+      text-decoration: underline !important;
+    }
+    [x-apple-data-detectors] {
+      color: #38bdf8 !important;
+      text-decoration: none !important;
+      font-size: inherit !important;
+      font-family: inherit !important;
+      font-weight: inherit !important;
+      line-height: inherit !important;
     }
     @media only screen and (max-width: 600px) {
       .email-container {
@@ -152,7 +175,7 @@ https://gabarito.sistema.pro.br`;
     }
   </style>
 </head>
-<body style="margin: 0; padding: 0; background-color: #020617; color: #f8fafc;">
+<body id="body" style="margin: 0; padding: 0; background-color: #020617; color: #f8fafc;">
   <!-- Wrapper Table -->
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #020617; min-height: 100vh;">
     <tr>
@@ -204,21 +227,23 @@ https://gabarito.sistema.pro.br`;
                 <tr>
                   <td align="center">
                     <a href="${verifyUrl}" target="_blank" class="btn-primary" style="display: block; width: 100%; text-align: center; box-sizing: border-box; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); background-color: #0284c7; color: #ffffff !important; font-size: 15px; font-weight: 700; text-decoration: none; padding: 15px 24px; border-radius: 12px; border: 1px solid #38bdf8; box-shadow: 0 4px 14px 0 rgba(2, 132, 199, 0.35);">
-                      Entrar no GabaritoWEB &rarr;
+                      <span style="color: #ffffff !important; font-weight: 700;">Entrar no GabaritoWEB &rarr;</span>
                     </a>
                   </td>
                 </tr>
               </table>
 
               <!-- Link Fallback Box -->
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #1e293b; border: 1px solid #334155; border-radius: 12px; margin-top: 24px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #0a1120; border: 1px solid #1e3a8a; border-radius: 12px; margin-top: 24px;">
                 <tr>
                   <td style="padding: 16px;">
-                    <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 600; color: #cbd5e1;">
+                    <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 600; color: #94a3b8;">
                       Se o botão não funcionar, copie e cole este endereço:
                     </p>
-                    <p style="margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 11px; line-height: 1.5; word-break: break-all; color: #38bdf8;">
-                      ${verifyUrl}
+                    <p class="raw-url" style="margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 11px; line-height: 1.6; word-break: break-all; color: #38bdf8;">
+                      <a href="${verifyUrl}" target="_blank" style="color: #38bdf8 !important; text-decoration: underline; word-break: break-all;">
+                        <span style="color: #38bdf8 !important;">${verifyUrl}</span>
+                      </a>
                     </p>
                   </td>
                 </tr>
@@ -241,7 +266,7 @@ https://gabarito.sistema.pro.br`;
                 GabaritoWEB &bull; Correção online de provas ágil e descomplicada
               </p>
               <p style="margin: 0; font-size: 11px; color: #334155;">
-                &copy; 2026 GabaritoWEB &bull; <a href="${siteUrl}" target="_blank" style="color: #0284c7; text-decoration: underline;">gabarito.sistema.pro.br</a>
+                &copy; 2026 GabaritoWEB &bull; <a href="${siteUrl}" target="_blank" style="color: #0284c7 !important; text-decoration: underline;">gabarito.sistema.pro.br</a>
               </p>
             </td>
           </tr>

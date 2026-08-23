@@ -182,7 +182,7 @@ export default function Home() {
                 <span>
                   Deseja salvar e ver seu histórico completo?{" "}
                   <strong className="underline underline-offset-2">
-                    Entrar sem senha
+                    Fazer login
                   </strong>
                 </span>
                 <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
