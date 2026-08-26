@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Mail,
   ArrowRight,
@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { navigateTo } from "../App";
+import { getRedirectQueryParam } from "../utils/postLoginRedirect";
 
 export default function AuthLogin() {
   const { requestMagicLink, isAuthenticated, user } = useAuth();
@@ -15,6 +16,13 @@ export default function AuthLogin() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  const pendingRedirect = getRedirectQueryParam();
+
+  useEffect(() => {
+    if (isAuthenticated && pendingRedirect) {
+      navigateTo(pendingRedirect);
+    }
+  }, [isAuthenticated, pendingRedirect]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +36,7 @@ export default function AuthLogin() {
 
     setLoading(true);
     try {
-      await requestMagicLink(trimmed);
+      await requestMagicLink(trimmed, pendingRedirect ?? undefined);
       setSuccess(true);
     } catch (err: unknown) {
       setError(
@@ -42,6 +50,13 @@ export default function AuthLogin() {
   };
 
   if (isAuthenticated && user) {
+    if (pendingRedirect) {
+      return (
+        <div className="flex-1 flex flex-col justify-center items-center py-16">
+          <div className="w-10 h-10 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      );
+    }
     return (
       <div className="flex-1 flex flex-col justify-center max-w-md mx-auto w-full py-8 text-center">
         <div className="glass-panel p-8 rounded-2xl border border-slate-800 space-y-6">
@@ -59,16 +74,22 @@ export default function AuthLogin() {
           </div>
           <div className="flex flex-col gap-3 pt-2">
             <button
-              onClick={() => navigateTo("/minhas-provas")}
+              onClick={() => navigateTo("/conta")}
               className="w-full py-3 px-4 rounded-xl font-bold text-white bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 shadow-lg shadow-cyan-900/30 transition-all cursor-pointer"
             >
-              Acessar Minhas Provas (Professor)
+              Continuar para minha conta
+            </button>
+            <button
+              onClick={() => navigateTo("/minhas-provas")}
+              className="w-full py-3 px-4 rounded-xl font-semibold text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-all cursor-pointer"
+            >
+              Minhas Provas (Professor)
             </button>
             <button
               onClick={() => navigateTo("/meus-resultados")}
               className="w-full py-3 px-4 rounded-xl font-semibold text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-all cursor-pointer"
             >
-              Acessar Meus Resultados (Aluno)
+              Meus Resultados (Aluno)
             </button>
           </div>
         </div>
@@ -99,7 +120,7 @@ export default function AuthLogin() {
           </h1>
           <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
             Digite seu e-mail para receber um link mágico e acessar seu
-            histórico de provas e submissões.
+            histórico de provas (professor) e envios (aluno).
           </p>
         </div>
 

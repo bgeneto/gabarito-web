@@ -287,9 +287,9 @@ O projeto fornece um script central de gerenciamento no host ([manage.sh](file:/
 
 #### Outros Utilitários do Script
 
-- `./manage.sh format`: Formata recursivamente todo o código-fonte do repositório utilizando Prettier.
+- `./manage.sh format`: Formata recursivamente todo o código-fonte do repositório utilizando Prettier. **Obrigatório ao concluir alterações** (ver seção 6).
 - `./manage.sh db-push`: Sincroniza o schema com o SQLite.
-- `./manage.sh test`: Executa os testes de integração do `test-api.sh` (utilizando a instância ativa se disponível, ou subindo uma temporária automaticamente).
+- `./manage.sh test`: Executa os testes unitários e, em seguida, os testes de integração do `test-api.sh` (utilizando a instância ativa se disponível, ou subindo uma temporária automaticamente). **Obrigatório ao concluir alterações** (ver seção 6).
 
 ### 5.7. Área Superadmin (Leitura + Backup Seletivo)
 
@@ -306,6 +306,7 @@ Painel global para o operador do serviço, acessível em `/superadmin` (não lin
 
 ## 6. Diretrizes Importantes para Desenvolvimento Futuro
 
+- **Formatar e testar (contrato rígido)**: Ao concluir qualquer alteração de código, rode **nesta ordem** `./manage.sh format` e depois `./manage.sh test`. Não declare a tarefa concluída se a formatação ou os testes falharem — corrija e rode de novo até ambos passarem. O `format` aplica Prettier em backend, frontend e arquivos `*.{md,json}` da raiz. O `test` executa os testes unitários (`backend` + `frontend`) e em seguida os testes de integração da API (`test-api.sh`). No WSL2, use sempre o Node/npm do **nvm em Linux**; nunca o `npm`/`node` de `C:\Program Files\nodejs` (o `manage.sh` já prioriza o nvm e ignora o Node do Windows no PATH).
 - **Sem Bibliotecas de Roteamento Complexas**: O frontend utiliza um mini roteador reativo no próprio [App.tsx](file:///home/bgeneto/github/gabarito-web/frontend/src/App.tsx) que escuta eventos `popstate`. Mantenha essa abordagem para evitar inflar o bundle ou introduzir incompatibilidades de rotas no Vite.
 - **Segurança de Gabaritos**: Nunca modifique a rota pública `GET /api/exams/:public_code` para retornar as respostas corretas (`answer_config_json`). A correção e atribuição de pontos devem ocorrer estritamente no servidor (`POST /api/exams/:public_code/submissions`).
 - **Exposição do `admin_token`**: O token administrativo em texto plano só pode aparecer em respostas da API superadmin autenticada. Não adicione `admin_token` a rotas públicas, de professor ou de aluno.

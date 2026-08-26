@@ -19,6 +19,8 @@ import {
   X,
 } from "lucide-react";
 import { useModal } from "../components/ModalProvider";
+import { useAuth } from "../contexts/AuthContext";
+import { withUserAuthHeaders } from "../utils/postLoginRedirect";
 import QrSharePanel from "../components/QrSharePanel";
 import {
   buildAdminDeepLink,
@@ -57,6 +59,7 @@ interface CreationResult {
 }
 
 export default function TeacherCreate() {
+  const { sessionToken, isAuthenticated, user } = useAuth();
   const [title, setTitle] = useState("");
   const [items, setItems] = useState<ItemInput[]>([
     {
@@ -455,9 +458,9 @@ export default function TeacherCreate() {
     try {
       const response = await fetch("/api/exams", {
         method: "POST",
-        headers: {
+        headers: withUserAuthHeaders(sessionToken, {
           "Content-Type": "application/json",
-        },
+        }),
         body: JSON.stringify(payload),
       });
 
@@ -742,8 +745,18 @@ export default function TeacherCreate() {
               Gabarito Criado com Sucesso!
             </h2>
             <p className="text-sm text-slate-400 mt-1">
-              A prova foi publicada e está pronta para receber submissões.
+              {isAuthenticated
+                ? "A prova foi publicada e vinculada à sua conta. Ela aparece em Minhas Provas em qualquer dispositivo."
+                : "A prova foi publicada e está pronta para receber submissões."}
             </p>
+            {isAuthenticated && (
+              <button
+                onClick={() => navigateTo("/minhas-provas")}
+                className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-cyan-300 hover:text-cyan-200 underline underline-offset-2 cursor-pointer"
+              >
+                Ver em Minhas Provas
+              </button>
+            )}
             <div className="mt-4 flex flex-wrap justify-center gap-2">
               <button
                 onClick={handleExportFile}
@@ -979,6 +992,12 @@ export default function TeacherCreate() {
             <p className="text-xs text-slate-500">
               Defina o título, as questões e os gabaritos aceitos.
             </p>
+            {isAuthenticated && user && (
+              <p className="text-[11px] text-cyan-400/90 mt-1">
+                Conectado como {user.email}. Esta prova será salva em Minhas
+                Provas.
+              </p>
+            )}
           </div>
         </div>
 

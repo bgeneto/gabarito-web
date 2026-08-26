@@ -13,12 +13,27 @@ import {
   normalizeAdminToken,
 } from "../utils/adminAuth.js";
 import { getExamAggregates } from "../services/examStats.js";
+import { countUserActivity } from "../services/userActivity.js";
 import { internalServerError } from "../utils/errorResponse.js";
 
 const userRouter = new Hono();
 
 userRouter.use("*", bodyLimit({ maxSize: 16 * 1024 }));
 userRouter.use("*", requireUserAuth);
+
+// ROTA: Contagens leves para o hub da conta (professor + aluno)
+userRouter.get("/overview", async (c) => {
+  try {
+    const user = getAuthenticatedUser(c)!;
+    const activity = await countUserActivity(user.id, user.email);
+    return c.json({
+      exam_count: activity.examCount,
+      submission_count: activity.submissionCount,
+    });
+  } catch (error: unknown) {
+    return internalServerError(c, "Erro ao obter resumo da conta:", error);
+  }
+});
 
 // ROTA: Listar todas as provas criadas ou vinculadas ao professor
 userRouter.get("/exams", async (c) => {

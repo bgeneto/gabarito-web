@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { CheckCircle2, AlertCircle, Sparkles, ArrowLeft } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { navigateTo } from "../App";
+import { sanitizePostLoginPath } from "../utils/postLoginRedirect";
 
 export default function AuthVerify() {
   const { verifyMagicLink } = useAuth();
@@ -29,7 +30,11 @@ export default function AuthVerify() {
       .then((res) => {
         setStatus("success");
         setTimeout(() => {
-          navigateTo(redirectTarget || res.redirect_to || "/minhas-provas");
+          navigateTo(
+            sanitizePostLoginPath(redirectTarget) ||
+              sanitizePostLoginPath(res.redirect_to) ||
+              "/conta",
+          );
         }, 1200);
       })
       .catch((err: unknown) => {
@@ -70,7 +75,8 @@ export default function AuthVerify() {
               <Sparkles className="w-5 h-5 text-amber-400 animate-pulse" />
             </h1>
             <p className="text-xs text-slate-300">
-              Você está autenticado no GabaritoWEB. Redirecionando...
+              Você está autenticado no GabaritoWEB. Levando você ao destino
+              certo...
             </p>
           </div>
         )}

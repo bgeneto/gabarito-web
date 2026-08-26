@@ -42,6 +42,16 @@ export function categorizeApiPath(
 
 export function categorizePagePath(normalizedPath: string): string {
   if (normalizedPath === "/" || normalizedPath === "") return "page_home";
+  if (normalizedPath === "/conta") return "page_account";
+  if (normalizedPath === "/minhas-provas") return "page_teacher_exams";
+  if (normalizedPath === "/meus-resultados") return "page_student_submissions";
+  if (
+    normalizedPath === "/entrar" ||
+    normalizedPath === "/login" ||
+    normalizedPath.startsWith("/auth/")
+  ) {
+    return "page_auth";
+  }
   if (normalizedPath === "/criar-prova") return "page_teacher_create";
   if (normalizedPath.startsWith("/prova/")) return "page_student_exam";
   if (normalizedPath.startsWith("/submissao/")) return "page_student_result";

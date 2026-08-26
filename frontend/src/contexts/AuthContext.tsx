@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
+import { sanitizePostLoginPath } from "../utils/postLoginRedirect";
 
 export interface UserProfile {
   id: string;
@@ -114,7 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return {
       ok: true,
-      redirect_to: data.redirect_to || "/minhas-provas",
+      redirect_to: sanitizePostLoginPath(data.redirect_to) || "/conta",
     };
   };
 

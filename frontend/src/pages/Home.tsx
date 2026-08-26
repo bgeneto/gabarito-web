@@ -14,6 +14,7 @@ import { setAdminSession } from "../utils/adminSession";
 import { exchangeAdminToken } from "../utils/adminApi";
 import { normalizeAdminToken } from "../utils/adminTokenUrl";
 import { useAuth } from "../contexts/AuthContext";
+import { buildLoginPath } from "../utils/postLoginRedirect";
 
 function parseReceiptCode(raw: string): string {
   const trimmed = raw.trim().toUpperCase();
@@ -116,10 +117,16 @@ export default function Home() {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-end">
+            <button
+              onClick={() => navigateTo("/conta")}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-cyan-600 hover:bg-cyan-500 transition-all cursor-pointer"
+            >
+              Minha conta
+            </button>
             <button
               onClick={() => navigateTo("/minhas-provas")}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-cyan-600 hover:bg-cyan-500 transition-all cursor-pointer"
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-all cursor-pointer"
             >
               Minhas Provas
             </button>
@@ -175,7 +182,7 @@ export default function Home() {
           {!isAuthenticated && (
             <div className="text-center mt-6">
               <button
-                onClick={() => navigateTo("/entrar")}
+                onClick={() => navigateTo(buildLoginPath())}
                 className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-cyan-400 transition-colors cursor-pointer group"
               >
                 <User className="w-3.5 h-3.5 text-cyan-400" />

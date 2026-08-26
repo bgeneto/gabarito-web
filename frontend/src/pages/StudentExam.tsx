@@ -10,6 +10,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { useModal } from "../components/ModalProvider";
+import { useAuth } from "../contexts/AuthContext";
 import {
   loadDraft,
   saveDraftIfChanged,
@@ -25,6 +26,10 @@ import {
   buildSubmissionUrl,
   formatWhatsAppSubmissionMessage,
 } from "../utils/examCredentials";
+import {
+  buildLoginPath,
+  withUserAuthHeaders,
+} from "../utils/postLoginRedirect";
 
 interface ExamItem {
   id: string;
@@ -50,6 +55,7 @@ interface SubmissionResponse {
 
 export default function StudentExam({ publicCode }: { publicCode: string }) {
   const { alert, confirm } = useModal();
+  const { sessionToken, isAuthenticated, user } = useAuth();
   const [exam, setExam] = useState<ExamPublicData | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -311,9 +317,9 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
         `/api/exams/${publicCode}/submissions`,
         {
           method: "POST",
-          headers: {
+          headers: withUserAuthHeaders(sessionToken, {
             "Content-Type": "application/json",
-          },
+          }),
           body: JSON.stringify(payload),
         },
       );
@@ -567,6 +573,25 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
             Rascunho salvo só neste aparelho (sem usar sua internet). O envio ao
             servidor acontece apenas quando você tocar em Finalizar.
           </p>
+          {isAuthenticated && user ? (
+            <p className="text-[10px] text-cyan-300/90 leading-relaxed">
+              Conectado como {user.email}. Este envio será salvo em Meus
+              Resultados e estará disponível em qualquer dispositivo.
+            </p>
+          ) : (
+            <p className="text-[10px] text-slate-500 leading-relaxed">
+              <button
+                type="button"
+                onClick={() =>
+                  navigateTo(buildLoginPath(`/prova/${publicCode}`))
+                }
+                className="font-semibold text-cyan-300/90 underline underline-offset-2 hover:text-cyan-200 cursor-pointer"
+              >
+                Entre com seu e-mail
+              </button>{" "}
+              antes de enviar se quiser guardar este resultado na sua conta.
+            </p>
+          )}
         </div>
 
         <div className="space-y-4">

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import Home from "./pages/Home";
+import AccountHub from "./pages/AccountHub";
 import TeacherCreate from "./pages/TeacherCreate";
 import TeacherDashboard from "./pages/TeacherDashboard";
 import TeacherAdminEntry from "./pages/TeacherAdminEntry";
@@ -17,11 +18,14 @@ import { AuthProvider } from "./contexts/AuthContext";
 import UserNav from "./components/UserNav";
 import { purgeLegacySubmissionReceiptsOnce } from "./utils/submissionReceipt";
 
+const APP_VERSION = "v1.1.1";
+
 export type RoutePath =
   | { type: "home" }
   | { type: "student-exam"; publicCode: string }
   | { type: "student-result"; submissionId: string }
   | { type: "student-submissions" }
+  | { type: "account-hub" }
   | { type: "teacher-create" }
   | { type: "teacher-dashboard" }
   | { type: "teacher-exams" }
@@ -55,6 +59,9 @@ export function parseCurrentRoute(): RoutePath {
   }
   if (path === "/meus-resultados") {
     return { type: "student-submissions" };
+  }
+  if (path === "/conta") {
+    return { type: "account-hub" };
   }
   if (path === "/minhas-provas") {
     return { type: "teacher-exams" };
@@ -147,6 +154,8 @@ function App() {
         return <StudentResult submissionId={route.submissionId} />;
       case "student-submissions":
         return <StudentSubmissionsList />;
+      case "account-hub":
+        return <AccountHub />;
       case "superadmin-login":
         return <SuperadminLogin />;
       case "superadmin-dashboard":
@@ -186,9 +195,6 @@ function App() {
                 ) : (
                   <UserNav />
                 )}
-                <span className="px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-400">
-                  v1.1.0
-                </span>
               </div>
             </div>
           </header>
@@ -201,10 +207,10 @@ function App() {
           </main>
 
           {/* Footer */}
-          <footer className="no-print border-t border-slate-900 py-6 text-center text-xs text-slate-600">
+          <footer className="no-print border-t border-slate-900 py-6 px-4 text-center text-xs text-slate-600">
             <p>
               © 2026-{new Date().getFullYear()} GabaritoWEB. Desenvolvido com ❤️
-              para facilitar a vida de professores e alunos.
+              para facilitar a vida de professores e alunos. ({APP_VERSION})
             </p>
           </footer>
         </div>

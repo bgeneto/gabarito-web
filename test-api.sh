@@ -635,7 +635,14 @@ if [ -z "$PROF_USER_SESSION" ] || [ "$PROF_USER_EMAIL" != "professor.teste@unive
   echo "$MAGIC_VERIFY_RESP"
   exit 1
 fi
-echo "OK: Magic link validado. Conectado como $PROF_USER_EMAIL"
+
+PROF_REDIRECT=$(echo "$MAGIC_VERIFY_RESP" | jq -r '.redirect_to // empty')
+if [ "$PROF_REDIRECT" != "/conta" ]; then
+  echo "FALHOU: conta nova deveria redirecionar para /conta (não /minhas-provas)"
+  echo "$MAGIC_VERIFY_RESP"
+  exit 1
+fi
+echo "OK: Magic link validado. Conectado como $PROF_USER_EMAIL (redirect_to=/conta)"
 
 # 12.3. Consultar /api/auth/me
 echo "12.3. Consultando /api/auth/me..."
@@ -679,6 +686,59 @@ if [ "$HAS_EXAM" -lt 1 ]; then
   exit 1
 fi
 echo "OK: Prova criada autenticada listada em /api/user/exams"
+
+echo "12.4b. Verificando resumo da conta e redirect inteligente do professor..."
+OVERVIEW_RESP=$(curl -s "$BASE_URL/user/overview" \
+  -H "Authorization: Bearer $PROF_USER_SESSION")
+OVERVIEW_EXAMS=$(echo "$OVERVIEW_RESP" | jq -r '.exam_count // 0')
+if [ "$OVERVIEW_EXAMS" -lt 1 ]; then
+  echo "FALHOU: /api/user/overview não contou a prova do professor"
+  echo "$OVERVIEW_RESP"
+  exit 1
+fi
+
+PROF_MAGIC_REQ2=$(curl -s -X POST "$BASE_URL/auth/magic-link/request" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "professor.teste@universidade.edu.br"}')
+PROF_DEV_TOKEN2=$(echo "$PROF_MAGIC_REQ2" | jq -r '.dev_token // empty')
+PROF_VERIFY2=$(curl -s -X POST "$BASE_URL/auth/magic-link/verify" \
+  -H "Content-Type: application/json" \
+  -d "{\"token\": \"$PROF_DEV_TOKEN2\"}")
+PROF_REDIRECT2=$(echo "$PROF_VERIFY2" | jq -r '.redirect_to // empty')
+if [ "$PROF_REDIRECT2" != "/minhas-provas" ]; then
+  echo "FALHOU: professor só com provas deveria redirecionar para /minhas-provas"
+  echo "$PROF_VERIFY2"
+  exit 1
+fi
+
+PROF_MAGIC_INTENT=$(curl -s -X POST "$BASE_URL/auth/magic-link/request" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "professor.teste@universidade.edu.br", "target_route": "/meus-resultados"}')
+PROF_INTENT_TOKEN=$(echo "$PROF_MAGIC_INTENT" | jq -r '.dev_token // empty')
+PROF_INTENT_VERIFY=$(curl -s -X POST "$BASE_URL/auth/magic-link/verify" \
+  -H "Content-Type: application/json" \
+  -d "{\"token\": \"$PROF_INTENT_TOKEN\"}")
+PROF_INTENT_REDIRECT=$(echo "$PROF_INTENT_VERIFY" | jq -r '.redirect_to // empty')
+if [ "$PROF_INTENT_REDIRECT" != "/meus-resultados" ]; then
+  echo "FALHOU: target_route explícito deveria ser honrado"
+  echo "$PROF_INTENT_VERIFY"
+  exit 1
+fi
+
+PROF_MAGIC_BAD=$(curl -s -X POST "$BASE_URL/auth/magic-link/request" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "professor.teste@universidade.edu.br", "target_route": "https://evil.example"}')
+PROF_BAD_TOKEN=$(echo "$PROF_MAGIC_BAD" | jq -r '.dev_token // empty')
+PROF_BAD_VERIFY=$(curl -s -X POST "$BASE_URL/auth/magic-link/verify" \
+  -H "Content-Type: application/json" \
+  -d "{\"token\": \"$PROF_BAD_TOKEN\"}")
+PROF_BAD_REDIRECT=$(echo "$PROF_BAD_VERIFY" | jq -r '.redirect_to // empty')
+if [ "$PROF_BAD_REDIRECT" != "/minhas-provas" ]; then
+  echo "FALHOU: target_route inválido deveria cair no destino inteligente"
+  echo "$PROF_BAD_VERIFY"
+  exit 1
+fi
+echo "OK: Redirect inteligente do professor e overview da conta"
 
 # 12.5. Criar prova anônima e resgatar/vincular via claim-exam
 echo "12.5. Criando prova anônima e vinculando retroativamente..."
@@ -727,6 +787,12 @@ ALUNO_VERIFY=$(curl -s -X POST "$BASE_URL/auth/magic-link/verify" \
   -H "Content-Type: application/json" \
   -d "{\"token\": \"$ALUNO_DEV_TOKEN\"}")
 ALUNO_SESSION=$(echo "$ALUNO_VERIFY" | jq -r '.session_token // empty')
+ALUNO_REDIRECT=$(echo "$ALUNO_VERIFY" | jq -r '.redirect_to // empty')
+if [ "$ALUNO_REDIRECT" != "/conta" ]; then
+  echo "FALHOU: aluno novo deveria redirecionar para /conta"
+  echo "$ALUNO_VERIFY"
+  exit 1
+fi
 
 # Buscar item da prova autenticada
 AUTH_EXAM_GET=$(curl -s "$BASE_URL/exams/$AUTH_EXAM_CODE")
@@ -754,6 +820,22 @@ if [ "$HAS_SUB" -lt 1 ]; then
   exit 1
 fi
 echo "OK: Submissão autenticada listada em /api/user/submissions"
+
+echo "12.6b. Verificando redirect inteligente do aluno..."
+ALUNO_MAGIC_REQ2=$(curl -s -X POST "$BASE_URL/auth/magic-link/request" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "aluno.gabarito@escola.org"}')
+ALUNO_DEV_TOKEN2=$(echo "$ALUNO_MAGIC_REQ2" | jq -r '.dev_token // empty')
+ALUNO_VERIFY2=$(curl -s -X POST "$BASE_URL/auth/magic-link/verify" \
+  -H "Content-Type: application/json" \
+  -d "{\"token\": \"$ALUNO_DEV_TOKEN2\"}")
+ALUNO_REDIRECT2=$(echo "$ALUNO_VERIFY2" | jq -r '.redirect_to // empty')
+if [ "$ALUNO_REDIRECT2" != "/meus-resultados" ]; then
+  echo "FALHOU: aluno só com envios deveria redirecionar para /meus-resultados"
+  echo "$ALUNO_VERIFY2"
+  exit 1
+fi
+echo "OK: Redirect inteligente do aluno apontou para /meus-resultados"
 
 # 12.7. Resgatar submissão anônima anterior via claim-submission
 echo "12.7. Vinculando submissão anterior anônima por comprovante..."

@@ -20,7 +20,12 @@ import {
   normalizeEmail,
 } from "../utils/authTokens.js";
 import { sendMagicLinkEmail } from "../services/mailer.js";
+import { countUserActivity } from "../services/userActivity.js";
 import { internalServerError } from "../utils/errorResponse.js";
+import {
+  resolvePostLoginDestination,
+  sanitizePostLoginPath,
+} from "../utils/postLoginRedirect.js";
 
 const authRouter = new Hono();
 
@@ -32,8 +37,7 @@ authRouter.post("/magic-link/request", magicLinkRateLimiter, async (c) => {
     const body = (c.get("parsedAuthBody" as any) ||
       (await c.req.json().catch(() => ({})))) as Record<string, unknown>;
     const rawEmail = typeof body.email === "string" ? body.email : "";
-    const targetRoute =
-      typeof body.target_route === "string" ? body.target_route.trim() : "";
+    const targetRoute = sanitizePostLoginPath(body.target_route) || "";
 
     const email = normalizeEmail(rawEmail);
     if (!isValidEmail(email)) {
@@ -181,7 +185,10 @@ authRouter.post("/magic-link/verify", async (c) => {
         email: user.email,
         name: user.name,
       },
-      redirect_to: link.targetRoute || "/minhas-provas",
+      redirect_to: resolvePostLoginDestination({
+        targetRoute: link.targetRoute,
+        ...(await countUserActivity(user.id, user.email)),
+      }),
     });
   } catch (error: unknown) {
     return internalServerError(c, "Erro ao validar link de acesso:", error);

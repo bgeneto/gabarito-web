@@ -2,6 +2,31 @@
 
 # GabaritoWEB - Script de Gerenciamento
 
+# WSL2 anexa o Node do Windows ao PATH. Priorize o nvm Linux para npm/npx
+# nunca dispararem cmd.exe (UNC \\wsl.localhost\... não é cwd válido no cmd).
+export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+if [ -s "$NVM_DIR/nvm.sh" ]; then
+  # shellcheck source=/dev/null
+  . "$NVM_DIR/nvm.sh"
+fi
+
+filtered_path=""
+old_ifs=$IFS
+IFS=':'
+for path_entry in $PATH; do
+  case "$path_entry" in
+    *"/mnt/c/Program Files/nodejs"*) continue ;;
+    *"/mnt/c/Program Files (x86)/nodejs"*) continue ;;
+  esac
+  if [ -z "$filtered_path" ]; then
+    filtered_path="$path_entry"
+  else
+    filtered_path="$filtered_path:$path_entry"
+  fi
+done
+IFS=$old_ifs
+export PATH="$filtered_path"
+
 function show_help() {
   echo "Uso: ./manage.sh [comando]"
   echo ""
@@ -18,7 +43,7 @@ function show_help() {
   echo "  format        Formata o código-fonte de todo o projeto usando Prettier"
   echo "  db-push       Aplica as alterações do schema TypeScript diretamente no banco SQLite"
   echo "  build         Roda o build geral do monorepo localmente (backend + frontend)"
-  echo "  test          Roda os testes de integração de API (usa a instância ativa ou sobe uma temporária)"
+  echo "  test          Roda testes unitários e, em seguida, os de integração da API"
 }
 
 case "$1" in
@@ -90,7 +115,7 @@ case "$1" in
     npm run build
     ;;
   test)
-    echo "Executando testes unitários do backend..."
+    echo "Executando testes unitários (backend + frontend)..."
     npm run test:unit
     UNIT_STATUS=$?
     if [ $UNIT_STATUS -ne 0 ]; then
