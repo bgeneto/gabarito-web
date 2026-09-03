@@ -72,7 +72,7 @@ export default function AccountHub() {
             <ClipboardList className="w-6 h-6 text-blue-400" />
           </div>
           <h2 className="font-bold text-lg group-hover:text-blue-400 transition-colors">
-            Minhas Provas
+            Minhas Avaliações
           </h2>
           <p className="text-xs text-slate-500 mt-1 mb-3">
             Gabaritos que você criou ou vinculou com o token administrativo.
@@ -81,8 +81,8 @@ export default function AccountHub() {
             {examCount == null
               ? "Abrir painel do professor"
               : examCount === 1
-                ? "1 prova vinculada"
-                : `${examCount} provas vinculadas`}
+                ? "1 avaliação vinculada"
+                : `${examCount} avaliações vinculadas`}
           </span>
         </button>
 
@@ -112,7 +112,7 @@ export default function AccountHub() {
       <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3 text-xs text-slate-500">
         <span className="inline-flex items-center gap-1.5">
           <LinkIcon className="w-3.5 h-3.5 text-slate-500" />
-          Provas antigas: use Vincular por Token ou por Comprovante em cada
+          Avaliações antigas: use Vincular por Token ou por Comprovante em cada
           lista.
         </span>
       </div>

@@ -78,7 +78,7 @@ export async function sendMagicLinkEmail(
   }
 
   const textBody = `============================================================
-  📝 GabaritoWEB — Correção Online de Provas
+  📝 GabaritoWEB — Correção Online de Avaliações
 ============================================================
 
 Olá!
@@ -98,7 +98,7 @@ INFORMAÇÕES DE SEGURANÇA:
   Nenhuma alteração foi realizada na sua conta.
 ------------------------------------------------------------
 
-© 2026 GabaritoWEB • Correção Inteligente de Provas
+© 2026 GabaritoWEB • Correção Inteligente de Avaliações
 https://gabarito.sistema.pro.br`;
 
   const htmlBody = `<!DOCTYPE html>
@@ -263,7 +263,7 @@ https://gabarito.sistema.pro.br`;
           <tr>
             <td align="center" style="padding-top: 28px; padding-bottom: 12px;">
               <p style="margin: 0 0 6px 0; font-size: 12px; color: #475569;">
-                GabaritoWEB &bull; Correção online de provas ágil e descomplicada
+                GabaritoWEB &bull; Correção online de avaliações ágil e descomplicada
               </p>
               <p style="margin: 0; font-size: 11px; color: #334155;">
                 &copy; 2026 GabaritoWEB &bull; <a href="${siteUrl}" target="_blank" style="color: #0284c7 !important; text-decoration: underline;">gabarito.sistema.pro.br</a>

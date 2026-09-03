@@ -149,7 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
     const data = await res.json();
     if (!res.ok) {
-      throw new Error(data.message || "Erro ao vincular prova.");
+      throw new Error(data.message || "Erro ao vincular avaliação.");
     }
     return data;
   };

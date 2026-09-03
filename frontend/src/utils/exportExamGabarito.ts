@@ -43,7 +43,7 @@ export function downloadExamGabaritoJson(
   const slug = slugifyExamTitle(filenameHint ?? payload.title);
 
   link.href = url;
-  link.download = `gabarito-${slug || "prova"}.json`;
+  link.download = `gabarito-${slug || "avaliacao"}.json`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

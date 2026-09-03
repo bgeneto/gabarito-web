@@ -45,7 +45,8 @@ export async function exchangeAdminToken(
 
   if (!response.ok) {
     throw new Error(
-      data.message || "Token administrativo inválido ou prova não encontrada.",
+      data.message ||
+        "Token administrativo inválido ou avaliação não encontrada.",
     );
   }
 

@@ -140,7 +140,7 @@ export default function TeacherCreate() {
       return "O formato do arquivo deve ser um objeto JSON contendo o título e as questões.";
     }
     if (typeof data.title !== "string" || !data.title.trim()) {
-      return "O título da prova é inválido ou está vazio.";
+      return "O título da avaliação é inválido ou está vazio.";
     }
     if (!Array.isArray(data.items) || data.items.length === 0) {
       return "A lista de questões ('items') deve conter pelo menos uma questão.";
@@ -379,7 +379,7 @@ export default function TeacherCreate() {
     setLoading(true);
 
     if (!title.trim()) {
-      setError("Por favor, informe o título da prova.");
+      setError("Por favor, informe o título da avaliação.");
       setLoading(false);
       return;
     }
@@ -558,7 +558,7 @@ export default function TeacherCreate() {
               <QRCodeSVG value={publicUrl} size={200} />
             </div>
             <p>
-              <strong>Código da prova:</strong> {result.public_code}
+              <strong>Código da avaliação:</strong> {result.public_code}
             </p>
             <p className="print-break-word">
               <strong>Link de resposta:</strong> {publicUrl}
@@ -717,7 +717,7 @@ export default function TeacherCreate() {
               </div>
               <div className="space-y-2">
                 <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
-                  Código da Prova
+                  Código da Avaliação
                 </p>
                 <p className="font-mono font-black text-3xl tracking-wider text-cyan-400">
                   {result.public_code}
@@ -746,15 +746,15 @@ export default function TeacherCreate() {
             </h2>
             <p className="text-sm text-slate-400 mt-1">
               {isAuthenticated
-                ? "A prova foi publicada e vinculada à sua conta. Ela aparece em Minhas Provas em qualquer dispositivo."
-                : "A prova foi publicada e está pronta para receber submissões."}
+                ? "A avaliação foi publicada e vinculada à sua conta. Ela aparece em Minhas Avaliações em qualquer dispositivo."
+                : "A avaliação foi publicada e está pronta para receber submissões."}
             </p>
             {isAuthenticated && (
               <button
                 onClick={() => navigateTo("/minhas-provas")}
                 className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-cyan-300 hover:text-cyan-200 underline underline-offset-2 cursor-pointer"
               >
-                Ver em Minhas Provas
+                Ver em Minhas Avaliações
               </button>
             )}
             <div className="mt-4 flex flex-wrap justify-center gap-2">
@@ -801,7 +801,7 @@ export default function TeacherCreate() {
             title="Acesso dos Alunos"
             description="Compartilhe o código ou o QR code abaixo para que os estudantes enviem suas respostas."
             qrValue={publicUrl}
-            codeLabel="Código da Prova"
+            codeLabel="Código da Avaliação"
             codeValue={result.public_code}
             linkLabel="Link de Resposta"
             linkValue={publicUrl}
@@ -832,7 +832,7 @@ export default function TeacherCreate() {
             <div className="flex items-start gap-2 text-xs text-amber-300/90 bg-amber-950/20 border border-amber-900/30 rounded-xl p-3">
               <Lock className="w-4 h-4 shrink-0 mt-0.5" />
               <span>
-                Salve as credenciais administrativas antes de exibir a prova
+                Salve as credenciais administrativas antes de exibir a avaliação
                 para a turma ou revelar o link admin.
               </span>
             </div>
@@ -847,7 +847,7 @@ export default function TeacherCreate() {
                 <div className="flex-1 space-y-3">
                   <p className="text-sm text-slate-400">
                     Guarde o link administrativo em local seguro antes de exibir
-                    a prova para a turma.
+                    a avaliação para a turma.
                   </p>
                   <button
                     onClick={handleRevealAdmin}
@@ -881,7 +881,7 @@ export default function TeacherCreate() {
                 </div>
                 <p className="text-xs text-slate-400 mb-4">
                   Use este token privado para acessar o painel de resultados e
-                  encerrar a prova posteriormente.
+                  encerrar a avaliação posteriormente.
                 </p>
 
                 <div className="bg-rose-950/20 border border-rose-900/30 p-3.5 rounded-xl text-xs text-rose-300 mb-4 flex gap-2">
@@ -988,14 +988,14 @@ export default function TeacherCreate() {
             <ArrowLeft />
           </button>
           <div>
-            <h1 className="text-2xl font-black">Configurar Prova</h1>
+            <h1 className="text-2xl font-black">Configurar Avaliação</h1>
             <p className="text-xs text-slate-500">
               Defina o título, as questões e os gabaritos aceitos.
             </p>
             {isAuthenticated && user && (
               <p className="text-[11px] text-cyan-400/90 mt-1">
-                Conectado como {user.email}. Esta prova será salva em Minhas
-                Provas.
+                Conectado como {user.email}. Esta avaliação será salva em Minhas
+                Avaliações.
               </p>
             )}
           </div>
@@ -1021,18 +1021,18 @@ export default function TeacherCreate() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Título da Prova */}
+        {/* Título da Avaliação */}
         <div className="glass-panel border border-slate-800 rounded-2xl p-5">
           <label
             htmlFor="examTitle"
             className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider"
           >
-            Título da Prova
+            Título da Avaliação
           </label>
           <input
             id="examTitle"
             type="text"
-            placeholder="Ex: Prova de Física Geral I - Recuperação"
+            placeholder="Ex: Avaliação de Física Geral I - Recuperação"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-slate-100 placeholder:text-slate-600 font-bold"

@@ -88,7 +88,7 @@
   animation: modal-fade-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Impressão de credenciais da prova e relatório de submissão */
+/* Impressão de credenciais da avaliação e relatório de submissão */
 @media print {
   @page {
     size: A4;

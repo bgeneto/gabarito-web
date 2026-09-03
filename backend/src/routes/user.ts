@@ -161,7 +161,8 @@ userRouter.post("/claim-exam", async (c) => {
       return c.json(
         {
           error: "Não encontrado",
-          message: "Nenhuma prova encontrada com este token administrativo.",
+          message:
+            "Nenhuma avaliação encontrada com este token administrativo.",
         },
         404,
       );
@@ -177,7 +178,7 @@ userRouter.post("/claim-exam", async (c) => {
 
     return c.json({
       ok: true,
-      message: `Prova "${exam.title}" vinculada à sua conta com sucesso!`,
+      message: `Avaliação "${exam.title}" vinculada à sua conta com sucesso!`,
       exam: {
         id: exam.id,
         title: exam.title,
@@ -243,7 +244,7 @@ userRouter.post("/claim-submission", async (c) => {
 
     return c.json({
       ok: true,
-      message: `Submissão da prova "${sub.examTitle}" vinculada ao seu histórico com sucesso!`,
+      message: `Submissão da avaliação "${sub.examTitle}" vinculada ao seu histórico com sucesso!`,
       submission: {
         id: sub.id,
         exam_title: sub.examTitle,

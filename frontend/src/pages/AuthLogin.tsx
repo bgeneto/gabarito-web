@@ -83,7 +83,7 @@ export default function AuthLogin() {
               onClick={() => navigateTo("/minhas-provas")}
               className="w-full py-3 px-4 rounded-xl font-semibold text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-all cursor-pointer"
             >
-              Minhas Provas (Professor)
+              Minhas Avaliações (Professor)
             </button>
             <button
               onClick={() => navigateTo("/meus-resultados")}
@@ -120,7 +120,7 @@ export default function AuthLogin() {
           </h1>
           <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
             Digite seu e-mail para receber um link mágico e acessar seu
-            histórico de provas (professor) e envios (aluno).
+            histórico de avaliações (professor) e envios (aluno).
           </p>
         </div>
 
@@ -202,7 +202,7 @@ export default function AuthLogin() {
 
         <div className="mt-6 pt-4 border-t border-slate-800/80 text-center">
           <p className="text-[11px] text-slate-500">
-            Não é obrigatório criar conta para responder ou criar provas
+            Não é obrigatório criar conta para responder ou criar avaliações
             avulsas.
           </p>
         </div>

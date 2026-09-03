@@ -172,7 +172,7 @@ app.post("/api/exams", optionalUserAuth, async (c) => {
 
     if (typeof title !== "string" || title.trim().length === 0) {
       return c.json(
-        { error: "Validação", message: "O título da prova é inválido." },
+        { error: "Validação", message: "O título da avaliação é inválido." },
         400,
       );
     }
@@ -181,7 +181,7 @@ app.post("/api/exams", optionalUserAuth, async (c) => {
       return c.json(
         {
           error: "Validação",
-          message: `O título da prova deve ter no máximo ${MAX_TITLE_LENGTH} caracteres.`,
+          message: `O título da avaliação deve ter no máximo ${MAX_TITLE_LENGTH} caracteres.`,
         },
         400,
       );
@@ -191,7 +191,7 @@ app.post("/api/exams", optionalUserAuth, async (c) => {
       return c.json(
         {
           error: "Validação",
-          message: `A prova pode ter no máximo ${MAX_ITEMS_PER_EXAM} itens.`,
+          message: `A avaliação pode ter no máximo ${MAX_ITEMS_PER_EXAM} itens.`,
         },
         400,
       );
@@ -280,7 +280,7 @@ app.post("/api/exams", optionalUserAuth, async (c) => {
       return c.json(
         {
           error: "Erro de geração",
-          message: "Não foi possível gerar um código de prova único.",
+          message: "Não foi possível gerar um código único para a avaliação.",
         },
         500,
       );
@@ -380,7 +380,7 @@ app.get("/api/exams/:public_code", async (c) => {
       return c.json(
         {
           error: "Não encontrado",
-          message: "Prova não encontrada com o código informado.",
+          message: "Avaliação não encontrada com o código informado.",
         },
         404,
       );
@@ -407,7 +407,7 @@ app.get("/api/exams/:public_code", async (c) => {
       items: itemsList,
     });
   } catch (error: unknown) {
-    return internalServerError(c, "Erro ao buscar prova:", error);
+    return internalServerError(c, "Erro ao buscar avaliação:", error);
   }
 });
 
@@ -479,7 +479,7 @@ app.post(
         .where(eq(exams.publicCode, publicCode));
       if (!exam) {
         return c.json(
-          { error: "Não encontrado", message: "Prova não encontrada." },
+          { error: "Não encontrado", message: "Avaliação não encontrada." },
           404,
         );
       }
@@ -488,7 +488,8 @@ app.post(
         return c.json(
           {
             error: "Bloqueado",
-            message: "Esta prova já foi encerrada e não aceita mais envios.",
+            message:
+              "Esta avaliação já foi encerrada e não aceita mais envios.",
           },
           403,
         );
@@ -511,7 +512,7 @@ app.post(
           {
             error: "Conflito",
             message:
-              "Você já enviou as respostas para esta prova. O reenvio está bloqueado. Use o código do comprovante na Home para consultar o resultado.",
+              "Você já enviou as respostas para esta avaliação. O reenvio está bloqueado. Use o código do comprovante na Home para consultar o resultado.",
             already_submitted: true,
           },
           409,
@@ -638,7 +639,7 @@ app.post(
         {
           submission_id: submissionId,
           message:
-            "Respostas registradas com sucesso. A nota será disponibilizada quando o professor encerrar a prova.",
+            "Respostas registradas com sucesso. A nota será disponibilizada quando o professor encerrar a avaliação.",
         },
         201,
       );
@@ -661,7 +662,8 @@ app.get("/api/submissions/:submission_id", async (c) => {
       return c.json(
         {
           error: "Não encontrado",
-          message: "Submissão de prova não encontrada.",
+          message:
+            "Comprovante de submissão não encontrado. Verifique o código digitado.",
         },
         404,
       );
@@ -683,7 +685,7 @@ app.get("/api/submissions/:submission_id", async (c) => {
         status: "open",
         total_score: null,
         message:
-          "A nota e o gabarito estarão disponíveis assim que a prova for encerrada pelo professor.",
+          "A nota e o gabarito estarão disponíveis assim que a avaliação for encerrada pelo professor.",
       });
     }
 

@@ -607,11 +607,16 @@ echo "OK: questão numérica (km/h -> m/s, tolerância absoluta sem unidade)"
 # 12. Testes de Autenticação Magic Link e Histórico de Usuários
 echo -e "\n12. Testando autenticação Magic Link e histórico de usuários..."
 
+AUTH_RUN_ID="$(date +%s)_$RANDOM"
+TEST_PROF_EMAIL_RAW="Professor.Teste.${AUTH_RUN_ID}@Universidade.edu.br"
+TEST_PROF_EMAIL="professor.teste.${AUTH_RUN_ID}@universidade.edu.br"
+TEST_ALUNO_EMAIL="aluno.gabarito.${AUTH_RUN_ID}@escola.org"
+
 # 12.1. Solicitar Magic Link
 echo "12.1. Solicitando Magic Link para professor..."
 MAGIC_REQ_RESP=$(curl -s -X POST "$BASE_URL/auth/magic-link/request" \
   -H "Content-Type: application/json" \
-  -d '{"email": "Professor.Teste@Universidade.edu.br"}')
+  -d "{\"email\": \"$TEST_PROF_EMAIL_RAW\"}")
 
 DEV_TOKEN=$(echo "$MAGIC_REQ_RESP" | jq -r '.dev_token // empty')
 if [ -z "$DEV_TOKEN" ] || [ "$DEV_TOKEN" = "null" ]; then
@@ -630,7 +635,7 @@ MAGIC_VERIFY_RESP=$(curl -s -X POST "$BASE_URL/auth/magic-link/verify" \
 PROF_USER_SESSION=$(echo "$MAGIC_VERIFY_RESP" | jq -r '.session_token // empty')
 PROF_USER_EMAIL=$(echo "$MAGIC_VERIFY_RESP" | jq -r '.user.email // empty')
 
-if [ -z "$PROF_USER_SESSION" ] || [ "$PROF_USER_EMAIL" != "professor.teste@universidade.edu.br" ]; then
+if [ -z "$PROF_USER_SESSION" ] || [ "$PROF_USER_EMAIL" != "$TEST_PROF_EMAIL" ]; then
   echo "FALHOU: validação do magic link"
   echo "$MAGIC_VERIFY_RESP"
   exit 1
@@ -650,7 +655,7 @@ ME_RESP=$(curl -s "$BASE_URL/auth/me" \
   -H "Authorization: Bearer $PROF_USER_SESSION")
 ME_EMAIL=$(echo "$ME_RESP" | jq -r '.user.email // empty')
 
-if [ "$ME_EMAIL" != "professor.teste@universidade.edu.br" ]; then
+if [ "$ME_EMAIL" != "$TEST_PROF_EMAIL" ]; then
   echo "FALHOU: /api/auth/me retornou e-mail inesperado"
   echo "$ME_RESP"
   exit 1
@@ -699,7 +704,7 @@ fi
 
 PROF_MAGIC_REQ2=$(curl -s -X POST "$BASE_URL/auth/magic-link/request" \
   -H "Content-Type: application/json" \
-  -d '{"email": "professor.teste@universidade.edu.br"}')
+  -d "{\"email\": \"$TEST_PROF_EMAIL\"}")
 PROF_DEV_TOKEN2=$(echo "$PROF_MAGIC_REQ2" | jq -r '.dev_token // empty')
 PROF_VERIFY2=$(curl -s -X POST "$BASE_URL/auth/magic-link/verify" \
   -H "Content-Type: application/json" \
@@ -713,7 +718,7 @@ fi
 
 PROF_MAGIC_INTENT=$(curl -s -X POST "$BASE_URL/auth/magic-link/request" \
   -H "Content-Type: application/json" \
-  -d '{"email": "professor.teste@universidade.edu.br", "target_route": "/meus-resultados"}')
+  -d "{\"email\": \"$TEST_PROF_EMAIL\", \"target_route\": \"/meus-resultados\"}")
 PROF_INTENT_TOKEN=$(echo "$PROF_MAGIC_INTENT" | jq -r '.dev_token // empty')
 PROF_INTENT_VERIFY=$(curl -s -X POST "$BASE_URL/auth/magic-link/verify" \
   -H "Content-Type: application/json" \
@@ -727,7 +732,7 @@ fi
 
 PROF_MAGIC_BAD=$(curl -s -X POST "$BASE_URL/auth/magic-link/request" \
   -H "Content-Type: application/json" \
-  -d '{"email": "professor.teste@universidade.edu.br", "target_route": "https://evil.example"}')
+  -d "{\"email\": \"$TEST_PROF_EMAIL\", \"target_route\": \"https://evil.example\"}")
 PROF_BAD_TOKEN=$(echo "$PROF_MAGIC_BAD" | jq -r '.dev_token // empty')
 PROF_BAD_VERIFY=$(curl -s -X POST "$BASE_URL/auth/magic-link/verify" \
   -H "Content-Type: application/json" \
@@ -780,7 +785,7 @@ echo "OK: Prova anônima vinculada retroativamente com sucesso!"
 echo "12.6. Autenticando aluno e enviando submissão..."
 ALUNO_MAGIC_REQ=$(curl -s -X POST "$BASE_URL/auth/magic-link/request" \
   -H "Content-Type: application/json" \
-  -d '{"email": "aluno.gabarito@escola.org"}')
+  -d "{\"email\": \"$TEST_ALUNO_EMAIL\"}")
 ALUNO_DEV_TOKEN=$(echo "$ALUNO_MAGIC_REQ" | jq -r '.dev_token // empty')
 
 ALUNO_VERIFY=$(curl -s -X POST "$BASE_URL/auth/magic-link/verify" \
@@ -824,7 +829,7 @@ echo "OK: Submissão autenticada listada em /api/user/submissions"
 echo "12.6b. Verificando redirect inteligente do aluno..."
 ALUNO_MAGIC_REQ2=$(curl -s -X POST "$BASE_URL/auth/magic-link/request" \
   -H "Content-Type: application/json" \
-  -d '{"email": "aluno.gabarito@escola.org"}')
+  -d "{\"email\": \"$TEST_ALUNO_EMAIL\"}")
 ALUNO_DEV_TOKEN2=$(echo "$ALUNO_MAGIC_REQ2" | jq -r '.dev_token // empty')
 ALUNO_VERIFY2=$(curl -s -X POST "$BASE_URL/auth/magic-link/verify" \
   -H "Content-Type: application/json" \

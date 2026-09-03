@@ -133,7 +133,7 @@ export default function StudentSubmissionsList() {
             </span>
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            Histórico de provas e gabaritos associados a{" "}
+            Histórico de avaliações e gabaritos associados a{" "}
             <strong className="text-slate-200">{user?.email}</strong>
           </p>
         </div>
@@ -160,7 +160,7 @@ export default function StudentSubmissionsList() {
               {submissions.length}
             </div>
             <div className="text-[11px] text-slate-400 font-medium">
-              Provas Realizadas
+              Avaliações Realizadas
             </div>
           </div>
         </div>
@@ -198,7 +198,7 @@ export default function StudentSubmissionsList() {
             </h2>
             <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
               Você ainda não enviou respostas enquanto estava conectado. Se você
-              já fez uma prova antes, pode vinculá-la usando o código de
+              já fez uma avaliação antes, pode vinculá-la usando o código de
               comprovante de 6 caracteres.
             </p>
           </div>
@@ -207,7 +207,7 @@ export default function StudentSubmissionsList() {
               onClick={() => navigateTo("/")}
               className="px-4 py-2.5 rounded-xl font-bold text-xs text-white bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 shadow-md transition-all cursor-pointer"
             >
-              Responder uma Prova
+              Responder uma Avaliação
             </button>
             <button
               onClick={() => setShowClaimModal(true)}
@@ -238,7 +238,7 @@ export default function StudentSubmissionsList() {
                           : "bg-amber-950/60 border-amber-800/50 text-amber-300"
                       }`}
                     >
-                      {isClosed ? "Nota Disponível" : "Prova Aberta"}
+                      {isClosed ? "Nota Disponível" : "Avaliação Aberta"}
                     </span>
                   </div>
 
@@ -316,7 +316,7 @@ export default function StudentSubmissionsList() {
             </div>
 
             <p className="text-xs text-slate-400">
-              Enviou uma prova anonimamente? Insira o{" "}
+              Enviou uma avaliação anonimamente? Insira o{" "}
               <strong>Código do Comprovante</strong> de 6 caracteres (ex:{" "}
               <code className="text-cyan-300">A7K9QF</code>) para salvá-la no
               seu histórico permanente.

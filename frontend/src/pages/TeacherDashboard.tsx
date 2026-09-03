@@ -157,9 +157,9 @@ export default function TeacherDashboard() {
   const handleCloseExam = async () => {
     if (!data) return;
     const hasConfirmed = await confirm(
-      "Tem certeza que deseja encerrar a prova? Uma vez encerrada, novos envios de alunos serão bloqueados e os resultados individuais serão liberados.",
+      "Tem certeza que deseja encerrar a avaliação? Uma vez encerrada, novos envios de alunos serão bloqueados e os resultados individuais serão liberados.",
       {
-        title: "Encerrar Prova",
+        title: "Encerrar Avaliação",
         severity: "danger",
         confirmText: "Encerrar",
         cancelText: "Cancelar",
@@ -176,7 +176,7 @@ export default function TeacherDashboard() {
       });
       const resData = await response.json();
       if (!response.ok) {
-        throw new Error(resData.message || "Erro ao encerrar a prova.");
+        throw new Error(resData.message || "Erro ao encerrar a avaliação.");
       }
 
       // Atualiza estado local
@@ -186,8 +186,8 @@ export default function TeacherDashboard() {
         closed_at: resData.closed_at,
       });
     } catch (err: any) {
-      await alert(err.message || "Houve um erro ao encerrar a prova.", {
-        title: "Erro ao Encerrar Prova",
+      await alert(err.message || "Houve um erro ao encerrar a avaliação.", {
+        title: "Erro ao Encerrar Avaliação",
         severity: "danger",
       });
     } finally {
@@ -449,7 +449,8 @@ export default function TeacherDashboard() {
         </div>
         <h2 className="text-xl font-bold">Sessão administrativa ausente</h2>
         <p className="text-sm text-slate-400">
-          Informe o token administrativo na Home para acessar o painel da prova.
+          Informe o token administrativo na Home para acessar o painel da
+          avaliação.
         </p>
         <button
           onClick={() => navigateTo("/")}
@@ -469,7 +470,7 @@ export default function TeacherDashboard() {
         </div>
         <h2 className="text-xl font-bold">Erro de Acesso</h2>
         <p className="text-sm text-slate-400">
-          {error || "Não foi possível carregar os dados desta prova."}
+          {error || "Não foi possível carregar os dados desta avaliação."}
         </p>
         <button
           onClick={() => navigateTo("/")}
@@ -494,7 +495,7 @@ export default function TeacherDashboard() {
               className={`w-2.5 h-2.5 rounded-full ${data.status === "open" ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`}
             ></span>
             <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-              Prova {data.status === "open" ? "Ativa" : "Encerrada"}
+              Avaliação {data.status === "open" ? "Ativa" : "Encerrada"}
             </span>
           </div>
           <h1 className="text-2xl font-black">{data.title}</h1>
@@ -533,7 +534,7 @@ export default function TeacherDashboard() {
               className="flex items-center gap-1.5 px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
             >
               <Lock className="w-3.5 h-3.5" />
-              Encerrar Prova
+              Encerrar Avaliação
             </button>
           ) : (
             <span className="flex items-center gap-1.5 px-4 py-2 bg-rose-950/20 border border-rose-900/30 rounded-xl text-xs font-bold text-rose-300 select-none">

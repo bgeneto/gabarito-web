@@ -18,7 +18,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import UserNav from "./components/UserNav";
 import { purgeLegacySubmissionReceiptsOnce } from "./utils/submissionReceipt";
 
-const APP_VERSION = "v1.1.1";
+const APP_VERSION = "v1.1.2";
 
 export type RoutePath =
   | { type: "home" }
@@ -53,6 +53,10 @@ export function parseCurrentRoute(): RoutePath {
     const publicCode = path.replace("/prova/", "").trim();
     return { type: "student-exam", publicCode };
   }
+  if (path.startsWith("/avaliacao/")) {
+    const publicCode = path.replace("/avaliacao/", "").trim();
+    return { type: "student-exam", publicCode };
+  }
   if (path.startsWith("/submissao/")) {
     const submissionId = path.replace("/submissao/", "").trim();
     return { type: "student-result", submissionId };
@@ -63,7 +67,7 @@ export function parseCurrentRoute(): RoutePath {
   if (path === "/conta") {
     return { type: "account-hub" };
   }
-  if (path === "/minhas-provas") {
+  if (path === "/minhas-provas" || path === "/minhas-avaliacoes") {
     return { type: "teacher-exams" };
   }
   if (path === "/entrar" || path === "/login") {
@@ -89,7 +93,7 @@ export function parseCurrentRoute(): RoutePath {
   if (path === "/superadmin" || path === "/superadmin/") {
     return { type: "superadmin-login" };
   }
-  if (path === "/criar-prova") {
+  if (path === "/criar-prova" || path === "/criar-avaliacao") {
     return { type: "teacher-create" };
   }
 

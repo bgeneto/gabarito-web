@@ -259,7 +259,7 @@ export default function SuperadminDashboard() {
     if (!file) return;
 
     const confirmed = window.confirm(
-      "Importar provas do backup que ainda não existem neste banco?",
+      "Importar avaliações do backup que ainda não existem neste banco?",
     );
     if (!confirmed) return;
 
@@ -378,7 +378,7 @@ export default function SuperadminDashboard() {
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <KpiCard
-              label="Provas"
+              label="Avaliações"
               value={overview.exams.total}
               sub={`${overview.exams.open} abertas · ${overview.exams.closed} encerradas`}
               icon={BookOpen}
@@ -406,7 +406,7 @@ export default function SuperadminDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="glass-panel rounded-xl p-4 border border-slate-800">
               <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-3">
-                Provas criadas (14d)
+                Avaliações criadas (14d)
               </p>
               <MiniBarChart
                 data={overview.timeline.exams_by_day}
@@ -457,7 +457,7 @@ export default function SuperadminDashboard() {
       <div className="glass-panel rounded-xl border border-slate-800 overflow-hidden">
         <div className="p-4 border-b border-slate-800 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
           <h2 className="font-bold text-slate-100">
-            Todas as provas ({pagination.total})
+            Todas as avaliações ({pagination.total})
           </h2>
           <div className="flex flex-wrap gap-2">
             <form onSubmit={handleSearch} className="flex gap-2">
@@ -546,10 +546,10 @@ export default function SuperadminDashboard() {
                     }
                     onChange={toggleAllOnPage}
                     className="rounded border-slate-600 bg-slate-900 text-amber-500 focus:ring-amber-500/50 cursor-pointer"
-                    aria-label="Selecionar todas as provas desta página"
+                    aria-label="Selecionar todas as avaliações desta página"
                   />
                 </th>
-                <th className="p-3 font-bold">Prova</th>
+                <th className="p-3 font-bold">Avaliação</th>
                 <th className="p-3 font-bold">Status</th>
                 <th className="p-3 font-bold">Criada</th>
                 <th className="p-3 font-bold text-right">Itens</th>
@@ -564,7 +564,7 @@ export default function SuperadminDashboard() {
               {exams.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="p-8 text-center text-slate-500">
-                    Nenhuma prova encontrada.
+                    Nenhuma avaliação encontrada.
                   </td>
                 </tr>
               ) : (
@@ -649,7 +649,7 @@ export default function SuperadminDashboard() {
           <div className="p-4 border-t border-slate-800 flex justify-between items-center text-sm text-slate-400">
             <span>
               Página {pagination.page} de {pagination.total_pages} (
-              {pagination.total} provas)
+              {pagination.total} avaliações)
             </span>
             <div className="flex gap-2">
               <button

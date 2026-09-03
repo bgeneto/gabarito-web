@@ -119,7 +119,7 @@ export default function StudentResult({
           <div>
             <h1 className="text-lg font-black truncate">{data.exam_title}</h1>
             <p className="text-[10px] text-slate-500 uppercase mt-0.5">
-              Status: Prova Aberta
+              Status: Avaliação Aberta
             </p>
           </div>
         </div>
@@ -137,7 +137,7 @@ export default function StudentResult({
             </h2>
             <p className="text-xs text-slate-400 max-w-[280px] mx-auto">
               A nota e o gabarito detalhado estarão disponíveis assim que o
-              professor encerrar a aplicação desta prova.
+              professor encerrar a aplicação desta avaliação.
             </p>
           </div>
         </div>
@@ -191,13 +191,13 @@ export default function StudentResult({
           />
           {refreshing
             ? "Verificando..."
-            : "Verificar se a prova já foi encerrada..."}
+            : "Verificar se a avaliação já foi encerrada..."}
         </button>
       </div>
     );
   }
 
-  // Se a prova estiver encerrada (Resultado detalhado disponível)
+  // Se a avaliação estiver encerrada (Resultado detalhado disponível)
   const maxPoints = data.max_score
     ? data.max_score
     : data.answers
@@ -239,7 +239,7 @@ export default function StudentResult({
           <div>
             <h1 className="text-xl font-black truncate">{data.exam_title}</h1>
             <p className="text-[10px] text-slate-500 uppercase mt-0.5">
-              Prova Encerrada • Nota Divulgada
+              Avaliação Encerrada • Nota Divulgada
             </p>
           </div>
         </div>

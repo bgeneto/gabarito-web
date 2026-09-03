@@ -8,6 +8,7 @@ import {
   ArrowLeft,
   Save,
   RotateCcw,
+  Receipt,
 } from "lucide-react";
 import { useModal } from "../components/ModalProvider";
 import { useAuth } from "../contexts/AuthContext";
@@ -21,6 +22,10 @@ import {
 } from "../utils/examDraft";
 import { fetchJson, formatFetchErrorMessage } from "../utils/fetchJson";
 import { clearSubmissionReceiptsForExam } from "../utils/submissionReceipt";
+import {
+  formatReceiptCode,
+  validateReceiptCode,
+} from "../utils/codeFormatters";
 import QrSharePanel from "../components/QrSharePanel";
 import {
   buildSubmissionUrl,
@@ -69,6 +74,10 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
 
   // In-memory only for this session's successful submit (never persisted).
   const [receiptId, setReceiptId] = useState("");
+
+  // Consulta direta em prova fechada
+  const [closedReceiptInput, setClosedReceiptInput] = useState("");
+  const [closedReceiptError, setClosedReceiptError] = useState("");
 
   // Draft persistence
   const [draftRestored, setDraftRestored] = useState(false);
@@ -158,7 +167,7 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
         ExamPublicData & { message?: string }
       >(`/api/exams/${publicCode}`);
       if (!ok) {
-        throw new Error(data.message || "Erro ao buscar dados da prova.");
+        throw new Error(data.message || "Erro ao buscar dados da avaliação.");
       }
       setExam(data);
 
@@ -327,7 +336,7 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
       if (status === 409 || data.already_submitted) {
         await alert(
           data.message ||
-            "Você já enviou as respostas para esta prova. O reenvio está bloqueado. Use o código do comprovante na Home para consultar o resultado.",
+            "Você já enviou as respostas para esta avaliação. O reenvio está bloqueado. Use o código do comprovante na Home para consultar o resultado.",
           {
             title: "Envio já registrado",
             severity: "warning",
@@ -361,7 +370,7 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
       <div className="text-center py-12">
         <div className="w-10 h-10 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
         <p className="text-slate-400 text-sm">
-          Carregando estrutura da prova...
+          Carregando estrutura da avaliação...
         </p>
       </div>
     );
@@ -373,7 +382,9 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
         <div className="w-14 h-14 bg-rose-950/80 border border-rose-900/30 rounded-2xl flex items-center justify-center mx-auto">
           <ShieldAlert className="w-8 h-8 text-rose-400" />
         </div>
-        <h2 className="text-xl font-bold">Não foi possível acessar a prova</h2>
+        <h2 className="text-xl font-bold">
+          Não foi possível acessar a avaliação
+        </h2>
         <p className="text-sm text-slate-400">{loadError}</p>
         <button
           onClick={() => navigateTo("/")}
@@ -385,23 +396,119 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
     );
   }
 
+  const handleClosedReceiptSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setClosedReceiptError("");
+    const code = formatReceiptCode(closedReceiptInput);
+    if (!code) {
+      setClosedReceiptError("Por favor, insira o código do seu comprovante.");
+      return;
+    }
+    if (!validateReceiptCode(code)) {
+      setClosedReceiptError(
+        "O comprovante deve conter 6 caracteres alfanuméricos (ex: P9Z2JU).",
+      );
+      return;
+    }
+    navigateTo(`/submissao/${code}`);
+  };
+
   if (exam && exam.status === "closed" && !receiptId) {
     return (
-      <div className="max-w-md mx-auto text-center py-12 space-y-4">
-        <div className="w-14 h-14 bg-rose-950/80 border border-rose-900/30 rounded-2xl flex items-center justify-center mx-auto">
-          <ShieldAlert className="w-8 h-8 text-rose-400" />
+      <div className="max-w-md mx-auto w-full space-y-6 animate-fade-in py-6">
+        {/* Banner de status */}
+        <div className="glass-panel border border-amber-500/30 bg-amber-950/10 rounded-2xl p-6 text-center">
+          <div className="w-14 h-14 bg-amber-950/80 border border-amber-800/40 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Award className="w-8 h-8 text-amber-400" />
+          </div>
+          <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-amber-950 border border-amber-800 text-amber-300 inline-block mb-3">
+            Avaliação Encerrada • Notas Divulgadas
+          </span>
+          <h2 className="text-xl font-bold text-slate-100">{exam.title}</h2>
+          <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+            Esta avaliação foi encerrada pelo professor e o gabarito oficial com
+            as notas já está disponível para consulta.
+          </p>
         </div>
-        <h2 className="text-xl font-bold">Prova Encerrada</h2>
-        <p className="text-sm text-slate-400">
-          Esta prova já foi fechada pelo professor e não está mais aceitando
-          submissões.
-        </p>
-        <button
-          onClick={() => navigateTo("/")}
-          className="px-5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm font-semibold hover:bg-slate-850 cursor-pointer"
-        >
-          Voltar para Home
-        </button>
+
+        {/* Formulário de Consulta */}
+        <div className="glass-panel border border-slate-800 rounded-2xl p-6 space-y-4">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-9 h-9 rounded-xl bg-cyan-950/60 border border-cyan-800/40 flex items-center justify-center text-cyan-400">
+              <Receipt className="w-4.5 h-4.5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm text-slate-200">
+                Consultar Meu Resultado
+              </h3>
+              <p className="text-[11px] text-slate-400">
+                Insira o código do comprovante recebido no envio
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handleClosedReceiptSubmit} className="space-y-4">
+            <div>
+              <label
+                htmlFor="closedReceiptCode"
+                className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5"
+              >
+                Comprovante de Submissão (6 caracteres)
+              </label>
+              <input
+                id="closedReceiptCode"
+                type="text"
+                placeholder="Ex: P9Z2JU"
+                value={closedReceiptInput}
+                maxLength={6}
+                onChange={(e) => {
+                  setClosedReceiptInput(formatReceiptCode(e.target.value));
+                  if (closedReceiptError) setClosedReceiptError("");
+                }}
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20 text-slate-100 placeholder:text-slate-600 uppercase tracking-widest text-center font-mono font-bold"
+                required
+                autoFocus
+              />
+            </div>
+
+            {closedReceiptError && (
+              <div className="flex items-center gap-2 text-xs text-rose-400 bg-rose-950/20 border border-rose-900/30 p-3 rounded-lg">
+                <ShieldAlert className="w-4 h-4 shrink-0" />
+                <span>{closedReceiptError}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-slate-950 font-bold rounded-xl text-sm transition-all shadow-lg shadow-cyan-500/10 cursor-pointer flex items-center justify-center gap-2"
+            >
+              <Receipt className="w-4 h-4" />
+              Ver Meu Resultado
+            </button>
+          </form>
+
+          {isAuthenticated && (
+            <div className="pt-2 border-t border-slate-800/80 text-center">
+              <button
+                type="button"
+                onClick={() => navigateTo("/meus-resultados")}
+                className="text-xs text-cyan-400 hover:text-cyan-300 transition-colors font-semibold cursor-pointer"
+              >
+                Ou acesse pelo seu histórico em <strong>Meus Resultados</strong>{" "}
+                &rarr;
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="text-center">
+          <button
+            onClick={() => navigateTo("/")}
+            className="px-5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-850 cursor-pointer transition-colors"
+          >
+            Voltar para Home
+          </button>
+        </div>
       </div>
     );
   }
@@ -435,14 +542,14 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
               <strong>Matrícula:</strong> {studentIdentifier}
             </p>
             <p>
-              <strong>Prova:</strong> {exam.title}
+              <strong>Avaliação:</strong> {exam.title}
             </p>
           </div>
 
           <p className="text-[10px] text-slate-500 italic">
             Guarde o código do comprovante — ele não fica salvo neste aparelho
             (privacidade em dispositivos compartilhados). Quando o professor
-            encerrar a prova, consulte sua nota na Home com esse código.
+            encerrar a avaliação, consulte sua nota na Home com esse código.
           </p>
         </div>
 
@@ -496,8 +603,8 @@ export default function StudentExam({ publicCode }: { publicCode: string }) {
         <div className="truncate">
           <h1 className="text-xl font-black truncate">{exam?.title}</h1>
           <p className="text-[10px] text-slate-500 uppercase mt-0.5">
-            Prova Aberta • {exam?.items.length} itens • {maxPoints.toFixed(1)}{" "}
-            pontos max
+            Avaliação Aberta • {exam?.items.length} itens •{" "}
+            {maxPoints.toFixed(1)} pontos max
           </p>
         </div>
       </div>

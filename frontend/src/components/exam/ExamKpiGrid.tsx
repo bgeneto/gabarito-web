@@ -33,7 +33,7 @@ export function ExamKpiGrid({ data, variant = "compact" }: ExamKpiGridProps) {
           </div>
           <div className="min-w-0">
             <span className="text-[10px] uppercase font-bold text-slate-500 block">
-              Valor da Prova
+              Valor da Avaliação
             </span>
             <span className="text-xl font-black text-blue-400">
               {data.max_score.toFixed(1)}

@@ -93,7 +93,7 @@ export default function UserNav() {
             className="w-full px-4 py-2.5 text-left text-slate-200 hover:text-white hover:bg-slate-800 flex items-center gap-2.5 transition-colors cursor-pointer"
           >
             <ClipboardList className="w-4 h-4 text-cyan-400 shrink-0" />
-            <span className="font-medium">Minhas Provas (Professor)</span>
+            <span className="font-medium">Minhas Avaliações (Professor)</span>
           </button>
 
           <button

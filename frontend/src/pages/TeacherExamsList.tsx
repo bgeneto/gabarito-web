@@ -66,12 +66,14 @@ export default function TeacherExamsList() {
         },
       });
       if (!res.ok) {
-        throw new Error("Não foi possível carregar a lista de provas.");
+        throw new Error("Não foi possível carregar a lista de avaliações.");
       }
       const data = await res.json();
       setExams(data.exams || []);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Erro ao buscar provas.");
+      setError(
+        err instanceof Error ? err.message : "Erro ao buscar avaliações.",
+      );
     } finally {
       setLoading(false);
     }
@@ -97,7 +99,7 @@ export default function TeacherExamsList() {
   const handleManageExam = async (adminToken: string | null) => {
     if (!adminToken) {
       await alert(
-        "Esta prova não possui um token administrativo registrado diretamente. Utilize a chave administrativa para acessá-la.",
+        "Esta avaliação não possui um token administrativo registrado diretamente. Utilize a chave administrativa para acessá-la.",
         {
           title: "Atenção",
           severity: "warning",
@@ -138,7 +140,7 @@ export default function TeacherExamsList() {
       setClaimTokenInput("");
       await fetchExams();
       await alert(
-        result.message || "Prova vinculada à sua conta com sucesso!",
+        result.message || "Avaliação vinculada à sua conta com sucesso!",
         {
           title: "Sucesso!",
           severity: "info",
@@ -148,7 +150,7 @@ export default function TeacherExamsList() {
       setClaimError(
         err instanceof Error
           ? err.message
-          : "Não foi possível vincular esta prova.",
+          : "Não foi possível vincular esta avaliação.",
       );
     } finally {
       setClaimLoading(false);
@@ -159,7 +161,7 @@ export default function TeacherExamsList() {
     return (
       <div className="flex-1 flex flex-col items-center justify-center py-16 space-y-4">
         <div className="w-10 h-10 border-3 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin" />
-        <p className="text-sm text-slate-400">Carregando suas provas...</p>
+        <p className="text-sm text-slate-400">Carregando suas avaliações...</p>
       </div>
     );
   }
@@ -175,7 +177,7 @@ export default function TeacherExamsList() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-800 pb-6">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-slate-100 flex items-center gap-2">
-            <span>Minhas Provas</span>
+            <span>Minhas Avaliações</span>
             <span className="text-xs px-2.5 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-800 text-cyan-400 font-semibold">
               Professor
             </span>
@@ -200,7 +202,7 @@ export default function TeacherExamsList() {
             className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 shadow-md shadow-cyan-900/30 transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Criar Nova Prova</span>
+            <span>Criar Nova Avaliação</span>
           </button>
         </div>
       </div>
@@ -216,7 +218,7 @@ export default function TeacherExamsList() {
               {exams.length}
             </div>
             <div className="text-[11px] text-slate-400 font-medium">
-              Provas Criadas
+              Avaliações Criadas
             </div>
           </div>
         </div>
@@ -244,13 +246,13 @@ export default function TeacherExamsList() {
               {exams.filter((e) => e.status === "open").length}
             </div>
             <div className="text-[11px] text-slate-400 font-medium">
-              Provas Abertas
+              Avaliações Abertas
             </div>
           </div>
         </div>
       </div>
 
-      {/* Lista de Provas */}
+      {/* Lista de Avaliações */}
       {error && (
         <div className="p-4 bg-rose-950/40 border border-rose-800/50 rounded-xl flex items-center gap-2.5 text-rose-300 text-sm">
           <AlertCircle className="w-4 h-4" />
@@ -265,12 +267,12 @@ export default function TeacherExamsList() {
           </div>
           <div>
             <h2 className="text-lg font-bold text-slate-200">
-              Nenhuma prova associada ainda
+              Nenhuma avaliação associada ainda
             </h2>
             <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-              Você ainda não criou provas enquanto estava logado. Crie uma nova
-              prova ou vincule uma prova criada anteriormente pelo seu token de
-              administração.
+              Você ainda não criou avaliações enquanto estava logado. Crie uma
+              nova avaliação ou vincule uma avaliação criada anteriormente pelo
+              seu token de administração.
             </p>
           </div>
           <div className="flex justify-center gap-3 pt-2">
@@ -278,13 +280,13 @@ export default function TeacherExamsList() {
               onClick={() => navigateTo("/criar-prova")}
               className="px-4 py-2.5 rounded-xl font-bold text-xs text-white bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 shadow-md transition-all cursor-pointer"
             >
-              Criar Primeira Prova
+              Criar Primeira Avaliação
             </button>
             <button
               onClick={() => setShowClaimModal(true)}
               className="px-4 py-2.5 rounded-xl font-semibold text-xs text-slate-300 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-all cursor-pointer"
             >
-              Vincular Prova Existente
+              Vincular Avaliação Existente
             </button>
           </div>
         </div>
@@ -338,7 +340,7 @@ export default function TeacherExamsList() {
                 <div className="flex items-center gap-2 self-end md:self-center">
                   <button
                     onClick={() => handleCopyLink(exam.public_code)}
-                    title="Copiar link da prova para alunos"
+                    title="Copiar link da avaliação para alunos"
                     className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
                   >
                     {copiedCode === exam.public_code ? (
@@ -362,14 +364,14 @@ export default function TeacherExamsList() {
         </div>
       )}
 
-      {/* Modal: Vincular Prova Existente por Token */}
+      {/* Modal: Vincular Avaliação Existente por Token */}
       {showClaimModal && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="glass-panel p-6 rounded-2xl border border-slate-700 max-w-md w-full shadow-2xl space-y-4 animate-fade-in">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="font-bold text-slate-100 flex items-center gap-2 text-sm">
                 <LinkIcon className="w-4 h-4 text-cyan-400" />
-                Vincular Prova Existente
+                Vincular Avaliação Existente
               </h3>
               <button
                 onClick={() => setShowClaimModal(false)}
@@ -380,7 +382,7 @@ export default function TeacherExamsList() {
             </div>
 
             <p className="text-xs text-slate-400">
-              Criou uma prova anonimamente no passado? Insira o{" "}
+              Criou uma avaliação anonimamente no passado? Insira o{" "}
               <strong>Token Administrativo</strong> (ex:{" "}
               <code className="text-cyan-300">adm_A7K9QF</code>) para
               adicioná-la permanentemente ao seu painel.
@@ -396,7 +398,7 @@ export default function TeacherExamsList() {
             <form onSubmit={handleClaimSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Token Administrativo da Prova
+                  Token Administrativo da Avaliação
                 </label>
                 <input
                   type="text"
@@ -422,7 +424,7 @@ export default function TeacherExamsList() {
                   disabled={claimLoading}
                   className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 transition-all flex items-center gap-1.5 cursor-pointer"
                 >
-                  {claimLoading ? "Vinculando..." : "Vincular Prova"}
+                  {claimLoading ? "Vinculando..." : "Vincular Avaliação"}
                 </button>
               </div>
             </form>

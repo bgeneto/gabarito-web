@@ -56,7 +56,7 @@ export default function SuperadminExamDetail({ examId }: { examId: string }) {
   useEffect(() => {
     superadminJson<ExamDetail>(`/api/superadmin/exams/${examId}`)
       .then(setData)
-      .catch((err) => setError(err.message || "Erro ao carregar prova."))
+      .catch((err) => setError(err.message || "Erro ao carregar avaliação."))
       .finally(() => setLoading(false));
   }, [examId]);
 
@@ -71,7 +71,9 @@ export default function SuperadminExamDetail({ examId }: { examId: string }) {
   if (error || !data) {
     return (
       <div className="text-center py-12">
-        <p className="text-rose-400 mb-4">{error || "Prova não encontrada."}</p>
+        <p className="text-rose-400 mb-4">
+          {error || "Avaliação não encontrada."}
+        </p>
         <button
           onClick={() => navigateTo("/superadmin/painel")}
           className="text-amber-400 hover:underline text-sm cursor-pointer"

@@ -49,13 +49,13 @@ export function formatCredentialsText({
   const adminDeepLink = buildAdminDeepLink(adminToken, origin);
 
   return [
-    "GABARITOWEB — Credenciais da Prova",
+    "GABARITOWEB — Credenciais da Avaliação",
     "====================================",
     "",
     `Título: ${title}`,
     "",
     "--- ACESSO DOS ALUNOS ---",
-    `Código da prova: ${publicCode}`,
+    `Código da avaliação: ${publicCode}`,
     `Link de resposta: ${publicUrl}`,
     "",
     "--- ACESSO DO PROFESSOR (PRIVADO) ---",
@@ -76,7 +76,7 @@ export function formatWhatsAppStudentMessage({
   const publicUrl = buildPublicUrl(publicCode, origin);
 
   return [
-    `Prova: ${title}`,
+    `Avaliação: ${title}`,
     "",
     `Código: ${publicCode}`,
     `Link para enviar respostas: ${publicUrl}`,
@@ -99,12 +99,12 @@ export function formatWhatsAppSubmissionMessage({
   const submissionUrl = buildSubmissionUrl(submissionId, origin);
 
   return [
-    `Prova: ${examTitle}`,
+    `Avaliação: ${examTitle}`,
     "",
     `Comprovante de submissão: ${submissionId}`,
     `Link para consultar resultado: ${submissionUrl}`,
     "",
-    "Guarde este comprovante. Quando o professor encerrar a prova, use o link acima para ver sua nota.",
+    "Guarde este comprovante. Quando o professor encerrar a avaliação, use o link acima para ver sua nota.",
   ].join("\n");
 }
 
