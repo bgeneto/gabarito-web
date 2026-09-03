@@ -140,6 +140,19 @@ test("codeFormatters - formatAdminToken", async (t) => {
   await t.test("strips special characters and spaces from suffix", () => {
     assert.equal(formatAdminToken("adm_a-7 k.9!q f"), "adm_A7K9QF");
   });
+
+  await t.test(
+    "handles pasted tokens with ADM in suffix or uppercase prefix",
+    () => {
+      assert.equal(formatAdminToken("adm_VZT7XG"), "adm_VZT7XG");
+      assert.equal(formatAdminToken("ADM_VZT7XG"), "adm_VZT7XG");
+      assert.equal(formatAdminToken("VZT7XG"), "adm_VZT7XG");
+      assert.equal(formatAdminToken("adm_adm_VZT7XG"), "adm_VZT7XG");
+      assert.equal(formatAdminToken("adm_1ADMX2"), "adm_1ADMX2");
+      assert.equal(formatAdminToken("adm_ADMF42"), "adm_ADMF42");
+      assert.equal(formatAdminToken("ADMF42"), "adm_ADMF42");
+    },
+  );
 });
 
 test("codeFormatters - validateAdminToken", async (t) => {

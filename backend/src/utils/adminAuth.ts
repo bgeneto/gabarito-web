@@ -31,7 +31,8 @@ function timingSafeEqualHex(a: string, b: string): boolean {
 }
 
 export async function findExamByAdminToken(adminToken: string) {
-  const adminCodeHash = hashAdminToken(adminToken);
+  const normalized = normalizeAdminToken(adminToken);
+  const adminCodeHash = hashAdminToken(normalized ?? adminToken);
 
   const [exam] = await db
     .select()

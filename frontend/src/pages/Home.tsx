@@ -79,6 +79,14 @@ export default function Home() {
     setAdminTokenInput(formatted);
   };
 
+  const handleAdminTokenPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    setTeacherError("");
+    const pastedText = e.clipboardData.getData("text");
+    const formatted = formatAdminToken(pastedText);
+    setAdminTokenInput(formatted);
+  };
+
   const handleAdminTokenKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement>,
   ) => {
@@ -586,12 +594,12 @@ export default function Home() {
                 id="adminToken"
                 type="text"
                 value={adminTokenInput || "adm_"}
-                maxLength={10}
                 onChange={handleAdminTokenChange}
+                onPaste={handleAdminTokenPaste}
                 onKeyDown={handleAdminTokenKeyDown}
                 onClick={handleAdminTokenSelect}
                 onFocus={handleAdminTokenSelect}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 text-slate-100 placeholder:text-slate-600 uppercase tracking-widest text-center font-mono font-bold"
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 text-slate-100 placeholder:text-slate-600 tracking-widest text-center font-mono font-bold"
                 required
                 autoFocus
               />

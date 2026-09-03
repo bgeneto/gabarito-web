@@ -76,16 +76,24 @@ export function formatAdminToken(input: string): string {
     return `adm_${code}`;
   }
 
-  // Remove qualquer ocorrência inicial do prefixo adm_ ou adm para isolar o código
-  let cleaned = trimmed;
-  if (/^adm_/i.test(cleaned)) {
-    cleaned = cleaned.slice(4);
-  } else if (/^adm/i.test(cleaned)) {
-    cleaned = cleaned.slice(3);
+  // Se for apenas o prefixo "adm" ou "adm_" sem código
+  if (/^adm_?$/i.test(trimmed)) {
+    return "adm_";
   }
 
-  // Se o usuário colou algo que ainda continha "adm_" internamente (ex: colou dentro de adm_)
-  cleaned = cleaned.replace(/adm_/gi, "").replace(/adm/gi, "");
+  let cleaned = trimmed;
+
+  // Remove qualquer quantidade de prefixos "adm_" repetidos no início (ex: adm_adm_XXXXXX)
+  while (/^adm_/i.test(cleaned)) {
+    cleaned = cleaned.slice(4);
+  }
+
+  // Se sobrou algo com prefixo "adm" sem underscore e com mais de 6 caracteres (ex: admXXXXXX)
+  if (/^adm[0-9A-Za-z]{6}$/i.test(cleaned)) {
+    cleaned = cleaned.slice(3);
+  } else if (/^adm/i.test(cleaned) && !/^[0-9A-Za-z]{1,6}$/.test(cleaned)) {
+    cleaned = cleaned.replace(/^adm/i, "");
+  }
 
   // Filtra apenas caracteres alfanuméricos e limita a 6
   const suffix = cleaned
