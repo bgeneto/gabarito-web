@@ -10,7 +10,7 @@ interface RateLimitRecord {
 const magicLinkLimits = new Map<string, RateLimitRecord>();
 
 const MAGIC_LINK_WINDOW_MS = 15 * 60 * 1000; // 15 minutos
-export const MAX_MAGIC_LINK_REQUESTS_PER_IP = 20; // máx 20 por IP em 15m
+export const MAX_MAGIC_LINK_REQUESTS_PER_IP = 100; // máx 100 por IP em 15m
 export const MAX_MAGIC_LINK_REQUESTS_PER_EMAIL = 10; // máx 10 por email em 15m
 
 export function resetMagicLinkRateLimitsForTests(): void {

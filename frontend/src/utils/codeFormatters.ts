@@ -53,3 +53,53 @@ export function validateReceiptCode(code: string): boolean {
   if (!code) return false;
   return /^[0-9A-Z]{6}$/.test(code.trim().toUpperCase());
 }
+
+/**
+ * Formata ou extrai o token administrativo garantindo o prefixo fixo 'adm_'.
+ * Sempre retorna uma string iniciada por 'adm_'.
+ * O sufixo é composto por até 6 caracteres alfanuméricos em maiúsculas (base36).
+ * Trata colagem de URLs completas (/admin/adm_XXXXXX ou /admin/XXXXXX),
+ * valores com 'adm_' ou sem 'adm_'.
+ */
+export function formatAdminToken(input: string): string {
+  if (!input) return "adm_";
+
+  const trimmed = input.trim();
+
+  // Se foi colada uma URL que contenha /admin/(adm_)?XXXXXX
+  const urlMatch = trimmed.match(/\/admin\/(?:adm_)?([0-9A-Za-z]{1,6})/i);
+  if (urlMatch && urlMatch[1]) {
+    const code = urlMatch[1]
+      .toUpperCase()
+      .replace(/[^0-9A-Z]/g, "")
+      .slice(0, 6);
+    return `adm_${code}`;
+  }
+
+  // Remove qualquer ocorrência inicial do prefixo adm_ ou adm para isolar o código
+  let cleaned = trimmed;
+  if (/^adm_/i.test(cleaned)) {
+    cleaned = cleaned.slice(4);
+  } else if (/^adm/i.test(cleaned)) {
+    cleaned = cleaned.slice(3);
+  }
+
+  // Se o usuário colou algo que ainda continha "adm_" internamente (ex: colou dentro de adm_)
+  cleaned = cleaned.replace(/adm_/gi, "").replace(/adm/gi, "");
+
+  // Filtra apenas caracteres alfanuméricos e limita a 6
+  const suffix = cleaned
+    .toUpperCase()
+    .replace(/[^0-9A-Z]/g, "")
+    .slice(0, 6);
+
+  return `adm_${suffix}`;
+}
+
+/**
+ * Valida se o token tem o formato completo adm_XXXXXX (exatamente 6 caracteres base36 após adm_).
+ */
+export function validateAdminToken(token: string): boolean {
+  if (!token) return false;
+  return /^adm_[0-9A-Z]{6}$/i.test(token.trim());
+}

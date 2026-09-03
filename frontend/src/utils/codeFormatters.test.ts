@@ -5,6 +5,8 @@ import {
   validatePublicCode,
   formatReceiptCode,
   validateReceiptCode,
+  formatAdminToken,
+  validateAdminToken,
 } from "./codeFormatters";
 
 test("codeFormatters - formatPublicCode", async (t) => {
@@ -87,5 +89,76 @@ test("codeFormatters - validateReceiptCode", async (t) => {
     assert.equal(validateReceiptCode("A7K9QFA"), false); // 7 chars
     assert.equal(validateReceiptCode("A7K-QF"), false); // symbol
     assert.equal(validateReceiptCode("A7K QF"), false); // space
+  });
+});
+
+test("codeFormatters - formatAdminToken", async (t) => {
+  await t.test("empty or undefined input returns 'adm_'", () => {
+    assert.equal(formatAdminToken(""), "adm_");
+    assert.equal(formatAdminToken(null as any), "adm_");
+    assert.equal(formatAdminToken(undefined as any), "adm_");
+  });
+
+  await t.test("always keeps 'adm_' prefix", () => {
+    assert.equal(formatAdminToken("adm_"), "adm_");
+    assert.equal(formatAdminToken("adm"), "adm_");
+    assert.equal(formatAdminToken("ADM_"), "adm_");
+  });
+
+  await t.test(
+    "formats incremental input and limits to 6 chars after prefix",
+    () => {
+      assert.equal(formatAdminToken("adm_a"), "adm_A");
+      assert.equal(formatAdminToken("adm_a7k"), "adm_A7K");
+      assert.equal(formatAdminToken("adm_a7k9qf"), "adm_A7K9QF");
+      assert.equal(formatAdminToken("adm_a7k9qfextra"), "adm_A7K9QF");
+    },
+  );
+
+  await t.test("handles input without 'adm_' prefix by adding it", () => {
+    assert.equal(formatAdminToken("a7k9qf"), "adm_A7K9QF");
+    assert.equal(formatAdminToken("A7K9"), "adm_A7K9");
+  });
+
+  await t.test("handles accidental duplicate 'adm_' prefixes", () => {
+    assert.equal(formatAdminToken("adm_adm_a7k9qf"), "adm_A7K9QF");
+    assert.equal(formatAdminToken("adm_adm_"), "adm_");
+  });
+
+  await t.test("extracts token from full admin URLs", () => {
+    assert.equal(
+      formatAdminToken("https://gabarito.web/admin/adm_A7K9QF"),
+      "adm_A7K9QF",
+    );
+    assert.equal(
+      formatAdminToken("https://gabarito.web/admin/a7k9qf"),
+      "adm_A7K9QF",
+    );
+    assert.equal(formatAdminToken("/admin/adm_P9Z2JU"), "adm_P9Z2JU");
+  });
+
+  await t.test("strips special characters and spaces from suffix", () => {
+    assert.equal(formatAdminToken("adm_a-7 k.9!q f"), "adm_A7K9QF");
+  });
+});
+
+test("codeFormatters - validateAdminToken", async (t) => {
+  await t.test("validates 6-character alphanumeric admin tokens", () => {
+    assert.equal(validateAdminToken("adm_A7K9QF"), true);
+    assert.equal(validateAdminToken("adm_a7k9qf"), true);
+    assert.equal(validateAdminToken("ADM_A7K9QF"), true);
+    assert.equal(validateAdminToken("adm_000000"), true);
+    assert.equal(validateAdminToken("adm_ZZZZZZ"), true);
+  });
+
+  await t.test("rejects invalid admin tokens", () => {
+    assert.equal(validateAdminToken(""), false);
+    assert.equal(validateAdminToken("adm_"), false);
+    assert.equal(validateAdminToken("adm_A7K9Q"), false); // 5 chars
+    assert.equal(validateAdminToken("adm_A7K9QFA"), false); // 7 chars
+    assert.equal(validateAdminToken("A7K9QF"), false); // missing adm_
+    assert.equal(validateAdminToken("adm-A7K9QF"), false); // wrong separator
+    assert.equal(validateAdminToken("adm_A7K-QF"), false); // invalid character
+    assert.equal(validateAdminToken("adm_A7K QF"), false); // space
   });
 });

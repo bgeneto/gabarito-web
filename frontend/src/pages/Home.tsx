@@ -9,6 +9,8 @@ import {
   ArrowRight,
   User,
   PenLine,
+  PlusCircle,
+  KeyRound,
 } from "lucide-react";
 import { setAdminSession } from "../utils/adminSession";
 import { exchangeAdminToken } from "../utils/adminApi";
@@ -20,6 +22,8 @@ import {
   validatePublicCode,
   formatReceiptCode,
   validateReceiptCode,
+  formatAdminToken,
+  validateAdminToken,
 } from "../utils/codeFormatters";
 
 export default function Home() {
@@ -28,9 +32,10 @@ export default function Home() {
   const [studentAction, setStudentAction] = useState<
     "submit" | "result" | null
   >(null);
+  const [teacherAction, setTeacherAction] = useState<"access" | null>(null);
   const [publicCode, setPublicCode] = useState("");
   const [receiptCode, setReceiptCode] = useState("");
-  const [adminTokenInput, setAdminTokenInput] = useState("");
+  const [adminTokenInput, setAdminTokenInput] = useState("adm_");
   const [examError, setExamError] = useState("");
   const [receiptError, setReceiptError] = useState("");
   const [teacherError, setTeacherError] = useState("");
@@ -68,11 +73,55 @@ export default function Home() {
     navigateTo(`/submissao/${code}`);
   };
 
+  const handleAdminTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTeacherError("");
+    const formatted = formatAdminToken(e.target.value);
+    setAdminTokenInput(formatted);
+  };
+
+  const handleAdminTokenKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+  ) => {
+    const input = e.currentTarget;
+    const start = input.selectionStart ?? 0;
+    const end = input.selectionEnd ?? 0;
+
+    // Se o usuário tentar apagar o prefixo adm_ com Backspace
+    if (e.key === "Backspace" && start <= 4 && end <= 4) {
+      e.preventDefault();
+      return;
+    }
+
+    // Se o usuário tentar apagar o prefixo adm_ com Delete
+    if (e.key === "Delete" && start < 4 && end <= 4) {
+      e.preventDefault();
+      return;
+    }
+  };
+
+  const handleAdminTokenSelect = (
+    e: React.SyntheticEvent<HTMLInputElement>,
+  ) => {
+    const input = e.currentTarget;
+    if ((input.selectionStart ?? 0) < 4) {
+      const pos = Math.max(4, input.value.length);
+      input.setSelectionRange(pos, pos);
+    }
+  };
+
   const handleTeacherAccess = async (e: React.FormEvent) => {
     e.preventDefault();
     setTeacherError("");
 
-    const token = normalizeAdminToken(adminTokenInput);
+    const formatted = formatAdminToken(adminTokenInput);
+    if (!validateAdminToken(formatted)) {
+      setTeacherError(
+        "O token administrativo deve conter exatamente 6 caracteres após adm_ (ex: adm_A7K9QF).",
+      );
+      return;
+    }
+
+    const token = normalizeAdminToken(formatted);
     if (!token) {
       setTeacherError(
         "Informe um token administrativo válido (ex: adm_A7K9QF).",
@@ -174,7 +223,12 @@ export default function Home() {
 
             {/* Card Professor */}
             <button
-              onClick={() => setRole("teacher")}
+              onClick={() => {
+                setRole("teacher");
+                setTeacherAction(null);
+                setTeacherError("");
+                setAdminTokenInput("adm_");
+              }}
               className="group flex flex-col items-center justify-center p-8 rounded-2xl glass-panel border border-slate-800 hover:border-blue-500/50 hover:bg-slate-900/60 transition-all text-center cursor-pointer relative overflow-hidden"
             >
               <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-colors"></div>
@@ -419,72 +473,153 @@ export default function Home() {
         </div>
       )}
 
-      {/* Professor View */}
-      {role === "teacher" && (
-        <div className="space-y-6">
-          <div className="glass-panel border border-slate-800 rounded-2xl p-6 relative overflow-hidden">
-            <button onClick={() => setRole(null)} className="back-link mb-4">
-              <ArrowLeft className="w-4 h-4" />
-              Voltar para seleção
+      {/* Professor View - Etapa 1: Seleção de Ação */}
+      {role === "teacher" && teacherAction === null && (
+        <div className="glass-panel border border-slate-800 rounded-2xl p-6 relative overflow-hidden animate-fade-in">
+          <button
+            onClick={() => {
+              setRole(null);
+              setTeacherError("");
+            }}
+            className="back-link mb-4"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Voltar para seleção
+          </button>
+
+          <div className="text-center mb-6">
+            <div className="w-12 h-12 rounded-2xl bg-blue-950/60 border border-blue-800/40 flex items-center justify-center mx-auto mb-3">
+              <ClipboardList className="w-6 h-6 text-blue-400" />
+            </div>
+            <h2 className="font-extrabold text-xl mb-1 text-slate-100">
+              Área do Professor
+            </h2>
+            <p className="text-xs text-slate-400">
+              O que você deseja fazer agora?
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3.5">
+            {/* Opção 1: Criar Novo Gabarito */}
+            <button
+              onClick={() => navigateTo("/criar-prova")}
+              className="group p-5 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-blue-500/50 hover:bg-slate-900 transition-all text-left flex items-center gap-4 cursor-pointer"
+            >
+              <div className="w-12 h-12 rounded-xl bg-blue-950/80 border border-blue-800/40 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <PlusCircle className="w-6 h-6 text-blue-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-sm text-slate-100 group-hover:text-blue-400 transition-colors flex items-center justify-between">
+                  <span>Criar Novo Gabarito</span>
+                  <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-blue-400" />
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Elaborar uma nova avaliação, definir questões e gerar o
+                  gabarito oficial.
+                </p>
+              </div>
             </button>
 
-            <div className="text-center mb-6">
-              <h2 className="font-extrabold text-xl mb-1">Área do Professor</h2>
+            {/* Opção 2: Acessar Avaliação Existente */}
+            <button
+              onClick={() => {
+                setTeacherAction("access");
+                setTeacherError("");
+                setAdminTokenInput("adm_");
+              }}
+              className="group p-5 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-indigo-500/50 hover:bg-slate-900 transition-all text-left flex items-center gap-4 cursor-pointer"
+            >
+              <div className="w-12 h-12 rounded-xl bg-indigo-950/80 border border-indigo-800/40 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <KeyRound className="w-6 h-6 text-indigo-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-sm text-slate-100 group-hover:text-indigo-400 transition-colors flex items-center justify-between">
+                  <span>Acessar Avaliação Existente</span>
+                  <ArrowRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-indigo-400" />
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Inserir o token administrativo para monitorar respostas e
+                  gerenciar o gabarito.
+                </p>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Professor View - Etapa 2: Acessar Avaliação Existente */}
+      {role === "teacher" && teacherAction === "access" && (
+        <div className="glass-panel border border-slate-800 rounded-2xl p-6 relative overflow-hidden animate-fade-in">
+          <button
+            onClick={() => {
+              setTeacherAction(null);
+              setTeacherError("");
+            }}
+            className="back-link mb-4"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Voltar para opções
+          </button>
+
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-indigo-950/50 border border-indigo-800/30 flex items-center justify-center">
+              <KeyRound className="w-5 h-5 text-indigo-400" />
+            </div>
+            <div>
+              <h2 className="font-bold text-lg">Acessar Avaliação Existente</h2>
               <p className="text-xs text-slate-500">
-                Crie novos gabaritos ou monitore as avaliações ativas.
+                Informe o token administrativo privado para gerenciar a
+                avaliação
+              </p>
+            </div>
+          </div>
+
+          <form onSubmit={handleTeacherAccess} className="space-y-4">
+            <div>
+              <label
+                htmlFor="adminToken"
+                className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider"
+              >
+                Token Administrativo
+              </label>
+              <input
+                id="adminToken"
+                type="text"
+                value={adminTokenInput || "adm_"}
+                maxLength={10}
+                onChange={handleAdminTokenChange}
+                onKeyDown={handleAdminTokenKeyDown}
+                onClick={handleAdminTokenSelect}
+                onFocus={handleAdminTokenSelect}
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 text-slate-100 placeholder:text-slate-600 uppercase tracking-widest text-center font-mono font-bold"
+                required
+                autoFocus
+              />
+              <p className="text-[11px] text-slate-500 mt-1.5 text-center">
+                O prefixo{" "}
+                <span className="text-indigo-400 font-mono font-semibold">
+                  adm_
+                </span>{" "}
+                é fixo. Digite os 6 caracteres do seu token.
               </p>
             </div>
 
-            <button
-              onClick={() => navigateTo("/criar-prova")}
-              className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-blue-500/15 mb-6 flex items-center justify-center gap-2 cursor-pointer"
-            >
-              Criar Novo Gabarito
-            </button>
-
-            <div className="relative flex py-3 items-center">
-              <div className="flex-grow border-t border-slate-900"></div>
-              <span className="flex-shrink mx-4 text-slate-600 text-[10px] uppercase font-bold tracking-widest">
-                Ou acesse uma avaliação existente
-              </span>
-              <div className="flex-grow border-t border-slate-900"></div>
-            </div>
-
-            <form onSubmit={handleTeacherAccess} className="space-y-4 mt-4">
-              <div>
-                <label
-                  htmlFor="adminToken"
-                  className="block text-xs font-semibold text-slate-400 mb-1.5 uppercase tracking-wider"
-                >
-                  Token Administrativo
-                </label>
-                <input
-                  id="adminToken"
-                  type="text"
-                  placeholder="Ex: adm_A7K9QF"
-                  value={adminTokenInput}
-                  onChange={(e) => setAdminTokenInput(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 text-slate-100 placeholder:text-slate-600 font-mono text-center text-xs"
-                  required
-                />
+            {teacherError && (
+              <div className="flex items-center gap-2 text-xs text-rose-400 bg-rose-950/20 border border-rose-900/30 p-3 rounded-lg">
+                <ShieldAlert className="w-4 h-4 shrink-0" />
+                <span>{teacherError}</span>
               </div>
+            )}
 
-              {teacherError && (
-                <div className="flex items-center gap-2 text-xs text-rose-400 bg-rose-950/20 border border-rose-900/30 p-3 rounded-lg">
-                  <ShieldAlert className="w-4 h-4 shrink-0" />
-                  <span>{teacherError}</span>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={teacherLoading}
-                className="w-full py-2.5 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 font-bold rounded-xl text-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {teacherLoading ? "Validando..." : "Acessar Painel"}
-              </button>
-            </form>
-          </div>
+            <button
+              type="submit"
+              disabled={teacherLoading}
+              className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-blue-500/15 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <KeyRound className="w-4 h-4" />
+              {teacherLoading ? "Validando..." : "Acessar Painel"}
+            </button>
+          </form>
         </div>
       )}
     </div>
