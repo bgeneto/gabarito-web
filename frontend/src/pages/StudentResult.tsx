@@ -9,6 +9,8 @@ import {
   RefreshCw,
   Printer,
   BarChart3,
+  Copy,
+  Check,
 } from "lucide-react";
 import { NormalDistributionChart } from "../components/exam/NormalDistributionChart";
 import { PerformanceMetricsTable } from "../components/exam/PerformanceMetricsTable";
@@ -49,6 +51,7 @@ export default function StudentResult({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [copiedReceipt, setCopiedReceipt] = useState(false);
 
   const fetchResult = async (showRefreshIndicator = false) => {
     if (showRefreshIndicator) setRefreshing(true);
@@ -205,6 +208,13 @@ export default function StudentResult({
       : 0;
   const score = data.total_score || 0;
   const percentScore = maxPoints > 0 ? (score / maxPoints) * 100 : 0;
+
+  const handleCopyReceipt = async () => {
+    await navigator.clipboard.writeText(data.id);
+    setCopiedReceipt(true);
+    setTimeout(() => setCopiedReceipt(false), 2000);
+  };
+
   const reportData = {
     id: data.id,
     student_name: data.student_name,
@@ -272,22 +282,46 @@ export default function StudentResult({
             Matrícula:{" "}
             <span className="font-mono">{data.student_identifier}</span>
           </p>
+          <p className="text-[11px] text-slate-500 mt-1">
+            Enviado em {new Date(data.submitted_at).toLocaleString("pt-BR")}
+          </p>
 
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-850 text-xs text-slate-400 font-semibold">
-              <Award className="w-4 h-4 text-yellow-400" />
-              <span>
-                Aproveitamento de <strong>{percentScore.toFixed(0)}%</strong>
-              </span>
+          <div className="mt-4 flex flex-col items-center gap-2">
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-850 text-xs text-slate-400 font-semibold">
+                <Award className="w-4 h-4 text-yellow-400" />
+                <span>
+                  Aproveitamento de <strong>{percentScore.toFixed(0)}%</strong>
+                </span>
+              </div>
+              <button
+                onClick={() => exportSubmissionReportPdf(reportData)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-950/60 border border-cyan-800/40 text-xs text-cyan-300 font-bold hover:bg-cyan-950 transition-colors cursor-pointer"
+                title="Salvar ou imprimir relatório em PDF"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                Exportar PDF
+              </button>
             </div>
-            <button
-              onClick={() => exportSubmissionReportPdf(reportData)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-950/60 border border-cyan-800/40 text-xs text-cyan-300 font-bold hover:bg-cyan-950 transition-colors cursor-pointer"
-              title="Salvar ou imprimir relatório em PDF"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              Exportar PDF
-            </button>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-850 text-xs text-slate-400 font-semibold">
+              <span>
+                Comprovante:{" "}
+                <span className="font-mono text-cyan-400">{data.id}</span>
+              </span>
+              <button
+                type="button"
+                onClick={handleCopyReceipt}
+                className="inline-flex items-center justify-center rounded-full p-0.5 text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+                title="Copiar comprovante"
+                aria-label="Copiar comprovante"
+              >
+                {copiedReceipt ? (
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                ) : (
+                  <Copy className="w-3.5 h-3.5" />
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
