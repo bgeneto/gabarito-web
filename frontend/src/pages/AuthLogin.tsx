@@ -11,7 +11,8 @@ import { navigateTo } from "../App";
 import { getRedirectQueryParam } from "../utils/postLoginRedirect";
 
 export default function AuthLogin() {
-  const { requestMagicLink, isAuthenticated, user } = useAuth();
+  const { requestMagicLink, isAuthenticated, user, isLoading, sessionToken } =
+    useAuth();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -48,6 +49,14 @@ export default function AuthLogin() {
       setLoading(false);
     }
   };
+
+  if (isLoading && sessionToken) {
+    return (
+      <div className="flex-1 flex flex-col justify-center items-center py-16">
+        <div className="w-10 h-10 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (isAuthenticated && user) {
     if (pendingRedirect) {

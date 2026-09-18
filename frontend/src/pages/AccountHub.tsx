@@ -20,13 +20,13 @@ export default function AccountHub() {
   const [submissionCount, setSubmissionCount] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+    if (!authLoading && !sessionToken) {
       navigateTo(buildLoginPath("/conta"));
     }
-  }, [authLoading, isAuthenticated]);
+  }, [authLoading, sessionToken]);
 
   useEffect(() => {
-    if (!sessionToken) return;
+    if (authLoading || !sessionToken) return;
     fetch("/api/user/overview", {
       headers: { Authorization: `Bearer ${sessionToken}` },
     })
@@ -39,7 +39,7 @@ export default function AccountHub() {
       .catch(() => {
         // Hub continua utilizável sem as contagens
       });
-  }, [sessionToken]);
+  }, [sessionToken, authLoading]);
 
   if (authLoading || !isAuthenticated || !user) {
     return (

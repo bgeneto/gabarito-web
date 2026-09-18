@@ -36,13 +36,7 @@ interface UserExam {
 }
 
 export default function TeacherExamsList() {
-  const {
-    sessionToken,
-    user,
-    isAuthenticated,
-    isLoading: authLoading,
-    claimExam,
-  } = useAuth();
+  const { sessionToken, user, isLoading: authLoading, claimExam } = useAuth();
   const { alert } = useModal();
   const [exams, setExams] = useState<UserExam[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,14 +74,13 @@ export default function TeacherExamsList() {
   };
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+    if (authLoading) return;
+    if (!sessionToken) {
       navigateTo("/entrar?redirect=/minhas-provas");
       return;
     }
-    if (sessionToken) {
-      fetchExams();
-    }
-  }, [sessionToken, authLoading, isAuthenticated]);
+    fetchExams();
+  }, [sessionToken, authLoading]);
 
   const handleCopyLink = (publicCode: string) => {
     const url = `${window.location.origin}/prova/${publicCode}`;

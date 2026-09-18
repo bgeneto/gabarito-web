@@ -29,7 +29,6 @@ export default function StudentSubmissionsList() {
   const {
     sessionToken,
     user,
-    isAuthenticated,
     isLoading: authLoading,
     claimSubmission,
   } = useAuth();
@@ -69,14 +68,13 @@ export default function StudentSubmissionsList() {
   };
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+    if (authLoading) return;
+    if (!sessionToken) {
       navigateTo("/entrar?redirect=/meus-resultados");
       return;
     }
-    if (sessionToken) {
-      fetchSubmissions();
-    }
-  }, [sessionToken, authLoading, isAuthenticated]);
+    fetchSubmissions();
+  }, [sessionToken, authLoading]);
 
   const handleClaimSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

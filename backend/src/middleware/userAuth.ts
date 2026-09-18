@@ -2,7 +2,7 @@ import { Context, Next } from "hono";
 import { eq, and, gt } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { users, userSessions } from "../db/schema.js";
-import { hashToken } from "../utils/authTokens.js";
+import { hashToken, USER_SESSION_TTL_MS } from "../utils/authTokens.js";
 
 export const AUTH_USER_KEY = "currentUser";
 export const AUTH_SESSION_KEY = "currentSession";
@@ -29,13 +29,19 @@ function extractBearerToken(c: Context): string | null {
   return null;
 }
 
+type SessionLookupResult =
+  | {
+      status: "ok";
+      user: AuthenticatedUser;
+      session: AuthenticatedSession;
+    }
+  | { status: "invalid" }
+  | { status: "unavailable" };
+
 export async function resolveUserFromSessionToken(
   sessionToken: string,
-): Promise<{
-  user: AuthenticatedUser;
-  session: AuthenticatedSession;
-} | null> {
-  if (!sessionToken) return null;
+): Promise<SessionLookupResult> {
+  if (!sessionToken) return { status: "invalid" };
   const tokenHash = hashToken(sessionToken);
   const now = Date.now();
 
@@ -59,18 +65,20 @@ export async function resolveUserFromSessionToken(
       );
 
     if (!results || results.length === 0) {
-      return null;
+      return { status: "invalid" };
     }
 
     const row = results[0];
+    const slidingExpiresAt = now + USER_SESSION_TTL_MS;
 
-    // Atualiza lastSeenAt em background (silencioso)
+    // Renova a validade a cada uso (30 dias a partir da última atividade).
     db.update(userSessions)
-      .set({ lastSeenAt: now })
+      .set({ lastSeenAt: now, expiresAt: slidingExpiresAt })
       .where(eq(userSessions.id, row.sessionId))
       .run();
 
     return {
+      status: "ok",
       user: {
         id: row.userId,
         email: row.userEmail,
@@ -80,11 +88,11 @@ export async function resolveUserFromSessionToken(
       session: {
         id: row.sessionId,
         userId: row.userId,
-        expiresAt: row.sessionExpiresAt,
+        expiresAt: slidingExpiresAt,
       },
     };
   } catch {
-    return null;
+    return { status: "unavailable" };
   }
 }
 
@@ -101,7 +109,17 @@ export async function requireUserAuth(c: Context, next: Next) {
   }
 
   const auth = await resolveUserFromSessionToken(token);
-  if (!auth) {
+  if (auth.status === "unavailable") {
+    return c.json(
+      {
+        error: "Serviço indisponível",
+        message:
+          "Não foi possível validar a sessão no momento. Tente novamente em instantes.",
+      },
+      503,
+    );
+  }
+  if (auth.status === "invalid") {
     return c.json(
       {
         error: "Não autorizado",
@@ -121,7 +139,7 @@ export async function optionalUserAuth(c: Context, next: Next) {
   const token = extractBearerToken(c);
   if (token) {
     const auth = await resolveUserFromSessionToken(token);
-    if (auth) {
+    if (auth.status === "ok") {
       c.set(AUTH_USER_KEY, auth.user);
       c.set(AUTH_SESSION_KEY, auth.session);
     }

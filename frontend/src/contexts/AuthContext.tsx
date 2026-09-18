@@ -6,6 +6,10 @@ import React, {
   useCallback,
 } from "react";
 import { sanitizePostLoginPath } from "../utils/postLoginRedirect";
+import {
+  interpretAuthMeStatus,
+  nextSessionProbeDelayMs,
+} from "../utils/userSessionProbe";
 
 export interface UserProfile {
   id: string;
@@ -48,37 +52,82 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  const clearLocalSession = useCallback(() => {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    setSessionToken(null);
+    setUser(null);
+  }, []);
+
   const fetchCurrentUser = useCallback(async (token: string) => {
-    try {
-      const res = await fetch("/api/auth/me", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setUser(data.user || null);
-      } else {
-        // Token inválido ou expirado
-        localStorage.removeItem(AUTH_STORAGE_KEY);
-        setSessionToken(null);
-        setUser(null);
+    const res = await fetch("/api/auth/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const action = interpretAuthMeStatus(res.status);
+    if (action === "authenticated") {
+      const data = await res.json();
+      if (!data.user) {
+        throw new Error("Resposta de sessão sem usuário.");
       }
-    } catch {
-      // Falha de rede ou backend offline
-    } finally {
-      setIsLoading(false);
+      setUser(data.user);
+      return "authenticated" as const;
     }
+    if (action === "invalid") {
+      return "invalid" as const;
+    }
+    return "retry" as const;
   }, []);
 
   useEffect(() => {
-    if (sessionToken) {
-      fetchCurrentUser(sessionToken);
-    } else {
+    if (!sessionToken) {
       setUser(null);
       setIsLoading(false);
+      return;
     }
-  }, [sessionToken, fetchCurrentUser]);
+
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let settleWait: (() => void) | undefined;
+
+    const restoreSession = async () => {
+      setIsLoading(true);
+      let failedAttempts = 0;
+
+      while (!cancelled) {
+        try {
+          const result = await fetchCurrentUser(sessionToken);
+          if (cancelled) return;
+          if (result === "authenticated") {
+            setIsLoading(false);
+            return;
+          }
+          if (result === "invalid") {
+            clearLocalSession();
+            setIsLoading(false);
+            return;
+          }
+        } catch {
+          if (cancelled) return;
+        }
+
+        const delay = nextSessionProbeDelayMs(failedAttempts);
+        failedAttempts += 1;
+        await new Promise<void>((resolve) => {
+          settleWait = resolve;
+          timer = setTimeout(resolve, delay);
+        });
+      }
+    };
+
+    void restoreSession();
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+      settleWait?.();
+    };
+  }, [sessionToken, fetchCurrentUser, clearLocalSession]);
 
   const requestMagicLink = async (email: string, targetRoute?: string) => {
     const res = await fetch("/api/auth/magic-link/request", {
@@ -132,9 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // ignora erro ao deslogar
       }
     }
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-    setSessionToken(null);
-    setUser(null);
+    clearLocalSession();
   };
 
   const claimExam = async (adminToken: string) => {
@@ -172,8 +219,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const refreshUser = async () => {
-    if (sessionToken) {
-      await fetchCurrentUser(sessionToken);
+    if (!sessionToken) return;
+    try {
+      const result = await fetchCurrentUser(sessionToken);
+      if (result === "invalid") {
+        clearLocalSession();
+      }
+    } catch {
+      // Falha transitória: mantém a sessão atual.
     }
   };
 
